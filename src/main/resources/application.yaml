@@ -1,0 +1,18 @@
+--- ################### 应用配置 ###################
+spring:
+  application:
+    name: knowledge-base
+  profiles:
+    active: local
+
+--- ################### MyBatis-Plus ###################
+mybatis-plus:
+  # Mapper XML 位置
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    # 下划线转驼峰
+    map-underscore-to-camel-case: true
+  global-config:
+    banner: false
+    db-config:
+      id-type: auto

@@ -1,0 +1,4446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="知序，一处安静的个人知识空间。本地化知识库平台高保真交互原型。">
+    <title>知序 · 让知识，重新相遇</title>
+    <style>
+        :root {
+            --bg: #fafaf8;
+            --paper: #fff;
+            --side: #f2f3ee;
+            --ink: #29392f;
+            --text: #475249;
+            --muted: #65725e;
+            --line: #e5e8df;
+            --sage: #657d62;
+            --sage-dark: #435c42;
+            --sage-tint: #e7ecdf;
+            --oat: #f4efe4;
+            --blue: #eaf0f2;
+            --danger: #a04e43;
+            --shadow: 0 6px 30px #29392f06;
+            --serif: Georgia, "Noto Serif SC", "Source Han Serif SC", "Songti SC", SimSun, serif;
+            --sans: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+        }
+
+        * {
+            box-sizing: border-box
+        }
+
+        body {
+            margin: 0;
+            color: var(--text);
+            font-family: var(--sans);
+            font-size: 14px;
+            background: var(--bg);
+            -webkit-font-smoothing: antialiased
+        }
+
+        button, input, textarea, select {
+            font: inherit
+        }
+
+        button, a, input, textarea, select {
+            -webkit-tap-highlight-color: transparent
+        }
+
+        button {
+            cursor: pointer;
+            color: inherit
+        }
+
+        button {
+            border: 0;
+            background: none
+        }
+
+        a {
+            color: inherit
+        }
+
+        button:disabled {
+            cursor: not-allowed;
+            opacity: .45
+        }
+
+        button, input, textarea, select, a {
+            outline-offset: 4px
+        }
+
+        button:focus-visible, a:focus-visible {
+            outline: 2px solid var(--sage)
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: 2px solid #91a48a44;
+            outline-offset: 1px
+        }
+
+        button {
+            transition: background .18s, color .18s, border-color .18s, box-shadow .18s
+        }
+
+        button:hover {
+            color: var(--ink)
+        }
+
+        svg {
+            width: 20px;
+            height: 20px;
+            flex: none;
+            stroke: currentColor;
+            stroke-width: 1.6;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            fill: none;
+            vertical-align: middle
+        }
+
+        h1, h2, h3, h4, p {
+            margin: 0
+        }
+
+        h1, h2, h3 {
+            color: var(--ink)
+        }
+
+        small {
+            font-size: 12px
+        }
+
+        .app {
+            display: flex;
+            height: 100dvh;
+            min-height: 560px;
+            overflow: hidden
+        }
+
+        .sidebar {
+            width: 242px;
+            flex: none;
+            background: var(--side);
+            border-right: 1px solid var(--line);
+            display: flex;
+            flex-direction: column;
+            padding: 31px 18px 16px;
+            z-index: 35
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            padding: 0 13px 32px
+        }
+
+        .brand-mark {
+            width: 33px;
+            height: 36px;
+            color: var(--sage-dark)
+        }
+
+        .brand-name {
+            font-family: var(--serif);
+            font-size: 25px;
+            letter-spacing: 4px;
+            font-weight: 600
+        }
+
+        .brand-en {
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: var(--muted);
+            margin-top: 2px
+        }
+
+        .new-search {
+            height: 43px;
+            border: 1px solid #cfd8c8;
+            background: #e8eddf;
+            border-radius: 7px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 0 14px;
+            color: var(--sage-dark);
+            font-weight: 600
+        }
+
+        .new-search:hover {
+            background: #dce5d4
+        }
+
+        .shortcut-key {
+            font-size: 11px;
+            color: #65725e;
+            margin-left: auto;
+            font-weight: 400;
+            border: 1px solid #ccd5c5;
+            padding: 1px 4px;
+            border-radius: 3px
+        }
+
+        .side-scroll {
+            overflow: auto;
+            flex: 1;
+            padding-top: 24px
+        }
+
+        .section-label {
+            font-size: 11px;
+            letter-spacing: 1px;
+            color: #65725e;
+            padding: 0 13px;
+            margin: 0 0 9px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center
+        }
+
+        .section-label button {
+            padding: 3px;
+            display: grid;
+            place-items: center
+        }
+
+        .section-label svg {
+            width: 15px;
+            height: 15px
+        }
+
+        .nav-item {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 13px;
+            margin: 3px 0;
+            border-radius: 6px;
+            text-align: left;
+            line-height: 20px;
+            font-size: 13px
+        }
+
+        .nav-item svg {
+            width: 17px;
+            height: 17px;
+            color: #65725e
+        }
+
+        .nav-item:hover {
+            background: #e8ebe2
+        }
+
+        .nav-item.active {
+            background: #e3e9db;
+            color: var(--sage-dark)
+        }
+
+        .nav-item .count {
+            margin-left: auto;
+            color: #65725e;
+            font-size: 11px
+        }
+
+        .side-subtitle {
+            font-size: 10px;
+            letter-spacing: .8px;
+            padding: 17px 13px 5px;
+            color: #65725e
+        }
+
+        .history-label {
+            margin-top: 31px
+        }
+
+        .history-item {
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: block;
+            padding: 10px 13px;
+            width: 100%;
+            text-align: left;
+            border-radius: 5px
+        }
+
+        .history-item:hover, .history-item.active {
+            background: #e7ebe2
+        }
+
+        .history-item:before {
+            content: "";
+            display: inline-block;
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #a8b39d;
+            margin-right: 10px;
+            vertical-align: 2px
+        }
+
+        .side-bottom {
+            padding-top: 20px
+        }
+
+        .local-note {
+            padding: 15px 13px;
+            background: #ebeee5;
+            border: 1px solid #e1e6d9;
+            border-radius: 7px;
+            margin-bottom: 15px
+        }
+
+        .local-note strong {
+            font-size: 11px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: #5e7055
+        }
+
+        .local-note svg {
+            width: 14px;
+            height: 14px
+        }
+
+        .local-note p {
+            font-size: 10px;
+            color: #65725e;
+            line-height: 1.8;
+            margin-top: 5px
+        }
+
+        .storage-track {
+            height: 3px;
+            background: #dde3d5;
+            margin-top: 10px;
+            border-radius: 8px
+        }
+
+        .storage-track span {
+            display: block;
+            width: 19%;
+            height: 100%;
+            background: #a9b899
+        }
+
+        .settings-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between
+        }
+
+        .settings-nav button {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            font-size: 12px;
+            padding: 9px 12px;
+            border-radius: 5px
+        }
+
+        .settings-nav button:hover {
+            background: #e4e9dd
+        }
+
+        .settings-nav small {
+            font-size: 10px;
+            color: #65725e;
+            padding-right: 9px
+        }
+
+        .main {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            position: relative
+        }
+
+        .topbar {
+            height: 76px;
+            flex: none;
+            border-bottom: 1px solid #e9ebe3;
+            padding: 0 38px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #fafaf8eb;
+            gap: 12px
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            font-size: 12px
+        }
+
+        .breadcrumb span:first-of-type {
+            color: #65725e
+        }
+
+        .breadcrumb .slash {
+            color: #65725e
+        }
+
+        .breadcrumb svg {
+            width: 17px;
+            height: 17px
+        }
+
+        .top-right {
+            display: flex;
+            align-items: center;
+            gap: 20px
+        }
+
+        .local-badge {
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: #65725e
+        }
+
+        .dot {
+            height: 5px;
+            width: 5px;
+            background: #809774;
+            border-radius: 50%;
+            display: inline-block
+        }
+
+        .avatar {
+            height: 31px;
+            width: 31px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: #e9eddf;
+            border: 1px solid #dde4d4;
+            color: #617352;
+            font-size: 12px
+        }
+
+        .avatar:hover {
+            background: #dde5d3
+        }
+
+        .mobile-menu {
+            display: none
+        }
+
+        .icon-btn {
+            width: 32px;
+            height: 32px;
+            display: inline-grid;
+            place-items: center;
+            border-radius: 5px
+        }
+
+        .icon-btn:hover {
+            background: #edf0e8
+        }
+
+        .workspace {
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            position: relative
+        }
+
+        .chat-panel {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column
+        }
+
+        .chat-scroll {
+            flex: 1;
+            overflow: auto;
+            scroll-behavior: smooth;
+            padding: 0 40px
+        }
+
+        .home {
+            max-width: 838px;
+            margin: 0 auto;
+            padding: 44px 0 24px;
+            animation: rise .55s ease both
+        }
+
+        .hero {
+            text-align: center;
+            position: relative
+        }
+
+        .hero-art {
+            width: 154px;
+            height: 107px;
+            margin: 0 auto 12px;
+            display: block;
+            overflow: visible
+        }
+
+        .eyebrow {
+            font-family: Georgia, serif;
+            font-size: 9px;
+            letter-spacing: 3.1px;
+            color: #65725e;
+            margin-bottom: 16px
+        }
+
+        .hero h1 {
+            font-family: var(--serif);
+            font-size: 36px;
+            font-weight: 400;
+            letter-spacing: 3px;
+            line-height: 1.5
+        }
+
+        .hero h1 span {
+            color: #65725e
+        }
+
+        .hero-description {
+            font-size: 12px;
+            color: #65725e;
+            line-height: 1.9;
+            margin-top: 12px;
+            letter-spacing: .3px
+        }
+
+        .quick-actions {
+            display: grid;
+            grid-template-columns:repeat(3, 1fr);
+            gap: 14px;
+            margin-top: 33px
+        }
+
+        .quick-card {
+            text-align: left;
+            padding: 21px 19px 18px;
+            border: 1px solid var(--line);
+            background: #fff9;
+            border-radius: 8px;
+            box-shadow: 0 3px 12px #33412b02;
+            position: relative
+        }
+
+        .quick-card:hover {
+            border-color: #b8c7aa;
+            background: white;
+            box-shadow: 0 8px 20px #33412b06
+        }
+
+        .quick-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 7px;
+            background: #eaf0e3;
+            display: grid;
+            place-items: center;
+            color: #65725e;
+            margin-bottom: 15px
+        }
+
+        .quick-card:nth-child(2) .quick-icon {
+            background: #edf0f1;
+            color: #65725e
+        }
+
+        .quick-card:nth-child(3) .quick-icon {
+            background: #f3eee4;
+            color: #65725e
+        }
+
+        .quick-card h2 {
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 7px
+        }
+
+        .quick-card p {
+            font-size: 11px;
+            color: #65725e;
+            line-height: 1.7
+        }
+
+        .quick-card .arrow {
+            position: absolute;
+            width: 15px;
+            height: 15px;
+            right: 17px;
+            top: 24px;
+            color: #65725e;
+            transition: transform .2s
+        }
+
+        .quick-card:hover .arrow {
+            transform: translateX(3px)
+        }
+
+        .suggestions {
+            margin-top: 29px
+        }
+
+        .micro-heading {
+            font-size: 11px;
+            color: #65725e;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            letter-spacing: .3px
+        }
+
+        .micro-heading .icon-btn {
+            height: 22px;
+            width: 22px
+        }
+
+        .micro-heading svg {
+            height: 13px;
+            width: 13px
+        }
+
+        .suggestion-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px
+        }
+
+        .suggestion {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 11px;
+            border: 1px solid #e7e9e1;
+            background: #f6f7f1;
+            border-radius: 5px;
+            font-size: 11px;
+            line-height: 1.5;
+            color: #65725e
+        }
+
+        .suggestion svg {
+            width: 13px;
+            height: 13px;
+            opacity: .75
+        }
+
+        .suggestion:hover {
+            background: #eaf0e2;
+            border-color: #cbd7bf
+        }
+
+        .recent-docs {
+            margin-top: 29px;
+            padding-top: 20px;
+            border-top: 1px solid var(--line)
+        }
+
+        .recent-doc-list {
+            display: grid;
+            grid-template-columns:repeat(3, 1fr);
+            gap: 16px
+        }
+
+        .recent-doc {
+            display: flex;
+            text-align: left;
+            gap: 10px;
+            align-items: center;
+            min-width: 0;
+            padding: 8px 0;
+            border-radius: 4px
+        }
+
+        .recent-doc:hover {
+            background: #f0f3e9
+        }
+
+        .file-icon {
+            width: 29px;
+            height: 35px;
+            display: grid;
+            place-items: center;
+            background: #f3eee4;
+            color: #65725e;
+            border: 1px solid #e9e2d4;
+            border-radius: 3px;
+            flex: none
+        }
+
+        .file-icon svg {
+            width: 16px;
+            height: 16px
+        }
+
+        .file-icon.md {
+            background: #eaf0e6;
+            color: #65725e;
+            border-color: #dfe7d9
+        }
+
+        .file-icon.png {
+            background: #eaf0f1;
+            color: #65725e;
+            border-color: #dfe7e8
+        }
+
+        .recent-doc div:last-child {
+            min-width: 0
+        }
+
+        .recent-doc strong {
+            display: block;
+            font-weight: 400;
+            color: #66715d;
+            font-size: 11px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap
+        }
+
+        .recent-doc small {
+            display: block;
+            font-size: 9px;
+            color: #65725e;
+            margin-top: 6px
+        }
+
+        .composer-area {
+            padding: 15px 40px 16px;
+            flex: none;
+            background: linear-gradient(0deg, var(--bg) 92%, #fafaf800)
+        }
+
+        .composer-wrap {
+            max-width: 838px;
+            margin: 0 auto;
+            position: relative
+        }
+
+        .composer {
+            border: 1px solid #dce2d3;
+            background: #fff;
+            border-radius: 10px;
+            padding: 13px 16px 11px;
+            box-shadow: 0 6px 24px #39463206;
+            transition: border .2s, box-shadow .2s;
+            position: relative
+        }
+
+        .composer:focus-within {
+            border-color: #a6b99b;
+            box-shadow: 0 5px 25px #3946320a
+        }
+
+        .composer.dragging {
+            border: 1px dashed var(--sage);
+            background: #f0f5e9
+        }
+
+        .chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            min-height: 25px;
+            align-items: center
+        }
+
+        .chip {
+            padding: 4px 8px;
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            background: #f0f3e9;
+            border: 1px solid #e5eadd;
+            border-radius: 4px;
+            color: #65725e;
+            font-size: 10px
+        }
+
+        .chip svg {
+            width: 12px;
+            height: 12px
+        }
+
+        .chip.skill-chip {
+            background: #f5f5f0;
+            color: #65725e;
+            border-color: #eaece4
+        }
+
+        .chip:hover {
+            background: #e4ebd9
+        }
+
+        .query {
+            width: 100%;
+            height: 49px;
+            max-height: 120px;
+            resize: none;
+            border: 0;
+            padding: 15px 0 5px;
+            line-height: 1.7;
+            color: var(--ink);
+            font-size: 13px;
+            background: transparent;
+            outline: none !important
+        }
+
+        .query::placeholder {
+            color: #65725e
+        }
+
+        .composer-bottom {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-top: 3px
+        }
+
+        .composer-left, .composer-right {
+            display: flex;
+            align-items: center;
+            gap: 7px
+        }
+
+        .add-btn {
+            width: 29px;
+            height: 29px;
+            border: 1px solid #e7e9e1;
+            border-radius: 5px;
+            display: grid;
+            place-items: center;
+            color: #65725e
+        }
+
+        .add-btn svg {
+            width: 16px;
+            height: 16px
+        }
+
+        .add-btn:hover {
+            background: #f0f3ea
+        }
+
+        .text-btn {
+            font-size: 11px;
+            color: #65725e;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 7px;
+            border-radius: 4px;
+            white-space: nowrap
+        }
+
+        .text-btn svg {
+            width: 13px;
+            height: 13px
+        }
+
+        .text-btn:hover {
+            background: #f1f4eb
+        }
+
+        .model-btn {
+            font-size: 10px
+        }
+
+        .mode-btn {
+            color: #53694a
+        }
+
+        .send {
+            width: 32px;
+            height: 32px;
+            display: grid;
+            place-items: center;
+            background: #74866a;
+            color: white;
+            border-radius: 6px;
+            margin-left: 5px
+        }
+
+        .send svg {
+            width: 18px;
+            height: 18px
+        }
+
+        .send:hover {
+            background: #526b46;
+            color: white
+        }
+
+        .send:disabled {
+            background: #b7c2af;
+            opacity: .7
+        }
+
+        .vline {
+            width: 1px;
+            height: 13px;
+            background: #e4e8dd;
+            margin: 0 2px
+        }
+
+        .composer-caption {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            margin-top: 11px;
+            font-size: 9px;
+            color: #65725e;
+            padding: 0 2px
+        }
+
+        .composer-caption span {
+            display: flex;
+            align-items: center;
+            gap: 5px
+        }
+
+        .composer-caption svg {
+            width: 11px;
+            height: 11px
+        }
+
+        .composer-caption kbd {
+            font: inherit;
+            color: #65725e
+        }
+
+        .popover {
+            display: none;
+            position: absolute;
+            z-index: 45;
+            bottom: calc(100% + 7px);
+            background: #fff;
+            border: 1px solid var(--line);
+            border-radius: 9px;
+            box-shadow: 0 12px 45px #29392f14;
+            padding: 7px;
+            min-width: 230px;
+            animation: rise .18s ease
+        }
+
+        .popover.open {
+            display: block
+        }
+
+        .popover.scope {
+            left: 0;
+            bottom: calc(100% + 7px);
+            width: 285px
+        }
+
+        .popover.add, .popover.skills {
+            left: 0
+        }
+
+        .popover.mode, .popover.model {
+            right: 0
+        }
+
+        .popover-title {
+            font-size: 11px;
+            color: #65725e;
+            padding: 9px 10px;
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 4px;
+            letter-spacing: .5px
+        }
+
+        .menu-option {
+            width: 100%;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            text-align: left;
+            border-radius: 5px;
+            font-size: 12px
+        }
+
+        .menu-option:hover {
+            background: #f1f4eb
+        }
+
+        .menu-option.active {
+            background: #edf2e6;
+            color: var(--sage-dark)
+        }
+
+        .menu-option svg {
+            width: 16px;
+            height: 16px
+        }
+
+        .menu-option .description {
+            display: block;
+            font-size: 10px;
+            color: #65725e;
+            margin-top: 4px;
+            line-height: 1.6
+        }
+
+        .menu-option .tick {
+            margin-left: auto;
+            color: #65725e
+        }
+
+        .menu-option label {
+            cursor: pointer;
+            flex: 1
+        }
+
+        .menu-option input {
+            accent-color: var(--sage);
+            width: 14px;
+            height: 14px
+        }
+
+        .menu-footer {
+            font-size: 10px;
+            color: #65725e;
+            padding: 10px;
+            border-top: 1px solid var(--line);
+            line-height: 1.7
+        }
+
+        .model-tier {
+            display: flex;
+            gap: 5px;
+            padding: 10px
+        }
+
+        .model-tier button {
+            background: #f2f4ed;
+            border-radius: 4px;
+            flex: 1;
+            font-size: 11px;
+            padding: 7px
+        }
+
+        .model-tier button.active {
+            background: #dfe8d5;
+            color: var(--sage-dark)
+        }
+
+        .attachment {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            border: 1px solid var(--line);
+            border-radius: 6px;
+            padding: 6px;
+            margin: 8px 0;
+            background: #f7f9f3;
+            width: fit-content;
+            font-size: 11px
+        }
+
+        .attachment img {
+            width: 34px;
+            height: 34px;
+            object-fit: cover;
+            border-radius: 3px
+        }
+
+        .attachment button {
+            display: grid;
+            place-items: center
+        }
+
+        .attachment svg {
+            width: 13px;
+            height: 13px
+        }
+
+        .message-list {
+            max-width: 838px;
+            margin: 0 auto;
+            padding: 30px 0 40px
+        }
+
+        .message {
+            margin: 0 0 30px;
+            animation: rise .3s ease both
+        }
+
+        .message-user {
+            display: flex;
+            justify-content: flex-end
+        }
+
+        .user-bubble {
+            background: #edf1e6;
+            border: 1px solid #e3e9da;
+            padding: 13px 18px;
+            border-radius: 12px 12px 3px 12px;
+            max-width: 85%;
+            font-size: 13px;
+            line-height: 1.8;
+            color: #4f6347;
+            overflow-wrap: anywhere
+        }
+
+        .user-bubble small {
+            display: block;
+            font-size: 9px;
+            color: #65725e;
+            margin-top: 7px
+        }
+
+        .user-bubble img {
+            display: block;
+            max-height: 130px;
+            max-width: 100%;
+            border-radius: 5px;
+            margin-bottom: 8px
+        }
+
+        .answer-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #4e6845;
+            margin-bottom: 13px
+        }
+
+        .answer-header .mini-mark {
+            background: #e7eddc;
+            display: grid;
+            place-items: center;
+            width: 25px;
+            height: 25px;
+            border-radius: 6px
+        }
+
+        .answer-header svg {
+            width: 16px;
+            height: 16px
+        }
+
+        .answer-header small {
+            font-size: 10px;
+            color: #65725e;
+            margin-left: auto
+        }
+
+        .result-summary {
+            font-size: 12px;
+            line-height: 1.8;
+            margin-bottom: 12px;
+            color: #65725e
+        }
+
+        .result-summary strong {
+            color: #516b45;
+            font-weight: 500
+        }
+
+        .result-card {
+            display: block;
+            width: 100%;
+            border: 1px solid var(--line);
+            background: #fff;
+            border-radius: 7px;
+            padding: 17px 18px;
+            margin-bottom: 10px;
+            text-align: left;
+            box-shadow: var(--shadow)
+        }
+
+        .result-card:hover {
+            border-color: #b9c9ac;
+            box-shadow: 0 5px 20px #29392f09
+        }
+
+        .result-top {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: space-between
+        }
+
+        .result-top h3 {
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.6;
+            display: flex;
+            gap: 8px;
+            align-items: center
+        }
+
+        .result-top h3 svg {
+            width: 16px;
+            height: 16px;
+            color: #65725e
+        }
+
+        .tag {
+            display: inline-block;
+            font-size: 9px;
+            padding: 3px 6px;
+            border-radius: 3px;
+            background: #edf2e7;
+            color: #65725e;
+            white-space: nowrap
+        }
+
+        .tag.blue {
+            background: #edf2f4;
+            color: #65725e
+        }
+
+        .tag.oat {
+            background: #f5eee4;
+            color: #65725e
+        }
+
+        .tag.red {
+            background: #f9eee9;
+            color: #65725e
+        }
+
+        .result-snippet {
+            font-size: 12px;
+            color: #65725e;
+            line-height: 1.9;
+            margin: 11px 0;
+            display: block
+        }
+
+        .result-path {
+            font-size: 10px;
+            color: #65725e;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            line-height: 1.8
+        }
+
+        .result-path svg {
+            width: 11px;
+            height: 11px
+        }
+
+        .result-relevance {
+            margin-left: auto;
+            color: #65725e
+        }
+
+        .result-thumb {
+            display: flex;
+            align-items: center;
+            gap: 14px
+        }
+
+        .result-thumb .thumb {
+            width: 100px;
+            height: 70px;
+            flex: none;
+            border-radius: 5px;
+            overflow: hidden;
+            background: #eef2e9
+        }
+
+        .thumb svg {
+            width: 100%;
+            height: 100%;
+            stroke-width: 1
+        }
+
+        .result-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover
+        }
+
+        mark {
+            background: #e6edce;
+            color: #43582f;
+            padding: 1px 3px;
+            border-radius: 2px
+        }
+
+        .answer-content {
+            font-size: 13px;
+            line-height: 2;
+            color: #58634f
+        }
+
+        .answer-content h3 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 15px 0 7px
+        }
+
+        .answer-content p {
+            margin-bottom: 9px
+        }
+
+        .answer-content ol {
+            padding-left: 22px;
+            margin: 7px 0
+        }
+
+        .inline-cite {
+            display: inline-grid;
+            place-items: center;
+            min-width: 18px;
+            height: 18px;
+            font-size: 10px;
+            color: #65725e;
+            background: #e9efdf;
+            border-radius: 3px;
+            vertical-align: 2px;
+            margin: 0 3px;
+            padding: 0 3px
+        }
+
+        .inline-cite:hover {
+            background: #d2dfc4
+        }
+
+        .sources-title {
+            font-size: 10px;
+            color: #65725e;
+            margin: 17px 0 8px
+        }
+
+        .citation-grid {
+            display: grid;
+            grid-template-columns:repeat(2, 1fr);
+            gap: 9px
+        }
+
+        .citation-card {
+            border: 1px solid var(--line);
+            background: #fff;
+            border-radius: 6px;
+            padding: 12px;
+            text-align: left;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            min-width: 0
+        }
+
+        .citation-card:hover {
+            border-color: #b3c5a5;
+            background: #f6f9f0
+        }
+
+        .citation-card b {
+            background: #edf2e5;
+            padding: 5px 7px;
+            font-size: 10px;
+            color: #65725e;
+            border-radius: 4px;
+            font-weight: 400
+        }
+
+        .citation-card div {
+            min-width: 0
+        }
+
+        .citation-card strong {
+            font-weight: 400;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-size: 11px
+        }
+
+        .citation-card small {
+            font-size: 9px;
+            color: #65725e;
+            display: block;
+            margin-top: 5px
+        }
+
+        .response-meta {
+            font-size: 10px;
+            color: #65725e;
+            margin-top: 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px
+        }
+
+        .response-meta button {
+            padding: 3px;
+            display: grid;
+            place-items: center;
+            border-radius: 3px
+        }
+
+        .response-meta svg {
+            width: 13px;
+            height: 13px
+        }
+
+        .response-meta button:hover, .response-meta button.selected {
+            background: #e8eddf;
+            color: #587243
+        }
+
+        .guide-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 14px 0
+        }
+
+        .guide-options button {
+            border: 1px solid #dbe3d1;
+            padding: 8px 12px;
+            background: #f4f7ee;
+            border-radius: 5px;
+            font-size: 12px
+        }
+
+        .guide-options button:hover {
+            background: #e6eedb
+        }
+
+        .guide-skip {
+            font-size: 11px;
+            color: #65725e;
+            text-decoration: underline;
+            text-underline-offset: 4px;
+            padding: 6px 0
+        }
+
+        .empty-result {
+            padding: 30px;
+            background: #f3f5ee;
+            border: 1px dashed #d5ddcb;
+            border-radius: 8px;
+            text-align: center;
+            line-height: 1.9
+        }
+
+        .empty-result svg {
+            color: #65725e;
+            width: 29px;
+            height: 29px;
+            margin-bottom: 10px
+        }
+
+        .empty-result h3 {
+            font-family: var(--serif);
+            font-size: 20px;
+            font-weight: 400;
+            margin-bottom: 8px
+        }
+
+        .empty-result p {
+            font-size: 12px;
+            color: #65725e
+        }
+
+        .typing {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 10px
+        }
+
+        .typing i {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
+            background: #95a783;
+            animation: breathe 1s ease-in-out infinite
+        }
+
+        .typing i:nth-child(2) {
+            animation-delay: .15s
+        }
+
+        .typing i:nth-child(3) {
+            animation-delay: .3s
+        }
+
+        .network-block {
+            border-top: 1px solid var(--line);
+            margin-top: 20px;
+            padding-top: 15px
+        }
+
+        .network-block p {
+            font-size: 11px;
+            color: #65725e;
+            margin: 8px 0;
+            line-height: 1.8
+        }
+
+        .drawer {
+            display: none;
+            width: 398px;
+            flex: none;
+            border-left: 1px solid var(--line);
+            background: #f2f3ee;
+            flex-direction: column;
+            animation: slideIn .3s ease;
+            min-width: 0
+        }
+
+        .drawer.open {
+            display: flex
+        }
+
+        .drawer-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 17px 20px;
+            border-bottom: 1px solid var(--line);
+            background: #fafbf7;
+            gap: 10px
+        }
+
+        .drawer-head strong {
+            font-weight: 500;
+            font-size: 12px
+        }
+
+        .drawer-head p {
+            font-size: 10px;
+            color: #65725e;
+            margin-top: 5px;
+            max-width: 255px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap
+        }
+
+        .drawer-tools {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 18px;
+            font-size: 10px;
+            color: #65725e
+        }
+
+        .drawer-tools button {
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            gap: 5px
+        }
+
+        .drawer-tools svg {
+            width: 12px;
+            height: 12px
+        }
+
+        .drawer-body {
+            overflow: auto;
+            flex: 1;
+            padding: 5px 20px 25px
+        }
+
+        .document-page {
+            background: #fff;
+            box-shadow: 0 3px 16px #26342107;
+            border: 1px solid #e9ece3;
+            padding: 29px 24px;
+            min-height: 480px;
+            font-size: 12px;
+            line-height: 2;
+            color: #65715a;
+            position: relative
+        }
+
+        .document-page .doc-kicker {
+            font-size: 8px;
+            letter-spacing: 1.8px;
+            color: #65725e;
+            border-bottom: 1px solid #e9ece3;
+            padding-bottom: 12px;
+            margin-bottom: 22px
+        }
+
+        .document-page h2 {
+            font-family: var(--serif);
+            font-size: 20px;
+            font-weight: 400;
+            line-height: 1.8;
+            margin-bottom: 18px
+        }
+
+        .document-page h3 {
+            font-size: 12px;
+            font-weight: 500;
+            margin: 18px 0 9px
+        }
+
+        .document-page p {
+            margin-bottom: 14px
+        }
+
+        .document-page blockquote {
+            margin: 18px -5px;
+            border-left: 2px solid #9aac81;
+            background: #edf2e2;
+            padding: 13px 14px;
+            color: #4e643e
+        }
+
+        .doc-page-number {
+            text-align: center;
+            color: #65725e;
+            font-family: Georgia, serif;
+            font-size: 10px;
+            margin-top: 40px
+        }
+
+        .drawer-foot {
+            padding: 12px 20px;
+            background: #fafbf8;
+            border-top: 1px solid var(--line);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 10px;
+            color: #65725e
+        }
+
+        .drawer-foot button {
+            font-size: 10px;
+            color: #65725e;
+            display: flex;
+            align-items: center;
+            gap: 5px
+        }
+
+        .management {
+            flex: 1;
+            overflow: auto;
+            padding: 37px 40px 40px
+        }
+
+        .manage-inner {
+            max-width: 1050px;
+            margin: auto;
+            animation: rise .3s ease
+        }
+
+        .page-kicker {
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: #65725e;
+            margin-bottom: 12px
+        }
+
+        .page-title {
+            font-family: var(--serif);
+            font-size: 30px;
+            font-weight: 400;
+            letter-spacing: 2px;
+            margin-bottom: 12px
+        }
+
+        .page-subtitle {
+            font-size: 12px;
+            color: #65725e;
+            line-height: 1.9
+        }
+
+        .manage-tabs {
+            display: flex;
+            gap: 25px;
+            border-bottom: 1px solid var(--line);
+            margin: 28px 0 25px;
+            overflow: auto;
+            white-space: nowrap
+        }
+
+        .manage-tabs button {
+            padding: 12px 0 14px;
+            font-size: 12px;
+            border-bottom: 2px solid transparent;
+            color: #65725e
+        }
+
+        .manage-tabs button.active {
+            border-color: #748963;
+            color: #4f6942
+        }
+
+        .manage-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 18px
+        }
+
+        .manage-toolbar-left {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap
+        }
+
+        .field-search {
+            border: 1px solid var(--line);
+            border-radius: 5px;
+            padding: 8px 11px;
+            background: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .field-search svg {
+            width: 14px;
+            height: 14px;
+            color: #65725e
+        }
+
+        .field-search input {
+            border: 0;
+            background: none;
+            width: 150px;
+            outline: none;
+            font-size: 11px
+        }
+
+        .select {
+            border: 1px solid var(--line);
+            background: #fff;
+            border-radius: 5px;
+            padding: 8px 9px;
+            font-size: 11px;
+            color: #65725e;
+            max-width: 100%
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: 1px solid #d8e1ce;
+            border-radius: 5px;
+            color: #65725e;
+            background: #f2f6ec;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            font-size: 12px
+        }
+
+        .btn svg {
+            width: 15px;
+            height: 15px
+        }
+
+        .btn:hover {
+            background: #e7efdb;
+            border-color: #bfcfae
+        }
+
+        .btn.primary {
+            color: #fff;
+            background: #6d825d;
+            border-color: #6d825d
+        }
+
+        .btn.primary:hover {
+            background: #536f43
+        }
+
+        .btn.danger {
+            background: #f8eeea;
+            border-color: #ead2c9;
+            color: #65725e
+        }
+
+        .btn.ghost {
+            background: #fff;
+            border-color: var(--line);
+            color: #65725e
+        }
+
+        .btn.small {
+            padding: 6px 9px;
+            font-size: 11px
+        }
+
+        .table-wrap {
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: #fff;
+            overflow: auto
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            white-space: nowrap;
+            font-size: 11px
+        }
+
+        th {
+            background: #f6f8f1;
+            text-align: left;
+            font-weight: 400;
+            color: #65725e;
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--line)
+        }
+
+        td {
+            padding: 16px 18px;
+            border-bottom: 1px solid #eff1e9;
+            color: #65725e
+        }
+
+        tbody tr:last-child td {
+            border-bottom: 0
+        }
+
+        .table-title {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            color: #526547;
+            max-width: 340px;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .table-title svg {
+            width: 16px;
+            height: 16px;
+            color: #65725e
+        }
+
+        .table-actions {
+            display: flex;
+            gap: 5px
+        }
+
+        .table-actions button {
+            font-size: 11px;
+            color: #65725e;
+            padding: 5px
+        }
+
+        .table-actions button:hover {
+            text-decoration: underline
+        }
+
+        .table-note {
+            font-size: 10px;
+            line-height: 1.8;
+            margin-top: 13px;
+            color: #65725e
+        }
+
+        .settings-card {
+            padding: 24px;
+            border: 1px solid var(--line);
+            border-radius: 8px;
+            background: white;
+            margin-bottom: 16px
+        }
+
+        .settings-card h3 {
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px
+        }
+
+        .settings-card > p {
+            font-size: 11px;
+            color: #65725e;
+            line-height: 1.9;
+            margin: 9px 0 20px
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns:1fr 1fr;
+            gap: 17px
+        }
+
+        .field {
+            display: block;
+            font-size: 11px;
+            color: #65725e;
+            margin: 14px 0
+        }
+
+        .field input, .field textarea, .field select {
+            display: block;
+            width: 100%;
+            border: 1px solid #dfe5d6;
+            border-radius: 5px;
+            padding: 11px 12px;
+            background: #fcfdf9;
+            color: #536649;
+            font-size: 12px;
+            margin-top: 8px
+        }
+
+        .field textarea {
+            resize: vertical;
+            min-height: 80px
+        }
+
+        .field-hint {
+            font-size: 10px;
+            color: #65725e;
+            margin-top: 7px;
+            line-height: 1.8
+        }
+
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            align-items: center;
+            margin-top: 20px
+        }
+
+        .info-banner {
+            background: #f0f5e8;
+            border: 1px solid #e0e9d5;
+            border-radius: 6px;
+            padding: 13px 15px;
+            font-size: 11px;
+            color: #65725e;
+            line-height: 1.9;
+            margin-bottom: 22px;
+            display: flex;
+            align-items: flex-start;
+            gap: 9px
+        }
+
+        .info-banner svg {
+            width: 15px;
+            height: 15px;
+            margin-top: 3px
+        }
+
+        .code-box {
+            background: #f3f5ee;
+            border: 1px solid #e3e8d9;
+            border-radius: 6px;
+            padding: 16px;
+            font-size: 11px;
+            line-height: 1.8;
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            color: #65725e;
+            max-height: 280px;
+            overflow: auto;
+            font-family: Consolas, monospace
+        }
+
+        .client-tabs {
+            display: flex;
+            gap: 5px;
+            margin: 15px 0 12px
+        }
+
+        .client-tabs button {
+            padding: 7px 14px;
+            font-size: 11px;
+            border-radius: 4px;
+            background: #f3f5ee
+        }
+
+        .client-tabs button.active {
+            background: #e3ecd8;
+            color: #65725e
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: #26332330;
+            backdrop-filter: blur(4px);
+            z-index: 80;
+            display: grid;
+            place-items: center;
+            padding: 20px;
+            animation: fade .2s ease
+        }
+
+        .modal {
+            background: #fafbf7;
+            border: 1px solid #e3e9d9;
+            border-radius: 12px;
+            box-shadow: 0 25px 100px #21351e20;
+            width: 560px;
+            max-width: 100%;
+            max-height: 88dvh;
+            overflow: auto;
+            padding: 28px
+        }
+
+        .modal-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px
+        }
+
+        .modal h2 {
+            font-family: var(--serif);
+            font-weight: 400;
+            letter-spacing: 1px;
+            font-size: 24px
+        }
+
+        .modal-description {
+            font-size: 12px;
+            color: #65725e;
+            line-height: 1.9;
+            margin-top: 10px;
+            margin-bottom: 20px
+        }
+
+        .dropzone {
+            border: 1px dashed #c5d2b8;
+            padding: 28px 20px;
+            text-align: center;
+            border-radius: 8px;
+            background: #f0f5e8;
+            cursor: pointer;
+            display: block
+        }
+
+        .dropzone:hover, .dropzone.dragging {
+            border-color: #859e6f;
+            background: #e7efdc
+        }
+
+        .dropzone svg {
+            width: 28px;
+            height: 28px;
+            color: #65725e;
+            margin-bottom: 12px
+        }
+
+        .dropzone strong {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: #65725e
+        }
+
+        .dropzone small {
+            display: block;
+            font-size: 10px;
+            color: #65725e;
+            margin-top: 8px;
+            line-height: 1.8
+        }
+
+        .upload-row {
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--line)
+        }
+
+        .upload-row svg {
+            width: 15px;
+            height: 15px;
+            color: #65725e
+        }
+
+        .upload-row span:nth-child(2) {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap
+        }
+
+        .upload-row small {
+            font-size: 10px;
+            color: #65725e
+        }
+
+        .upload-progress {
+            height: 3px;
+            background: #e2e9d9;
+            border-radius: 6px;
+            margin-top: 9px;
+            overflow: hidden
+        }
+
+        .upload-progress div {
+            height: 100%;
+            background: #9ab384;
+            animation: progress 2.3s ease both
+        }
+
+        .toast {
+            position: fixed;
+            left: calc(50% + 100px);
+            transform: translateX(-50%);
+            bottom: 30px;
+            z-index: 120;
+            padding: 13px 20px;
+            background: #455b3e;
+            color: #fff;
+            border: 1px solid #6c805d;
+            border-radius: 7px;
+            box-shadow: 0 8px 35px #33492b22;
+            font-size: 12px;
+            max-width: calc(100vw - 30px);
+            line-height: 1.8;
+            animation: fade .2s ease
+        }
+
+        .toast.error {
+            background: #885f4c;
+            border-color: #b5917e
+        }
+
+        .overlay-mobile {
+            display: none
+        }
+
+        .back-chat {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 11px;
+            color: #65725e;
+            padding: 6px 0;
+            margin-bottom: 22px
+        }
+
+        .back-chat svg {
+            width: 13px;
+            height: 13px
+        }
+
+        .account-avatar {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: #e5eddc;
+            color: #65725e;
+            font-family: var(--serif);
+            font-size: 25px;
+            display: grid;
+            place-items: center;
+            margin: 15px 0
+        }
+
+        .muted {
+            color: #65725e
+        }
+
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0
+        }
+
+        .hidden {
+            display: none !important
+        }
+
+        .doc-status {
+            font-size: 9px;
+            color: #65725e
+        }
+
+        .settings-pair {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid var(--line);
+            font-size: 12px;
+            gap: 20px
+        }
+
+        .settings-pair:last-child {
+            border: 0
+        }
+
+        .settings-pair small {
+            display: block;
+            color: #65725e;
+            margin-top: 6px;
+            line-height: 1.7
+        }
+
+        .doc-context {
+            border-top: 1px solid var(--line);
+            padding-top: 12px;
+            margin-top: 20px
+        }
+
+        .doc-art {
+            width: 100%;
+            height: auto;
+            max-height: 220px;
+            margin: 12px 0
+        }
+
+        .hint-chip {
+            font-size: 9px;
+            border: 1px solid #dfe5d6;
+            padding: 3px 6px;
+            border-radius: 4px;
+            color: #65725e
+        }
+
+        .busy-line {
+            height: 2px;
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            overflow: hidden
+        }
+
+        .busy-line:after {
+            content: "";
+            position: absolute;
+            width: 30%;
+            height: 2px;
+            animation: scan 1s ease-in-out infinite;
+            background: #a6b98f
+        }
+
+        @keyframes fade {
+            from {
+                opacity: 0
+            }
+            to {
+                opacity: 1
+            }
+        }
+
+        @keyframes rise {
+            from {
+                opacity: 0;
+                transform: translateY(9px)
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: .3;
+                transform: translateX(20px)
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0)
+            }
+        }
+
+        @keyframes breathe {
+            0%, 80%, 100% {
+                opacity: .3;
+                transform: translateY(0)
+            }
+            40% {
+                opacity: 1;
+                transform: translateY(-3px)
+            }
+        }
+
+        @keyframes progress {
+            from {
+                width: 2%
+            }
+            to {
+                width: 100%
+            }
+        }
+
+        @keyframes scan {
+            from {
+                left: -30%
+            }
+            to {
+                left: 100%
+            }
+        }
+
+        @media (min-width: 1500px) {
+            .home {
+                padding-top: 65px
+            }
+
+            .hero-art {
+                height: 125px;
+                width: 180px
+            }
+
+            .hero h1 {
+                font-size: 40px
+            }
+
+            .quick-actions {
+                margin-top: 38px
+            }
+
+            .quick-card {
+                padding: 25px 23px
+            }
+
+            .suggestions {
+                margin-top: 35px
+            }
+
+            .recent-docs {
+                margin-top: 35px
+            }
+
+            .composer-area {
+                padding-bottom: 23px
+            }
+        }
+
+        @media (max-height: 800px) and (min-width: 901px) {
+            .home {
+                padding-top: 23px
+            }
+
+            .hero-art {
+                height: 77px;
+                width: 125px;
+                margin-bottom: 7px
+            }
+
+            .eyebrow {
+                margin-bottom: 10px
+            }
+
+            .hero h1 {
+                font-size: 31px
+            }
+
+            .hero-description {
+                margin-top: 8px
+            }
+
+            .quick-actions {
+                margin-top: 23px
+            }
+
+            .quick-card {
+                padding: 15px
+            }
+
+            .quick-icon {
+                margin-bottom: 10px;
+                width: 30px;
+                height: 30px
+            }
+
+            .suggestions {
+                margin-top: 20px
+            }
+
+            .recent-docs {
+                margin-top: 20px;
+                padding-top: 14px
+            }
+
+            .recent-doc-list {
+                gap: 12px
+            }
+
+            .composer-area {
+                padding-top: 10px;
+                padding-bottom: 12px
+            }
+
+            .sidebar {
+                padding-top: 25px
+            }
+
+            .brand {
+                padding-bottom: 25px
+            }
+        }
+
+        @media (max-width: 1200px) {
+            .sidebar {
+                width: 218px;
+                padding-left: 13px;
+                padding-right: 13px
+            }
+
+            .topbar {
+                padding: 0 28px
+            }
+
+            .chat-scroll {
+                padding: 0 28px
+            }
+
+            .composer-area {
+                padding-left: 28px;
+                padding-right: 28px
+            }
+
+            .drawer {
+                width: 345px
+            }
+
+            .drawer.open ~ * {
+                min-width: 0
+            }
+
+            .with-drawer .quick-actions {
+                gap: 8px
+            }
+
+            .with-drawer .quick-card {
+                padding: 14px
+            }
+
+            .with-drawer .quick-card p {
+                font-size: 10px
+            }
+
+            .with-drawer .hero h1 {
+                font-size: 28px
+            }
+
+            .with-drawer .suggestion-list {
+                gap: 5px
+            }
+
+            .with-drawer .recent-doc-list {
+                grid-template-columns:1fr
+            }
+
+            .with-drawer .recent-doc:nth-child(n+2) {
+                display: none
+            }
+
+            .with-drawer .model-btn {
+                max-width: 145px;
+                overflow: hidden
+            }
+
+            .with-drawer .model-btn .model-tier-name {
+                display: none
+            }
+
+            .management {
+                padding: 30px 28px
+            }
+
+            .table-title {
+                max-width: 235px
+            }
+        }
+
+        @media (max-width: 1000px) {
+            .drawer.open {
+                position: absolute;
+                inset: 0 0 0 auto;
+                width: min(420px, 100%);
+                z-index: 40;
+                box-shadow: -15px 0 60px #29392f12
+            }
+
+            .quick-actions {
+                gap: 10px
+            }
+
+            .quick-card {
+                padding: 17px 14px
+            }
+
+            .hero h1 {
+                font-size: 31px
+            }
+
+            .recent-doc-list {
+                gap: 10px
+            }
+
+            .recent-doc strong {
+                font-size: 10px
+            }
+
+            .form-grid {
+                grid-template-columns:1fr
+            }
+
+            .quick-card .arrow {
+                right: 12px
+            }
+
+            .hero-description {
+                font-size: 11px
+            }
+        }
+
+        @media (max-width: 760px) {
+            .app {
+                min-height: 500px
+            }
+
+            .sidebar {
+                position: fixed;
+                inset: 0 auto 0 0;
+                width: 245px;
+                transform: translateX(-100%);
+                transition: transform .25s;
+                box-shadow: 10px 0 60px #29392f12
+            }
+
+            .sidebar.open {
+                transform: translateX(0)
+            }
+
+            .overlay-mobile.open {
+                display: block;
+                position: fixed;
+                inset: 0;
+                z-index: 34;
+                background: #26332325;
+                backdrop-filter: blur(2px)
+            }
+
+            .mobile-menu {
+                display: inline-grid
+            }
+
+            .topbar {
+                height: 61px;
+                padding: 0 17px
+            }
+
+            .breadcrumb {
+                gap: 8px;
+                font-size: 11px
+            }
+
+            .top-right {
+                gap: 12px
+            }
+
+            .local-badge {
+                font-size: 10px
+            }
+
+            .chat-scroll {
+                padding: 0 22px
+            }
+
+            .home {
+                padding-top: 32px
+            }
+
+            .hero-art {
+                width: 135px;
+                height: 90px;
+                margin-bottom: 12px
+            }
+
+            .hero h1 {
+                font-size: 30px;
+                letter-spacing: 2px
+            }
+
+            .eyebrow {
+                font-size: 8px;
+                letter-spacing: 2px
+            }
+
+            .hero-description {
+                font-size: 11px
+            }
+
+            .quick-actions {
+                margin-top: 27px;
+                gap: 9px
+            }
+
+            .quick-card {
+                padding: 15px 12px
+            }
+
+            .quick-card .arrow {
+                display: none
+            }
+
+            .quick-card h2 {
+                font-size: 12px
+            }
+
+            .quick-card p {
+                font-size: 10px
+            }
+
+            .quick-icon {
+                width: 30px;
+                height: 30px;
+                margin-bottom: 13px
+            }
+
+            .quick-icon svg {
+                width: 17px;
+                height: 17px
+            }
+
+            .suggestions {
+                margin-top: 24px
+            }
+
+            .suggestion {
+                font-size: 10px;
+                padding: 8px 9px
+            }
+
+            .recent-docs {
+                margin-top: 24px;
+                padding-top: 17px
+            }
+
+            .recent-doc-list {
+                grid-template-columns:1fr
+            }
+
+            .recent-doc:nth-child(n+2) {
+                display: none
+            }
+
+            .recent-doc strong {
+                font-size: 11px
+            }
+
+            .recent-doc {
+                padding: 4px 0
+            }
+
+            .composer-area {
+                padding: 10px 15px 12px
+            }
+
+            .composer {
+                padding: 11px 12px 9px
+            }
+
+            .composer-caption {
+                font-size: 8px;
+                justify-content: center
+            }
+
+            .composer-caption span:last-child {
+                display: none
+            }
+
+            .query {
+                font-size: 12px;
+                height: 53px
+            }
+
+            .model-btn {
+                font-size: 9px;
+                padding: 5px
+            }
+
+            .model-btn .model-tier-name {
+                display: none
+            }
+
+            .mode-btn {
+                font-size: 10px;
+                padding: 5px
+            }
+
+            .text-btn {
+                gap: 4px
+            }
+
+            .composer-left, .composer-right {
+                gap: 3px
+            }
+
+            .send {
+                width: 29px;
+                height: 29px;
+                margin-left: 2px
+            }
+
+            .popover {
+                max-width: calc(100vw - 35px)
+            }
+
+            .popover.mode {
+                right: 0
+            }
+
+            .management {
+                padding: 25px 20px
+            }
+
+            .manage-tabs {
+                gap: 21px;
+                margin-top: 20px
+            }
+
+            .page-title {
+                font-size: 27px
+            }
+
+            .settings-card {
+                padding: 19px
+            }
+
+            .toast {
+                left: 50%
+            }
+
+            .citation-grid {
+                grid-template-columns:1fr
+            }
+
+            .drawer {
+                width: 100%
+            }
+
+            .drawer.open {
+                width: 100%
+            }
+
+            .user-bubble {
+                max-width: 92%;
+                font-size: 12px
+            }
+
+            .message-list {
+                padding-top: 24px
+            }
+
+            .modal {
+                padding: 23px
+            }
+
+            .form-actions {
+                flex-wrap: wrap
+            }
+
+            .recent-docs .micro-heading .text-btn {
+                font-size: 10px
+            }
+
+            .quick-card p {
+                min-height: 30px
+            }
+
+            .brand {
+                padding-top: 0
+            }
+
+            .form-actions .btn {
+                font-size: 11px
+            }
+
+            .model-tier {
+                padding: 8px
+            }
+
+            .table-title {
+                max-width: 220px
+            }
+        }
+
+        @media (max-width: 390px) {
+            .chat-scroll {
+                padding: 0 17px
+            }
+
+            .quick-card {
+                padding: 13px 10px
+            }
+
+            .quick-card h2 {
+                font-size: 11px
+            }
+
+            .quick-card p {
+                font-size: 9px
+            }
+
+            .hero h1 {
+                font-size: 28px
+            }
+
+            .top-right {
+                gap: 8px
+            }
+
+            .breadcrumb {
+                gap: 6px
+            }
+
+            .local-badge {
+                font-size: 9px
+            }
+
+            .composer-bottom .vline {
+                display: none
+            }
+
+            .composer-left .text-btn {
+                font-size: 10px;
+                padding: 5px
+            }
+
+            .model-btn {
+                max-width: 111px;
+                overflow: hidden
+            }
+
+            .suggestion-list .suggestion:last-child {
+                display: none
+            }
+        }
+
+        .icon-btn.mobile-menu {
+            display: none
+        }
+
+        .brand-en {
+            font-size: 8px;
+            letter-spacing: 1.25px;
+            white-space: nowrap
+        }
+
+        .drawer-tools > span:nth-child(2) {
+            display: flex;
+            align-items: center;
+            gap: 4px
+        }
+
+        .drawer-tools > span:nth-child(2) > button {
+            display: inline-grid;
+            place-items: center;
+            width: 19px;
+            height: 20px;
+            border: 1px solid #dfe5d7;
+            border-radius: 3px
+        }
+
+        .drawer-tools > span:nth-child(2) > button:hover {
+            background: #e7eddf
+        }
+
+        @media (max-width: 760px) {
+            .icon-btn.mobile-menu {
+                display: inline-grid
+            }
+
+            .composer-caption > span:first-child #privacy-caption {
+                display: inline
+            }
+
+            .composer-caption > span:last-child {
+                display: none
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *:before, *:after {
+                animation: none !important;
+                transition: none !important;
+                scroll-behavior: auto !important
+            }
+        }
+    </style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <defs>
+        <symbol id="i-plus" viewBox="0 0 24 24">
+            <path d="M12 5v14M5 12h14"/>
+        </symbol>
+        <symbol id="i-search" viewBox="0 0 24 24">
+            <circle cx="10.7" cy="10.7" r="6.7"/>
+            <path d="m16 16 4.5 4.5"/>
+        </symbol>
+        <symbol id="i-book" viewBox="0 0 24 24">
+            <path d="M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1Zm0 0v15"/>
+        </symbol>
+        <symbol id="i-layers" viewBox="0 0 24 24">
+            <path d="m12 3 10 5-10 5L2 8l10-5ZM3 12l9 5 9-5M3 16l9 5 9-5"/>
+        </symbol>
+        <symbol id="i-users" viewBox="0 0 24 24">
+            <circle cx="9" cy="8" r="3"/>
+            <path d="M3 20v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6m1 3c2 .5 3 2 3 4v2"/>
+        </symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24">
+            <path d="m9 3-.8 3-2 .9-2.8-.8-2 3.5 2.2 2.1v2.5l-2.1 2 2 3.6 2.9-.9 2 .9.7 3h4l.8-3 2-.9 2.8.9 2-3.5-2.2-2.1v-2.5l2.1-2-2-3.6-2.9.8-2-.8L13 3Z"
+                  transform="translate(1 -1) scale(.95)"/>
+            <circle cx="12" cy="12" r="3"/>
+        </symbol>
+        <symbol id="i-shield" viewBox="0 0 24 24">
+            <path d="m12 3 8 3v6c0 5-8 9-8 9s-8-4-8-9V6l8-3Z"/>
+            <path d="m8 12 3 3 5-6"/>
+        </symbol>
+        <symbol id="i-file" viewBox="0 0 24 24">
+            <path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6Zm0 0v6h6M8 13h8m-8 4h6"/>
+        </symbol>
+        <symbol id="i-image" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="3"/>
+            <circle cx="8" cy="8" r="1.5"/>
+            <path d="m21 15-5-5L5 21"/>
+        </symbol>
+        <symbol id="i-plug" viewBox="0 0 24 24">
+            <path d="m9 3 6 6M6 6l5 5m2-7-8 8 7 7 8-8M10 17l-4 4m11-11 4-4M3 3l3 3"/>
+        </symbol>
+        <symbol id="i-arrow" viewBox="0 0 24 24">
+            <path d="M4 12h15m-5-5 5 5-5 5"/>
+        </symbol>
+        <symbol id="i-up" viewBox="0 0 24 24">
+            <path d="M12 19V5m-6 6 6-6 6 6"/>
+        </symbol>
+        <symbol id="i-down" viewBox="0 0 24 24">
+            <path d="m7 10 5 5 5-5"/>
+        </symbol>
+        <symbol id="i-close" viewBox="0 0 24 24">
+            <path d="m6 6 12 12M6 18 18 6"/>
+        </symbol>
+        <symbol id="i-upload" viewBox="0 0 24 24">
+            <path d="M12 15V3m-5 5 5-5 5 5M4 15v5h16v-5"/>
+        </symbol>
+        <symbol id="i-spark" viewBox="0 0 24 24">
+            <path d="m12 3 2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4L12 3Zm7-1v4m-2-2h4"/>
+        </symbol>
+        <symbol id="i-globe" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="9"/>
+            <ellipse cx="12" cy="12" rx="4" ry="9"/>
+            <path d="M3 12h18"/>
+        </symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24">
+            <path d="M20 8a8 8 0 0 0-14-3L3 8m0-5v5h5m-4 8a8 8 0 0 0 14 3l3-3m0 5v-5h-5"/>
+        </symbol>
+        <symbol id="i-check" viewBox="0 0 24 24">
+            <path d="m5 12 4 4L19 6"/>
+        </symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24">
+            <rect x="5" y="10" width="14" height="11" rx="2"/>
+            <path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/>
+        </symbol>
+        <symbol id="i-external" viewBox="0 0 24 24">
+            <path d="M14 3h7v7m0-7-11 11m-1-9H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>
+        </symbol>
+        <symbol id="i-back" viewBox="0 0 24 24">
+            <path d="M20 12H4m6-6-6 6 6 6"/>
+        </symbol>
+        <symbol id="i-menu" viewBox="0 0 24 24">
+            <path d="M4 6h16M4 12h16M4 18h16"/>
+        </symbol>
+        <symbol id="i-copy" viewBox="0 0 24 24">
+            <rect x="8" y="8" width="13" height="13" rx="2"/>
+            <path d="M16 8V3H3v13h5"/>
+        </symbol>
+        <symbol id="i-like" viewBox="0 0 24 24">
+            <path d="M7 10 12 3c3 0 2 5 1 7h6c2 0 2 1.5 1.5 3l-2 7H7Zm-4 0h4v10H3Z"/>
+        </symbol>
+        <symbol id="i-pin" viewBox="0 0 24 24">
+            <path d="M8 3h8l-1 7 4 4H5l4-4-1-7Zm4 11v7"/>
+        </symbol>
+    </defs>
+</svg>
+<div class="app" id="app">
+    <div class="overlay-mobile" id="mobile-overlay" data-action="close-sidebar"></div>
+    <aside class="sidebar" id="sidebar" aria-label="主导航">
+        <div class="brand">
+            <svg class="brand-mark" viewBox="0 0 36 40" aria-hidden="true">
+                <path d="M17 32V12C11 7 5 8 3 9v21c6-1 11 0 14 3 4-3 9-4 15-3V9c-3-1-9-1-15 3" stroke-width="1.5"/>
+                <path d="M20 8c0-5 5-7 9-6-1 5-4 8-9 6ZM9 16l4 2m-4 3 4 2m9-7 5-1m-5 6 5-1" stroke-width="1.2"/>
+            </svg>
+            <div>
+                <div class="brand-name">知序</div>
+                <div class="brand-en">KNOWLEDGE, AT HOME.</div>
+            </div>
+        </div>
+        <button class="new-search" data-action="new-chat">
+            <svg>
+                <use href="#i-plus"/>
+            </svg>
+            新检索<span class="shortcut-key">Ctrl K</span></button>
+        <div class="side-scroll">
+            <div class="section-label">知识空间
+                <button aria-label="新建共享知识库" data-action="create-library">
+                    <svg>
+                        <use href="#i-plus"/>
+                    </svg>
+                </button>
+            </div>
+            <nav id="library-nav" aria-label="知识库"></nav>
+            <div class="section-label history-label">最近会话
+                <svg>
+                    <use href="#i-refresh"/>
+                </svg>
+            </div>
+            <nav id="history-nav" aria-label="最近会话"></nav>
+        </div>
+        <div class="side-bottom">
+            <div class="local-note"><strong>
+                <svg>
+                    <use href="#i-shield"/>
+                </svg>
+                知识在此，安心在此。</strong>
+                <p>资料存于你的环境，灵感随时可寻。</p>
+                <div class="storage-track"><span></span></div>
+            </div>
+            <div class="settings-nav">
+                <button data-action="manage" data-tab="docs">
+                    <svg>
+                        <use href="#i-settings"/>
+                    </svg>
+                    设置与管理
+                </button>
+                <small>v0.3</small></div>
+        </div>
+    </aside>
+    <main class="main">
+        <header class="topbar">
+            <div class="breadcrumb">
+                <button class="icon-btn mobile-menu" data-action="toggle-sidebar" aria-label="打开导航">
+                    <svg>
+                        <use href="#i-menu"/>
+                    </svg>
+                </button>
+                <svg>
+                    <use href="#i-layers"/>
+                </svg>
+                <span>工作空间</span><span class="slash">/</span><span id="breadcrumb-current">新检索</span></div>
+            <div class="top-right"><span class="local-badge" title="界面交互原型。示例数据与响应在浏览器本地模拟。"><span
+                    class="dot"></span>本地知识 · 交互原型</span>
+                <button class="avatar" aria-label="账号设置" data-action="manage" data-tab="account">林</button>
+            </div>
+        </header>
+        <div class="workspace" id="workspace">
+            <section class="chat-panel" id="chat-panel" aria-label="检索会话">
+                <div class="chat-scroll" id="chat-scroll">
+                    <div id="chat-content"></div>
+                </div>
+                <div class="composer-area">
+                    <div class="composer-wrap">
+                        <div id="popover" class="popover" role="dialog" aria-label="输入选项"></div>
+                        <form class="composer" id="composer">
+                            <div class="chips" id="chips"></div>
+                            <div id="attachment"></div>
+                            <label for="query" class="sr-only">输入检索问题</label><textarea id="query" class="query"
+                                                                                             placeholder="搜索你的知识，或从一个问题开始…"
+                                                                                             rows="2"></textarea>
+                            <div class="composer-bottom">
+                                <div class="composer-left">
+                                    <button type="button" class="add-btn" data-action="popover" data-menu="add"
+                                            aria-label="添加附件" aria-expanded="false">
+                                        <svg>
+                                            <use href="#i-plus"/>
+                                        </svg>
+                                    </button>
+                                    <button type="button" class="text-btn" data-action="popover" data-menu="skills"
+                                            aria-expanded="false">
+                                        <svg>
+                                            <use href="#i-spark"/>
+                                        </svg>
+                                        技能
+                                        <svg>
+                                            <use href="#i-down"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                                <div class="composer-right">
+                                    <button type="button" class="text-btn mode-btn" id="mode-button"
+                                            data-action="popover" data-menu="mode" aria-expanded="false"></button>
+                                    <span class="vline"></span>
+                                    <button type="button" class="text-btn model-btn" id="model-button"
+                                            data-action="popover" data-menu="model" aria-expanded="false"></button>
+                                    <button type="submit" class="send" id="send-button" aria-label="发送检索">
+                                        <svg>
+                                            <use href="#i-up"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                        <div class="composer-caption"><span><svg><use href="#i-lock"/></svg><span id="privacy-caption">你的资料，只属于你。示例检索在浏览器本地运行。</span></span><span><kbd>Enter</kbd> 发送 · <kbd>Shift + Enter</kbd> 换行</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            <section class="management hidden" id="management" aria-label="管理页面"></section>
+            <aside class="drawer" id="drawer" aria-label="原文预览"></aside>
+        </div>
+    </main>
+</div>
+<div id="modal-root"></div>
+<div id="toast-root" aria-live="polite" role="status"></div>
+<input type="file" class="hidden" id="upload-input" multiple
+       accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.jpg,.jpeg,.png,.webp,.bmp">
+<input type="file" class="hidden" id="image-input" accept="image/png,image/jpeg,image/webp,image/bmp">
+<script>
+    'use strict';
+    const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+    const icon = (name, cls = '') => `<svg class="${cls}" aria-hidden="true"><use href="#i-${name}"/></svg>`;
+    const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    }[c]));
+    const brandMini = () => `<div class="answer-header"><span class="mini-mark">${icon('book')}</span>知序<span class="hint-chip">示例响应</span><small>依据本地示例资料</small></div>`;
+    const art = `<svg class="hero-art" viewBox="0 0 190 127" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><ellipse cx="97" cy="111" rx="69" ry="7" fill="#e8ebdf" stroke="none"/><circle cx="101" cy="59" r="49" fill="#f0f2e9" stroke="none"/><path d="M39 88 94 75l56 20-53 17-58-20Z" fill="#d4deca" stroke="#c0ceb2" stroke-width=".8"/><path d="m42 86 55 18 50-13v5l-50 15-55-18Z" fill="#e5ebda" stroke="#c8d4ba" stroke-width=".8"/><path d="M46 78 94 64l52 19-50 16-50-16Z" fill="#f9faf5" stroke="#cbd4be" stroke-width=".8"/><path d="m96 99 0 5m-43-22 37 12m-30-16 34 11m8 2 34-11" stroke="#c6d1b9" stroke-width=".8"/><path d="m61 69 1-43 36 10 34-11v43L98 82Z" fill="#fbfcf6" stroke="#b8c7a5" stroke-width="1"/><path d="M98 36v46m-30-49 23 7m-23 0 23 7m-23 0 16 5m21-11 20-7m-20 14 20-7m-20 14 13-4" stroke="#c8d4b9" stroke-width="1"/><path d="M98 79c-10-12-15-28-15-46" stroke="#84996d" stroke-width="1.2"/><path d="M83 48C67 50 63 36 66 29c11 1 21 8 17 19Z" fill="#bdcda9" stroke="#9eaf87" stroke-width=".8"/><path d="M84 38c-2-12 7-22 17-24 3 11-1 22-17 24Z" fill="#d0ddbd" stroke="#a9bc91" stroke-width=".8"/><path d="m83 48-10-10m12-1 9-14" stroke="#93a679" stroke-width=".7"/><path d="M137 66c8-3 13-9 15-17m-11 13c-3-10 3-17 11-19 2 8-1 15-11 19Z" fill="#d9e3cc" stroke="#afc09a" stroke-width=".8"/><circle cx="47" cy="45" r="2.5" fill="#d4dec6" stroke="none"/><path d="M143 29h5m-2.5-2.5v5M38 69h4m-2-2v4" stroke="#b2c39c" stroke-width="1"/></svg>`;
+    const imageArt = `<svg viewBox="0 0 240 160" xmlns="http://www.w3.org/2000/svg" aria-label="极简设计情绪板"><rect width="240" height="160" fill="#e9ede2" stroke="none"/><rect x="24" y="25" width="77" height="111" rx="2" fill="#f9f8f1" stroke="#d7dec9"/><rect x="115" y="25" width="99" height="62" rx="2" fill="#d6dfca" stroke="none"/><rect x="115" y="99" width="43" height="37" rx="2" fill="#c0cdb3" stroke="none"/><rect x="169" y="99" width="45" height="37" rx="2" fill="#e5d9c4" stroke="none"/><path d="M40 48h40m-40 9h28m-28 50h40m-40 8h28M148 77c-10-21 7-44 33-40-4 21-12 33-33 40Zm0 0 25-29" fill="none" stroke="#8d9f7b" stroke-width="1.2"/></svg>`;
+    const defaults = {
+        libs: [{id: 'personal', name: '我的知识库', role: '所有者', type: 'personal'}, {
+            id: 'design',
+            name: '产品与设计',
+            role: '所有者',
+            type: 'shared'
+        }, {id: 'research', name: '研究与阅读', role: '查看者', type: 'shared'}],
+        docs: [
+            {
+                id: 'd1',
+                title: '知识检索与可信答案设计',
+                ext: 'pdf',
+                lib: 'personal',
+                status: '可用',
+                date: '2026-10-16',
+                size: '2.4 MB',
+                page: 12,
+                pages: 24,
+                section: '03 / 让答案有据可循',
+                tags: '知识 检索 RAG 引用 可信 方案 混合 关键字 语义',
+                text: '可信的知识问答需要建立完整的证据链。采用关键字与语义融合检索，在答案中为每一项结论附上来源引用，并允许用户直接定位到原文对应的页或分块。',
+                context: '关键字检索适合编号、术语和精确表达；语义检索能够找回意思相近但措辞不同的内容。两种方式融合排序，可以兼顾准确匹配与模糊回忆。',
+                after: '当知识库中没有足够依据时，应明确说明未找到足够的支撑资料，引导用户扩大检索范围或补充文档，不生成缺乏出处的答案。'
+            },
+            {
+                id: 'd2',
+                title: '渐进式披露：让复杂变简单',
+                ext: 'md',
+                lib: 'design',
+                status: '可用',
+                date: '2026-10-15',
+                size: '36 KB',
+                page: 3,
+                pages: 8,
+                section: '02 / 在恰当的时刻呈现信息',
+                tags: '设计 交互 渐进式披露 复杂 简约 认知 负担',
+                text: '渐进式披露将次要功能收纳在需要时才出现的位置。让用户首先看到当前任务最重要的动作，再根据上下文展开更多选项，可以降低认知负担。',
+                context: '在知识工具里，主要任务是提出问题与阅读结果。模型参数、知识库管理和高级过滤应当让位于这个核心流程。',
+                after: '输入区只保留范围、当前模式与发送动作。附加能力通过轻量菜单出现，原文预览则按需在侧边展开，保持会话上下文连续。'
+            },
+            {
+                id: 'd3',
+                title: '自然与留白 · 设计情绪板',
+                ext: 'png',
+                lib: 'design',
+                status: '可用',
+                date: '2026-10-14',
+                size: '1.8 MB',
+                page: 1,
+                pages: 1,
+                section: '01 / 视觉参考',
+                tags: '图片 设计 极简 参考图 自然 留白 米白 苔绿 情绪板 色彩',
+                text: '图片内文字（OCR）：Less, but better. 自然色、纸张肌理与大面积留白，构成安静而有层次的视觉体验。',
+                context: '色彩记录：米白 #FAFAFA、浅苔绿 #D6DFCA、燕麦 #E5D9C4。图片向量与 OCR 文字可以共同参与图片检索。',
+                after: '参考图以“自然”“极简”“留白”为标签，适合用于知识工具的视觉方向探索。'
+            },
+            {
+                id: 'd4',
+                title: '个人知识管理方法札记',
+                ext: 'pdf',
+                lib: 'personal',
+                status: '可用',
+                date: '2026-10-13',
+                size: '1.2 MB',
+                page: 5,
+                pages: 16,
+                section: '02 / 从收集到连接',
+                tags: '知识 管理 笔记 学习 方法 收集 整理 阅读 灵感',
+                text: '知识管理的价值不在于积累多少文件，而在于需要时能否重新找到并建立连接。以问题组织资料，保留原始出处，并周期性回顾，比建立过度复杂的目录更有效。',
+                context: '收集是一切的起点，但收集后需要建立清晰的命名和基本标签。',
+                after: '尝试在完成每次阅读后记录一个问题与一条结论，并把结论连接到原文。'
+            },
+            {
+                id: 'd5',
+                title: '本地 RAG 检索架构笔记',
+                ext: 'md',
+                lib: 'research',
+                status: '可用',
+                date: '2026-10-12',
+                size: '52 KB',
+                page: 2,
+                pages: 9,
+                section: '01 / 混合检索与重排',
+                tags: '本地 RAG 检索 知识库 方案 模型 向量 重排 MCP',
+                text: '本地知识库通过解析、分块、建立关键字与向量索引完成入库。检索时融合两路结果，再用重排模型精排；生成答案时，仅使用当前用户有权访问且已完成索引的内容。',
+                context: '资料入库经历排队、解析中、索引中和可用四个状态。只有可用文档参与检索。',
+                after: 'MCP 服务复用同一套检索与权限规则，使外部智能体能够在授权范围内访问知识。'
+            },
+            {
+                id: 'd6',
+                title: '阅读摘录 · 信息的秩序',
+                ext: 'txt',
+                lib: 'personal',
+                status: '可用',
+                date: '2026-10-11',
+                size: '18 KB',
+                page: 1,
+                pages: 4,
+                section: '01 / 阅读摘录',
+                tags: '阅读 信息 秩序 知识 笔记 灵感',
+                text: '为信息建立秩序，是为未来的自己保留一条回到灵感的路。清晰的出处、恰当的标签和轻量的整理方式，让知识可以在不同语境里重新被使用。',
+                context: '每一份资料都有被重新发现的价值。',
+                after: '从一个小而稳定的收集与回顾习惯开始。'
+            },
+            {
+                id: 'd7',
+                title: '课程板书扫描件',
+                ext: 'pdf',
+                lib: 'personal',
+                status: '失败',
+                date: '2026-10-16',
+                size: '5.3 MB',
+                page: 1,
+                pages: 6,
+                section: '扫描件',
+                tags: '课程 板书',
+                text: '',
+                reason: '扫描质量过低，部分文字无法识别。可重试或上传更清晰的文件。'
+            },
+            {
+                id: 'd8',
+                title: '多模态检索论文摘录',
+                ext: 'pdf',
+                lib: 'research',
+                status: '可用',
+                date: '2026-10-10',
+                size: '3.5 MB',
+                page: 4,
+                pages: 12,
+                section: '02 / 图文联合检索',
+                tags: '图片 多模态 OCR 检索 以文搜图 以图搜图 向量',
+                text: '图内文字检索使用 OCR 结果定位文字所在图片；以文搜图和以图搜图通过多模态向量匹配内容与视觉相似性。结果需保留图片缩略图与原始来源定位。',
+                context: '图片是知识资料的重要组成，包括截图、照片和独立图表。',
+                after: '向量模型不可用时，应明确提示图片向量检索不可用，仍保留可用的精确文字检索入口。'
+            }
+        ],
+        credentials: [{
+            id: 'c1',
+            name: '我的 Codex',
+            expires: '2027-01-14',
+            status: '有效',
+            last: '今天 09:41',
+            tools: ['search', 'search_images', 'ask', 'list_knowledge_bases']
+        }],
+        members: [{name: '林予', role: '所有者', lib: 'design'}, {
+            name: '陈禾',
+            role: '编辑者',
+            lib: 'design'
+        }, {name: '许知', role: '查看者', lib: 'design'}]
+    };
+    const STORE = 'zhixu-prototype-v1';
+    let saved = {};
+    try {
+        saved = JSON.parse(localStorage.getItem(STORE) || '{}')
+    } catch {
+    }
+    ;
+    let libs = saved.libs || structuredClone(defaults.libs), docs = saved.docs || structuredClone(defaults.docs),
+        credentials = saved.credentials || structuredClone(defaults.credentials),
+        members = saved.members || structuredClone(defaults.members), sessions = saved.sessions || [];
+    let modelConfig = saved.modelConfig || {
+        chat: {
+            name: 'Qwen3',
+            url: 'http://localhost:11434/v1',
+            type: '本地模型服务'
+        },
+        embedding: {name: 'bge-m3', url: 'http://localhost:8001/v1', type: '本地模型服务'},
+        rerank: {name: 'bge-reranker-v2-m3', url: 'http://localhost:8002/v1', type: '本地模型服务'}
+    };
+    let current = {
+        id: 'new',
+        title: '新检索',
+        mode: '直接检索',
+        scope: [],
+        skills: [],
+        model: 'Qwen3 · 本地',
+        tier: '均衡',
+        messages: []
+    };
+    let page = 'chat', tab = 'docs', popover = '', attachment = null, busy = false, guide = null, preview = null,
+        previewPage = 1, contextExpanded = false, docFilter = 'all', docSearch = '', memberLib = 'design',
+        pendingUpload = [], uploadTarget = 'personal', uploadStarted = false, modalReturnFocus = null,
+        oneTimeToken = null, lastConfigClient = 'Codex', suggestionIndex = 0;
+    const modes = [['直接检索', '关键字 + 语义，融合查找'], ['精确检索', '按术语、编号和字面精确匹配'], ['模糊检索', '凭模糊记忆，按语义寻找'], ['引导检索', '先澄清需求，再帮你找到'], ['RAG 检索', '基于资料回答，逐条附上引用']];
+    const libName = id => libs.find(x => x.id === id)?.name || '未知知识库';
+    const writable = id => libs.find(x => x.id === id)?.role !== '查看者';
+    const uuid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+    function persist() {
+        try {
+            localStorage.setItem(STORE, JSON.stringify({
+                libs,
+                docs: docs.map(({dataUrl, ...d}) => d),
+                credentials,
+                members,
+                sessions,
+                modelConfig
+            }))
+        } catch {
+            toast('浏览器存储空间不足，本次更改仅在当前页面保留', true)
+        }
+    }
+
+    function toast(msg, error = false) {
+        $('#toast-root').innerHTML = `<div class="toast ${error ? 'error' : ''}">${esc(msg)}</div>`;
+        clearTimeout(toast.timer);
+        toast.timer = setTimeout(() => $('#toast-root').innerHTML = '', 4200)
+    }
+
+    function setSidebar(open) {
+        $('#sidebar').classList.toggle('open', open);
+        $('#mobile-overlay').classList.toggle('open', open)
+    }
+
+    function renderNav() {
+        $('#library-nav').innerHTML = `<button class="nav-item ${!current.scope.length ? 'active' : ''}" data-action="scope-single" data-id="">${icon('layers')}<span>全部知识库</span><span class="count">${docs.filter(d => d.status === '可用').length}</span></button>` + libs.filter(l => l.type === 'personal').map(l => libNav(l)).join('') + '<div class="side-subtitle">共享知识库</div>' + libs.filter(l => l.type === 'shared').map(l => libNav(l)).join('');
+        const demos = [['demo-rag', '如何让知识检索更可信？'], ['demo-design', '关于渐进式披露的设计原则'], ['demo-image', '找一张极简设计的参考图']];
+        $('#history-nav').innerHTML = [...sessions.slice(0, 5).map(s => [s.id, s.title]), ...demos.filter(d => !sessions.some(s => s.id === d[0] || s.title === d[1]))].slice(0, 5).map(([id, t]) => `<button class="history-item ${current.id === id ? 'active' : ''}" data-action="history" data-id="${esc(id)}" title="${esc(t)}">${esc(t)}</button>`).join('');
+    }
+
+    function libNav(l) {
+        return `<button class="nav-item ${current.scope.length === 1 && current.scope[0] === l.id ? 'active' : ''}" data-action="scope-single" data-id="${esc(l.id)}">${icon(l.type === 'personal' ? 'book' : 'users')}<span>${esc(l.name)}</span><span class="count">${docs.filter(d => d.lib === l.id && d.status === '可用').length}</span></button>`
+    }
+
+    function renderComposer() {
+        const scope = current.scope.length ? current.scope.length === 1 ? libName(current.scope[0]) : `${current.scope.length} 个知识库` : '全局检索';
+        $('#chips').innerHTML = `<button type="button" class="chip" data-action="popover" data-menu="scope" aria-expanded="${popover === 'scope'}">${icon('layers')}${esc(scope)}${icon('down')}</button>` + current.skills.map(s => `<button type="button" class="chip skill-chip" data-action="skill-remove" data-skill="${esc(s)}" aria-label="关闭${esc(s)}">${icon(s === '联网搜索' ? 'globe' : 'image')}${esc(s)}${icon('close')}</button>`).join('');
+        $('#mode-button').innerHTML = `${icon('search')}${current.mode}${icon('down')}`;
+        $('#model-button').innerHTML = `${current.model}<span class="model-tier-name">· ${current.tier}</span>${icon('down')}`;
+        $('#send-button').disabled = busy || (!$('#query').value.trim() && !attachment);
+        $('#query').placeholder = current.mode === 'RAG 检索' ? '向你的资料提问，每一份答案都有出处…' : current.skills.includes('图片搜索') ? '描述你想找的图片，或拖入一张图片…' : '搜索你的知识，或从一个问题开始…';
+        $('#privacy-caption').textContent = current.skills.includes('联网搜索') ? '网络补充单独展示，不作为本地答案引用。当前为离线演示。' : '你的资料，只属于你。示例检索在浏览器本地运行。';
+    }
+
+    const suggestionSets = [['帮我找关于知识管理的笔记', '如何让知识检索更可信？', '找一张极简设计的参考图'], ['渐进式披露是什么？', '本地 RAG 是如何检索的？', '图片里的文字能被找到吗？']];
+
+    function homeHTML() {
+        let recent = docs.filter(d => d.status === '可用').slice(0, 3);
+        return `<div class="home"><div class="hero">${art}<p class="eyebrow">A QUIET PLACE FOR YOUR KNOWLEDGE</p><h1>今天想找<span>什么？</span></h1><p class="hero-description">让散落的资料，有序安放。<br>从一次搜索开始，与积累的知识重新相遇。</p></div><div class="quick-actions"><button class="quick-card" data-action="upload"><span class="quick-icon">${icon('upload')}</span>${icon('arrow', 'arrow')}<h2>上传你的资料</h2><p>文档、笔记与灵感<br>在这里，慢慢积累。</p></button><button class="quick-card" data-action="image-start"><span class="quick-icon">${icon('image')}</span>${icon('arrow', 'arrow')}<h2>试试图片搜索</h2><p>一段描述，或一张图片<br>找回记忆中的画面。</p></button><button class="quick-card" data-action="manage" data-tab="mcp"><span class="quick-icon">${icon('plug')}</span>${icon('arrow', 'arrow')}<h2>连接 AI 智能体</h2><p>将你的知识带入<br>Codex、Trae 和更多工具。</p></button></div><div class="suggestions"><div class="micro-heading"><span>从一个好问题开始</span><button class="icon-btn" data-action="shuffle" aria-label="换一组问题">${icon('refresh')}</button></div><div class="suggestion-list">${suggestionSets[suggestionIndex % 2].map((q, i) => `<button class="suggestion" data-action="suggest" data-query="${esc(q)}" data-mode="${i === 1 ? 'RAG 检索' : '直接检索'}" data-image="${q.includes('图片') || q.includes('参考图')}">${icon(i === 2 ? 'image' : i === 1 ? 'spark' : 'search')}${esc(q)}</button>`).join('')}</div></div><div class="recent-docs"><div class="micro-heading"><span>最近加入<span style="color:#aab19f"> · 随时可寻</span></span><button class="text-btn" data-action="manage" data-tab="docs">查看全部${icon('arrow')}</button></div><div class="recent-doc-list">${recent.map(d => `<button class="recent-doc" data-action="preview" data-id="${d.id}"><span class="file-icon ${d.ext}">${icon(d.ext === 'png' ? 'image' : 'file')}</span><div><strong>${esc(d.title)}</strong><small>${esc(libName(d.lib))} · ${d.date.slice(5).replace('-', '月')}日</small></div></button>`).join('')}</div></div></div>`
+    }
+
+    function renderChat(scroll = false) {
+        $('#chat-content').innerHTML = current.messages.length ? `<div class="message-list" aria-live="polite">${current.messages.map(renderMessage).join('')}${busy ? `<div class="message">${brandMini()}<div class="typing" aria-label="正在检索"><i></i><i></i><i></i></div></div>` : ''}</div>` : homeHTML();
+        $('#breadcrumb-current').textContent = current.title === '新检索' ? '新检索' : current.title.slice(0, 18);
+        renderComposer();
+        if (scroll) requestAnimationFrame(() => $('#chat-scroll').scrollTop = $('#chat-scroll').scrollHeight)
+    }
+
+    function highlight(text, q) {
+        let out = esc(text);
+        const keywords = (q.match(/[a-zA-Z0-9]+|[\u4e00-\u9fff]{2,}/g) || []).flatMap(s => s.length > 5 ? [...s.matchAll(/.{2}/g)].map(m => m[0]) : [s]).filter(s => s.length > 1);
+        const unique = [...new Set(keywords)].sort((a, b) => b.length - a.length).slice(0, 12);
+        if (unique.length) {
+            const regex = new RegExp(unique.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'), 'gi');
+            out = out.replace(regex, m => `<mark>${m}</mark>`)
+        }
+        return out
+    }
+
+    function resultCard(d, q, mode, i) {
+        const type = d.ext === 'png' ? '图片' : mode === '精确检索' ? '精确' : mode === '模糊检索' ? '模糊' : d.id === 'd8' ? 'OCR' : i === 0 ? '精确' : '模糊';
+        return `<button class="result-card" data-action="preview" data-id="${esc(d.id)}"><span class="result-top"><h3>${icon(d.ext === 'png' ? 'image' : 'file')}${esc(d.title)}</h3><span class="tag ${type === '图片' ? 'blue' : ''}">${type}命中</span></span><span class="${d.ext === 'png' ? 'result-thumb' : ''}">${d.ext === 'png' ? `<span class="thumb">${imageArt}</span>` : ''}<span class="result-snippet">${highlight(d.text || '已导入的文档，内容解析仅作状态演示。', q)}</span></span><span class="result-path">${icon('book')}${esc(libName(d.lib))} › ${esc(d.title)} › 第 ${d.page} ${d.ext === 'md' ? '块' : '页'}<span class="result-relevance">示例匹配</span></span></button>`
+    }
+
+    function citation(d, i) {
+        return `<button class="citation-card" data-action="preview" data-id="${esc(d.id)}"><b>${i + 1}</b><div><strong>${esc(d.title)}</strong><small>${esc(libName(d.lib))} · 第 ${d.page} ${d.ext === 'md' ? '块' : '页'}</small></div></button>`
+    }
+
+    function renderMessage(m) {
+        if (m.type === 'user') return `<div class="message message-user"><div class="user-bubble">${m.image ? `<img src="${m.image}" alt="用于以图搜图的查询图片">` : ''}${esc(m.text).replace(/\n/g, '<br>')}<small>${esc(m.scope)} · ${esc(m.mode)}</small></div></div>`;
+        let body = '';
+        const found = (m.ids || []).map(id => docs.find(d => d.id === id)).filter(Boolean);
+        if (m.type === 'results') body = `<p class="result-summary">在${esc(m.scope)}中找到 <strong>${found.length} 份相关资料</strong><br><small>${esc(m.mode)} · 以下为预置资料的交互演示</small></p>${found.map((d, i) => d.status === '已删除' ? `<div class="empty-result"><p>原文已删除，历史记录保留</p></div>` : resultCard(d, m.query, m.mode, i)).join('')}${m.web ? networkHTML() : ''}`;
+        if (m.type === 'answer') body = `<div class="answer-content">${m.answer}</div><p class="sources-title">引用来源 · 点击核对原文</p><div class="citation-grid">${found.map((d, i) => citation(d, i)).join('')}</div>${m.web ? networkHTML() : ''}<div class="response-meta">示例模型响应 · ${esc(m.model || 'Qwen3')}<span style="margin-left:auto"></span><button data-action="copy-answer" data-id="${m.id}" aria-label="复制回答">${icon('copy')}</button><button data-action="feedback" data-id="${m.id}" class="${m.feedback ? 'selected' : ''}" aria-label="这份回答有帮助">${icon('like')}</button></div>`;
+        if (m.type === 'guide') body = `<div class="answer-content"><p>${esc(m.text)}</p></div>${m.done ? '<p class="table-note">已完成本轮引导</p>' : `<div class="guide-options">${m.options.map(o => `<button data-action="guide-choice" data-id="${m.id}" data-value="${esc(o)}">${esc(o)}</button>`).join('')}</div><button class="guide-skip" data-action="guide-skip" data-id="${m.id}">跳过引导，直接搜 ${icon('arrow')}</button>`}`;
+        if (m.type === 'empty') body = `<div class="empty-result">${icon('search')}<h3>${m.rag ? '未找到足够的依据' : '没有找到相关资料'}</h3><p>${esc(m.text)}</p><div class="guide-options" style="justify-content:center"><button data-action="broaden" data-query="${esc(m.query)}">扩大范围并试试模糊检索</button><button data-action="upload">补充资料</button></div></div>`;
+        if (m.type === 'note') body = `<div class="info-banner">${icon('shield')}<span>${esc(m.text)}</span></div>`;
+        return `<div class="message">${brandMini()}${body}</div>`;
+    }
+
+    function networkHTML() {
+        return `<div class="network-block"><span class="tag blue">来自网络</span><p>当前为离线交互原型，尚未接入网络搜索服务。联网后，补充结果将在这里独立展示，不计入 RAG 引用来源。</p></div>`
+    }
+
+    function syncSession() {
+        if (!current.messages.length) return;
+        const c = JSON.parse(JSON.stringify(current));
+        c.messages = c.messages.map(m => {
+            const {image, ...rest} = m;
+            return rest
+        });
+        sessions = sessions.filter(s => s.id !== current.id);
+        sessions.unshift(c);
+        sessions = sessions.slice(0, 16);
+        persist();
+        renderNav()
+    }
+
+    function newChat() {
+        if (busy) {
+            toast('请等待当前演示检索完成');
+            return
+        }
+        syncSession();
+        current = {
+            id: uuid(),
+            title: '新检索',
+            mode: '直接检索',
+            scope: [],
+            skills: [],
+            model: 'Qwen3 · 本地',
+            tier: '均衡',
+            messages: []
+        };
+        guide = null;
+        attachment = null;
+        $('#query').value = '';
+        renderAttachment();
+        closePreview();
+        showChat();
+        closePopover();
+        renderNav();
+        renderChat();
+        setSidebar(false)
+    }
+
+    function showChat() {
+        page = 'chat';
+        $('#chat-panel').classList.remove('hidden');
+        $('#management').classList.add('hidden');
+        renderChat();
+        renderNav()
+    }
+
+    function addMessage(m) {
+        current.messages.push({id: uuid(), ...m})
+    }
+
+    function available() {
+        return docs.filter(d => d.status === '可用' && (!current.scope.length || current.scope.includes(d.lib)))
+    }
+
+    function retrieve(q, mode) {
+        let pool = available(), s = q.toLowerCase().trim();
+        if (current.skills.includes('图片搜索')) pool = pool.filter(d => d.ext === 'png' || d.tags.includes('图片'));
+        if (attachment?.image) return pool.filter(d => d.ext === 'png').slice(0, 3);
+        if (!s) return [];
+        let cleaned = s.replace(/帮我|找一下|帮忙|我想|请问|关于|相关资料|帮|我的|一张|一个|如何|什么|哪些|怎么|可以|有没有|请|[？?]/g, '').trim();
+        if (mode === '精确检索') return pool.filter(d => (d.title + d.text + d.tags).toLowerCase().includes(cleaned)).slice(0, 5);
+        const lexicon = ['渐进式披露', '渐进', '披露', '认知', '负担', '设计', '简约', '极简', '留白', '色彩', '参考图', '图片', '图内文字', 'ocr', '多模态', '向量', '语义', '关键字', '混合', '重排', '可信', '引用', '出处', '证据', 'rag', 'mcp', '本地', '知识管理', '管理', '笔记', '整理', '学习', '阅读', '检索', '模型', '扫描', '板书'];
+        let tokens = lexicon.filter(t => s.includes(t));
+        if (!tokens.length) tokens = s.match(/[a-z0-9]{2,}/g) || [];
+        if (/可信|出处|证据|引用/.test(s)) tokens.push('可信', '引用', '证据');
+        if (/简单|复杂|认知/.test(s)) tokens.push('渐进', '披露', '认知');
+        if (/图片|参考图|以图|画面|极简|截图/.test(s)) tokens.push('图片', '极简');
+        if (/记忆|回忆|模糊/.test(s)) tokens.push('语义');
+        if (/知识管理|整理|学习/.test(s)) tokens.push('管理', '笔记');
+        tokens = [...new Set(tokens)];
+        return pool.map(d => ({
+            d,
+            score: tokens.reduce((n, t) => n + (d.title.toLowerCase().includes(t) ? 4 : d.tags.toLowerCase().includes(t) ? 2 : d.text.toLowerCase().includes(t) ? 1 : 0), 0)
+        })).filter(x => x.score > 0).sort((a, b) => b.score - a.score).slice(0, mode === '模糊检索' ? 5 : 3).map(x => x.d);
+    }
+
+    function buildAnswer(q, found) {
+        let cites = (i) => `<button class="inline-cite" data-action="preview" data-id="${found[i].id}" aria-label="查看引用${i + 1}">${i + 1}</button>`;
+        if (/可信|引用|证据|出处/.test(q) && found.some(d => d.id === 'd1')) {
+            let a = found.findIndex(d => d.id === 'd1'), b = found.findIndex(d => d.id === 'd5');
+            return `<p>让知识检索更可信，关键是让“找到什么”和“依据在哪里”始终清晰。结合已有资料，可以从三个方面着手：</p><h3>01 · 兼顾准确匹配与语义理解</h3><p>融合关键字与语义检索：用关键字找到编号和术语，用语义找回不同措辞下的相近内容。${cites(a)}${b >= 0 ? cites(b) : ''}</p><h3>02 · 让每条结论都能回到原文</h3><p>在答案中附上页级或分块级引用。点击引用，即可在侧边预览中核对原始内容，保留完整的阅读上下文。${cites(a)}</p><h3>03 · 依据不足时，明确告诉用户</h3><p>没有足够的支撑资料时，说明证据不足，并建议扩大范围或补充文档，避免生成没有出处的答案。${cites(a)}</p>`
+        }
+        return `<p>根据当前范围内的示例资料，与“${esc(q)}”相关的内容如下：</p>${found.map((d, i) => `<h3>${String(i + 1).padStart(2, '0')} · ${esc(d.title)}</h3><p>${esc(d.text || '该上传项尚未接入真实内容解析，无法生成有依据的回答。')}${cites(i)}</p>`).join('')}<p class="table-note">以上为基于预置片段的演示汇总，未调用真实语言模型。</p>`
+    }
+
+    async function sendQuery(override) {
+        if (busy) return;
+        const q = (override ?? $('#query').value).trim();
+        if (!q && !attachment) {
+            toast('先写下你想找的内容');
+            return
+        }
+        if (q.length > 2000) {
+            toast('问题较长，请控制在 2000 字以内', true);
+            return
+        }
+        if (current.id === 'new') current.id = uuid();
+        const query = q || (attachment ? '查找与这张图片相似的内容' : '');
+        const scope = current.scope.length ? current.scope.map(libName).join('、') : '全部知识库';
+        if (current.title === '新检索') current.title = query.slice(0, 22);
+        const picture = attachment?.dataUrl;
+        addMessage({type: 'user', text: query, scope, mode: guide ? '引导补充' : current.mode, image: picture});
+        $('#query').value = '';
+        if (guide) {
+            guide.answers.push(query);
+            await advanceGuide();
+            return
+        }
+        if (current.mode === '引导检索') {
+            guide = {query, answers: [], round: 1};
+            addMessage({
+                type: 'guide',
+                text: '为了更快找到你需要的资料，你更想了解哪一类内容？',
+                options: ['概念与定义', '方法与实践', '图片与图表']
+            });
+            attachment = null;
+            renderAttachment();
+            renderChat(true);
+            syncSession();
+            return
+        }
+        await executeQuery(query, current.mode, scope);
+    }
+
+    async function executeQuery(query, mode, scope) {
+        busy = true;
+        closePopover();
+        renderChat(true);
+        const imageQuery = !!attachment?.image;
+        let found = retrieve(query, mode).filter(d => mode !== 'RAG 检索' || d.text);
+        if (mode === 'RAG 检索' && /可信|引用|证据|出处/.test(query) && found.some(d => d.id === 'd1')) found = found.filter(d => ['d1', 'd5'].includes(d.id));
+        const responseModel = current.model, responseWeb = current.skills.includes('联网搜索');
+        attachment = null;
+        renderAttachment();
+        await new Promise(r => setTimeout(r, 650));
+        const hasContent = available().length > 0;
+        if (!found.length) {
+            addMessage({
+                type: 'empty',
+                query,
+                rag: mode === 'RAG 检索',
+                text: !hasContent ? '当前知识库暂无可用内容。上传资料并完成索引后，再开始检索。' : mode === 'RAG 检索' ? '当前示例资料不足以支持这个问题，因此不生成答案。可扩大范围、调整问法，或补充相关文档。' : '试试更短的关键词、切换模糊检索，或检查当前知识库范围。'
+            })
+        } else if (mode === 'RAG 检索') {
+            addMessage({
+                type: 'answer',
+                query,
+                ids: found.map(d => d.id),
+                answer: buildAnswer(query, found),
+                scope,
+                model: responseModel,
+                web: responseWeb
+            })
+        } else {
+            addMessage({
+                type: 'results',
+                query,
+                ids: found.map(d => d.id),
+                scope,
+                mode: imageQuery ? '以图搜图 · 示例相似结果' : mode,
+                web: responseWeb
+            })
+        }
+        busy = false;
+        guide = null;
+        renderChat(true);
+        syncSession()
+    }
+
+    async function advanceGuide() {
+        const last = current.messages.filter(m => m.type === 'guide').at(-1);
+        if (last) last.done = true;
+        if (guide.round === 1) {
+            guide.round = 2;
+            addMessage({
+                type: 'guide',
+                text: '还想按哪种方式收窄范围？也可以直接输入更多线索。',
+                options: ['优先查我的知识库', '优先查产品与设计', '保持当前范围']
+            });
+            renderChat(true);
+            syncSession()
+        } else {
+            let g = guide;
+            if (g.answers.some(a => a.includes('我的知识库'))) current.scope = ['personal'];
+            if (g.answers.some(a => a.includes('产品与设计'))) current.scope = ['design'];
+            if (g.answers.some(a => a.includes('图片'))) current.skills = [...new Set([...current.skills, '图片搜索'])];
+            guide = null;
+            await executeQuery(g.query + ' ' + g.answers.filter(a => !a.includes('范围') && !a.includes('优先')).join(' '), '直接检索', current.scope.length ? current.scope.map(libName).join('、') : '全部知识库')
+        }
+    }
+
+    function openHistory(id) {
+        if (busy) {
+            toast('请等待当前检索完成');
+            return
+        }
+        syncSession();
+        const old = sessions.find(s => s.id === id);
+        if (old) {
+            current = JSON.parse(JSON.stringify(old));
+            guide = null;
+            const unfinished = current.messages.filter(m => m.type === 'guide' && !m.done);
+            for (const m of unfinished) m.done = true;
+            showChat();
+            closePreview();
+            renderChat(true)
+        } else {
+            current = {
+                id,
+                title: id === 'demo-rag' ? '如何让知识检索更可信？' : id === 'demo-design' ? '关于渐进式披露的设计原则' : '找一张极简设计的参考图',
+                mode: id === 'demo-rag' ? 'RAG 检索' : '直接检索',
+                scope: [],
+                skills: id === 'demo-image' ? ['图片搜索'] : [],
+                model: 'Qwen3 · 本地',
+                tier: '均衡',
+                messages: []
+            };
+            const found = id === 'demo-rag' ? [docs.find(d => d.id === 'd1'), docs.find(d => d.id === 'd5')] : id === 'demo-design' ? [docs.find(d => d.id === 'd2')] : [docs.find(d => d.id === 'd3')];
+            const clean = found.filter(Boolean);
+            addMessage({type: 'user', text: current.title, scope: '全部知识库', mode: current.mode});
+            addMessage(id === 'demo-rag' ? {
+                type: 'answer',
+                query: current.title,
+                ids: clean.map(d => d.id),
+                answer: buildAnswer(current.title, clean),
+                scope: '全部知识库',
+                model: current.model
+            } : {
+                type: 'results',
+                query: current.title,
+                ids: clean.map(d => d.id),
+                scope: '全部知识库',
+                mode: '直接检索'
+            });
+            showChat();
+            renderChat(true);
+            syncSession()
+        }
+        attachment = null;
+        renderAttachment();
+        setSidebar(false)
+    }
+
+    function closePopover() {
+        popover = '';
+        $('#popover').className = 'popover';
+        $('#popover').innerHTML = '';
+        $$('[data-menu]').forEach(b => b.setAttribute('aria-expanded', 'false'))
+    }
+
+    function chatModelOptions() {
+        const m = modelConfig.chat;
+        return [...new Set([m.name + ' · ' + (m.type === '本地模型服务' ? '本地' : '私有服务'), 'Qwen3 · 本地', 'DeepSeek · 私有服务'])]
+    }
+
+    function openPopover(name) {
+        if (popover === name) {
+            closePopover();
+            return
+        }
+        popover = name;
+        const p = $('#popover');
+        p.className = 'popover open ' + name;
+        $$('[data-menu]').forEach(b => b.setAttribute('aria-expanded', b.dataset.menu === name ? 'true' : 'false'));
+        if (name === 'scope') p.innerHTML = `<div class="popover-title">检索范围 · 支持多选</div><div class="menu-option"><input type="checkbox" id="scope-all" ${!current.scope.length ? 'checked' : ''} data-action="scope-all"><label for="scope-all">全部有权访问的知识库</label></div>` + libs.map(l => `<div class="menu-option"><input type="checkbox" id="scope-${l.id}" data-action="scope-check" data-id="${l.id}" ${current.scope.includes(l.id) ? 'checked' : ''}><label for="scope-${l.id}">${esc(l.name)}<span class="description">${l.type === 'personal' ? '个人知识库' : l.role}</span></label></div>`).join('') + '<div class="menu-footer">更改仅对后续消息生效，已发送结果保持不变。</div>';
+        if (name === 'mode') p.innerHTML = '<div class="popover-title">选择检索方式</div>' + modes.map(([m, d]) => `<button type="button" class="menu-option ${current.mode === m ? 'active' : ''}" data-action="mode" data-mode="${m}">${icon(m === 'RAG 检索' ? 'spark' : 'search')}<span>${m}<span class="description">${d}</span></span>${current.mode === m ? icon('check', 'tick') : ''}</button>`).join('');
+        if (name === 'model') p.innerHTML = '<div class="popover-title">对话模型</div>' + chatModelOptions().map(m => `<button type="button" class="menu-option ${current.model === m ? 'active' : ''}" data-action="model" data-model="${m}">${icon('spark')}<span>${m}<span class="description">示例模型 · 未接入实际服务</span></span>${current.model === m ? icon('check', 'tick') : ''}</button>`).join('') + `<div class="model-tier">${['轻快', '均衡', '深度'].map(t => `<button type="button" class="${current.tier === t ? 'active' : ''}" data-action="tier" data-tier="${t}">${t}</button>`).join('')}</div><div class="menu-footer">向量与重排模型在「实例设置」中配置。</div>`;
+        if (name === 'add') p.innerHTML = `<button type="button" class="menu-option" data-action="upload">${icon('upload')}<span>上传资料<span class="description">PDF、Office、笔记与图片</span></span></button><button type="button" class="menu-option" data-action="image-file">${icon('image')}<span>以图搜图<span class="description">选择图片，查找相似内容</span></span></button>`;
+        if (name === 'skills') p.innerHTML = '<div class="popover-title">为本次检索添加能力</div>' + ['联网搜索', '图片搜索'].map(s => `<button type="button" class="menu-option ${current.skills.includes(s) ? 'active' : ''}" data-action="skill-toggle" data-skill="${s}">${icon(s === '联网搜索' ? 'globe' : 'image')}<span>${s}<span class="description">${s === '联网搜索' ? '单独展示网络补充，不计入本地引用' : '图内文字、以文搜图与以图搜图'}</span></span>${current.skills.includes(s) ? icon('check', 'tick') : icon('plus', 'tick')}</button>`).join('') + `<button type="button" class="menu-option" disabled>${icon('spark')}<span>深度检索 <span class="tag oat">P1</span><span class="description">多步拆解与跨文档归纳 · 后续开放</span></span></button>`;
+        p.querySelector('button,input')?.focus();
+    }
+
+    function renderAttachment() {
+        $('#attachment').innerHTML = attachment ? `<div class="attachment">${attachment.dataUrl ? `<img src="${attachment.dataUrl}" alt="查询图片缩略图">` : icon('file')}<span>${esc(attachment.name)}</span><button type="button" data-action="remove-attachment" aria-label="移除查询图片">${icon('close')}</button></div>` : '';
+        renderComposer()
+    }
+
+    function setImage(file) {
+        if (!file || !/^image\/(png|jpeg|webp|bmp)$/.test(file.type)) {
+            toast('请选择 PNG、JPG、WebP 或 BMP 图片', true);
+            return
+        }
+        if (file.size > 10 * 1024 * 1024) {
+            toast('原型预览支持 10 MB 以内的查询图片', true);
+            return
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+            attachment = {name: file.name, image: true, dataUrl: reader.result};
+            if (!current.skills.includes('图片搜索')) current.skills.push('图片搜索');
+            renderAttachment();
+            closePopover();
+            $('#query').focus();
+            toast('已添加查询图片，可补充描述后发送；相似结果为预置演示')
+        };
+        reader.readAsDataURL(file)
+    }
+
+    function showPreview(id) {
+        const d = docs.find(d => d.id === id);
+        if (!d) {
+            toast('原文已删除或无权访问', true);
+            return
+        }
+        if (d.status === '已删除') {
+            toast('原文已删除，可在文档管理的回收站中恢复', true);
+            return
+        }
+        if (!libs.some(l => l.id === d.lib)) {
+            toast('无权访问该原文', true);
+            return
+        }
+        preview = d;
+        previewPage = d.page;
+        contextExpanded = false;
+        renderPreview();
+        $('#drawer').classList.add('open');
+        $('#workspace').classList.add('with-drawer');
+        requestAnimationFrame(() => $('#drawer .icon-btn')?.focus())
+    }
+
+    function renderPreview() {
+        const d = preview;
+        if (!d) return;
+        const match = previewPage === d.page;
+        $('#drawer').innerHTML = `<div class="drawer-head"><div><strong>原文预览</strong><p>${esc(d.title)}.${esc(d.ext)}</p></div><button class="icon-btn" data-action="close-preview" aria-label="关闭原文预览">${icon('close')}</button></div><div class="drawer-tools"><span>${esc(libName(d.lib))}</span><span><button data-action="preview-prev" aria-label="上一页">‹</button> ${previewPage} / ${d.pages} <button data-action="preview-next" aria-label="下一页">›</button></span><button data-action="preview-new">新页打开${icon('external')}</button></div><div class="drawer-body"><article class="document-page"><div class="doc-kicker">ZHIXU / LOCAL KNOWLEDGE</div><h2>${esc(d.title)}</h2><p class="table-note">原文样式预览 · 预置示例片段</p>${d.ext === 'png' ? imageArt.replace('viewBox=', 'class="doc-art" viewBox=') : ''}<h3>${esc(d.section)}</h3>${match ? `<p>${esc(d.context || '以下展示导入文件的基本信息。')}</p><blockquote id="preview-hit">${esc(d.text || '该文件已完成模拟入库。原型未读取其实际文本，不参与有依据的 RAG 生成。')}</blockquote><p>${esc(d.after || '文件名：' + d.title + '.' + d.ext)}</p>` : `<div class="empty-result"><p>当前页没有命中片段。</p><button class="btn small" data-action="preview-hit">回到命中位置 · 第 ${d.page} 页</button></div>`}${contextExpanded ? `<div class="doc-context"><h3>前后文 · 相邻分块</h3><p>${esc(d.context || '该文档没有额外的演示上下文。')}</p><p>${esc(d.after || '')}</p><p class="table-note">相邻分块仅为当前原型的预置文本。</p></div>` : ''}<div class="doc-page-number">— ${previewPage} —</div></article></div><div class="drawer-foot"><span>${match ? '已定位至命中片段' : '翻页预览'}</span><button data-action="preview-context">${icon('layers')}${contextExpanded ? '收起上下文' : '展开原文上下文'}</button></div>`;
+        if (match) requestAnimationFrame(() => $('#preview-hit')?.scrollIntoView({block: 'center', behavior: 'smooth'}))
+    }
+
+    function closePreview() {
+        $('#drawer').classList.remove('open');
+        $('#workspace').classList.remove('with-drawer');
+        preview = null
+    }
+
+    function previewNew() {
+        if (!preview) return;
+        const d = preview, win = window.open('about:blank', '_blank');
+        if (!win) {
+            toast('浏览器阻止了新页，请允许弹出窗口后重试', true);
+            return
+        }
+        win.opener = null;
+        win.document.write(`<!DOCTYPE html><html lang="zh-CN"><meta charset="utf-8"><title>${esc(d.title)} · 示例原文</title><body style="max-width:720px;margin:60px auto;padding:25px;color:#45573c;background:#fafbf7;font:16px/2 Georgia,'Microsoft YaHei',serif"><p style="font-size:12px;color:#869477">知序 / 原型示例资料 / 第 ${d.page} 页</p><h1>${esc(d.title)}</h1><p>${esc(d.context || '')}</p><blockquote style="border-left:3px solid #a8bb93;padding:20px;background:#ecf1e3">${esc(d.text || '当前上传文件未接入真实内容解析。')}</blockquote><p>${esc(d.after || '')}</p><p style="font-size:12px;color:#869477">这里展示预置片段，非实际 PDF 或 Office 渲染。</p></body></html>`);
+        win.document.close()
+    }
+
+    const tabTitles = {docs: '文档管理', mcp: 'MCP 接入', models: '实例设置', members: '共享成员', account: '账号'};
+
+    function showManage(t = 'docs') {
+        page = 'manage';
+        tab = t;
+        setSidebar(false);
+        closePreview();
+        closePopover();
+        $('#chat-panel').classList.add('hidden');
+        $('#management').classList.remove('hidden');
+        renderManage()
+    }
+
+    function renderManage() {
+        const body = {
+            docs: docsHTML,
+            mcp: mcpHTML,
+            models: modelsHTML,
+            members: membersHTML,
+            account: accountHTML
+        }[tab]();
+        $('#breadcrumb-current').textContent = tabTitles[tab];
+        $('#management').innerHTML = `<div class="manage-inner"><button class="back-chat" data-action="back-chat">${icon('back')}回到检索</button><div class="page-kicker">YOUR KNOWLEDGE, WELL KEPT.</div><h1 class="page-title">让知识，有序生长。</h1><p class="page-subtitle">整理资料，连接工具，照顾好属于你的知识空间。</p><nav class="manage-tabs" aria-label="管理模块">${Object.entries(tabTitles).map(([k, v]) => `<button class="${tab === k ? 'active' : ''}" data-action="manage-tab" data-tab="${k}">${v}</button>`).join('')}</nav><div id="manage-body">${body}</div></div>`
+    }
+
+    function docsHTML() {
+        const filtered = docs.filter(d => docFilter === 'deleted' ? d.status === '已删除' : d.status !== '已删除' && (docFilter === 'all' || d.status === docFilter)).filter(d => (d.title + libName(d.lib)).toLowerCase().includes(docSearch.toLowerCase()));
+        return `<div class="manage-toolbar"><div class="manage-toolbar-left"><label class="field-search">${icon('search')}<input id="doc-search" aria-label="搜索文档" placeholder="搜索文档或知识库" value="${esc(docSearch)}"></label><select class="select" id="doc-filter" aria-label="文档状态"><option value="all" ${docFilter === 'all' ? 'selected' : ''}>全部文档</option>${['可用', '失败', '排队', '解析中', '索引中'].map(s => `<option ${docFilter === s ? 'selected' : ''}>${s}</option>`).join('')}<option value="deleted" ${docFilter === 'deleted' ? 'selected' : ''}>回收站</option></select></div><button class="btn primary" data-action="upload">${icon('upload')}上传资料</button></div><div class="table-wrap"><table><thead><tr><th>文档名称</th><th>所属知识库</th><th>状态</th><th>上传时间</th><th>大小</th><th>操作</th></tr></thead><tbody>${filtered.map(d => `<tr><td><button class="table-title" data-action="preview" data-id="${d.id}">${icon(d.ext === 'png' ? 'image' : 'file')}${esc(d.title)}.${esc(d.ext)}</button>${d.status === '失败' ? `<div class="field-hint" style="max-width:280px;white-space:normal;color:#a0806a">${esc(d.reason)}</div>` : ''}</td><td>${esc(libName(d.lib))}</td><td><span class="tag ${d.status === '失败' ? 'red' : d.status === '已删除' ? 'oat' : ''}">${esc(d.status)}</span></td><td>${esc(d.date)}</td><td>${esc(d.size)}</td><td><span class="table-actions">${writable(d.lib) ? d.status === '已删除' ? `<button data-action="restore-doc" data-id="${d.id}">恢复</button><button data-action="purge-doc" data-id="${d.id}">彻底删除</button>` : `${d.status === '失败' ? `<button data-action="retry-doc" data-id="${d.id}">重试</button>` : ''}<button data-action="delete-doc" data-id="${d.id}">删除</button>` : '<span class="doc-status">仅查看</span>'}</span></td></tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:45px">这里还没有符合条件的文档</td></tr>'}</tbody></table></div><p class="table-note">${filtered.length} 份文档 · 删除后在回收站保留 30 天。研究与阅读为查看者权限。上传与解析状态为交互演示。</p>`
+    }
+
+    function config(client = lastConfigClient, token = 'YOUR_TOKEN') {
+        if (client === 'Codex') return `[mcp_servers.zhixu]\nurl = "http://localhost:8000/mcp"\nhttp_headers = { Authorization = "Bearer ${token}" }`;
+        return JSON.stringify({
+            mcpServers: {
+                zhixu: {
+                    url: 'http://localhost:8000/mcp',
+                    headers: {Authorization: 'Bearer ' + token}
+                }
+            }
+        }, null, 2)
+    }
+
+    function mcpHTML() {
+        return `<div class="info-banner">${icon('shield')}<span>每份凭证跟随你的当前权限，默认只读、90 天过期，撤销后即时失效。此处为凭证管理演示，不会建立真实 MCP 服务。</span></div><div class="manage-toolbar"><span style="font-size:12px">你的连接凭证 <span class="muted">/ ${credentials.length}</span></span><button class="btn primary" data-action="create-credential">${icon('plus')}新建凭证</button></div><div class="table-wrap"><table><thead><tr><th>名称</th><th>工具</th><th>状态</th><th>到期时间</th><th>最后使用</th><th>操作</th></tr></thead><tbody>${credentials.map(c => `<tr><td>${esc(c.name)}</td><td title="${esc(c.tools.join(', '))}">${c.tools.length} 个只读工具</td><td><span class="tag ${c.status === '已撤销' ? 'oat' : ''}">${esc(c.status)}</span></td><td>${c.expires}</td><td>${c.last}</td><td>${c.status === '有效' ? `<button class="btn small ghost" data-action="revoke" data-id="${c.id}">撤销</button>` : '—'}</td></tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:35px">还没有凭证，创建一份开始连接。</td></tr>'}</tbody></table></div><div class="settings-card" style="margin-top:24px"><h3>把知识带到你工作的地方<span class="tag oat">配置示例</span></h3><p>选择客户端，复制配置，并将 YOUR_TOKEN 替换为创建凭证时展示的令牌。端点为本地地址示例。</p><div class="client-tabs">${['Codex', 'Trae', 'Claude'].map(c => `<button data-action="config-client" data-client="${c}" class="${lastConfigClient === c ? 'active' : ''}">${c}</button>`).join('')}</div><pre class="code-box" id="config-code">${esc(config())}</pre><div class="form-actions"><button class="btn small" data-action="copy-config">${icon('copy')}复制配置</button></div><p class="table-note">可用只读工具：search · search_images · ask · list_knowledge_bases。实际接入须部署后端服务。</p></div><div class="settings-card"><h3>最近调用<span class="tag">示例记录</span></h3><p style="margin-bottom:0">今天 09:41 · search · 我的知识库 · 3 条结果 · 我的 Codex</p></div>`
+    }
+
+    function modelsHTML() {
+        return `<div class="info-banner">${icon('spark')}<span>聊天界面仅选择对话模型与档位。向量、重排模型由实例管理员统一配置；更换向量模型需要重建索引。下方连接测试与保存均为界面演示。</span></div>${[['chat', '对话模型', '生成带引用的答案', 'Qwen3', 'http://localhost:11434/v1'], ['embedding', '向量模型', '建立文本与图片的语义索引', 'bge-m3', 'http://localhost:8001/v1'], ['rerank', '重排模型', '对召回结果重新排序', 'bge-reranker-v2-m3', 'http://localhost:8002/v1']].map(([id, title, desc, name, url]) => `<form class="settings-card model-form" data-kind="${id}"><h3>${title}<span class="tag" id="model-state-${id}">示例配置</span></h3><p>${desc}</p><div class="form-grid"><label class="field">接入方式<select name="type"><option ${modelConfig[id]?.type === '本地模型服务' ? 'selected' : ''}>本地模型服务</option><option ${modelConfig[id]?.type === '兼容标准接口' ? 'selected' : ''}>兼容标准接口</option></select></label><label class="field">模型名称<input name="model" value="${esc(modelConfig[id]?.name || name)}" required></label><label class="field">服务地址<input name="url" value="${esc(modelConfig[id]?.url || url)}" type="url" required></label><label class="field">API 密钥<input type="password" name="key" autocomplete="off" placeholder="如服务需要，可填写（不持久化）"></label></div><div class="form-actions"><span class="field-hint" id="model-result-${id}" style="margin-right:auto"></span><button type="button" class="btn ghost" data-action="test-model" data-id="${id}">测试连接</button><button type="submit" class="btn primary">保存演示配置</button></div></form>`).join('')}`
+    }
+
+    function membersHTML() {
+        const own = libs.filter(l => l.type === 'shared' && l.role === '所有者');
+        if (!own.length) return '<div class="empty-result"><h3>还没有可管理的共享知识库</h3><button class="btn" data-action="create-library">新建共享知识库</button></div>';
+        if (!own.some(l => l.id === memberLib)) memberLib = own[0].id;
+        return `<div class="manage-toolbar"><div class="manage-toolbar-left"><select class="select" id="member-lib" aria-label="选择共享知识库">${own.map(l => `<option value="${l.id}" ${memberLib === l.id ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select><span class="tag">所有者</span></div><button class="btn primary" data-action="invite">${icon('users')}添加演示成员</button></div><div class="table-wrap"><table><thead><tr><th>成员</th><th>角色</th><th>操作</th></tr></thead><tbody>${members.filter(m => m.lib === memberLib).map(m => `<tr><td>${esc(m.name)}${m.name === '林予' ? ' · 你' : ''}</td><td>${m.role === '所有者' ? '所有者' : `<select class="select" data-action="member-role" data-name="${esc(m.name)}" aria-label="${esc(m.name)}的角色"><option ${m.role === '编辑者' ? 'selected' : ''}>编辑者</option><option ${m.role === '查看者' ? 'selected' : ''}>查看者</option></select>`}</td><td>${m.role !== '所有者' ? `<button class="btn small ghost" data-action="remove-member" data-name="${esc(m.name)}">移除</button>` : '—'}</td></tr>`).join('')}</tbody></table></div><p class="table-note">查看者仅可检索与阅读；编辑者可上传、删除、重试文档。成员变更同步影响 MCP 可访问范围。</p><div class="form-actions"><button class="btn ghost" data-action="create-library">${icon('plus')}新建共享知识库</button><button class="btn danger" data-action="delete-library" data-id="${memberLib}">删除当前共享库</button></div>`
+    }
+
+    function accountHTML() {
+        return `<div class="settings-card"><h3>你的个人空间</h3><div class="account-avatar">林</div><div class="settings-pair"><span>用户名</span><span>林予 / linyu</span></div><div class="settings-pair"><span>当前角色<small>实例管理员不天然拥有他人资料的访问权。</small></span><span class="tag">实例管理员 · 演示</span></div><div class="settings-pair"><span>数据存放位置<small>此原型仅使用当前浏览器本地存储。</small></span><span class="tag oat">当前浏览器</span></div></div><div class="settings-card"><h3>关于这个原型</h3><p>依据 PRD v0.3 第 6 章「界面与交互」制作。检索、模型回答、解析与凭证均为演示。上传文件不发送到服务器；关闭页面后仅保留文件元信息。图片查询预览不写入本地存储。</p><div class="settings-pair"><span>交互数据<small>重置后恢复初始示例资料与会话。</small></span><button class="btn danger small" data-action="reset">重置演示</button></div></div>`
+    }
+
+    function showModal(title, description, body, onReady) {
+        closePopover();
+        if (!$('#modal-root').children.length) modalReturnFocus = document.activeElement;
+        $('#modal-root').innerHTML = `<div class="modal-backdrop"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" tabindex="-1"><div class="modal-head"><h2 id="modal-title">${esc(title)}</h2><button class="icon-btn" data-action="close-modal" aria-label="关闭对话框">${icon('close')}</button></div>${description ? `<p class="modal-description">${esc(description)}</p>` : ''}${body}</section></div>`;
+        $('#modal-root .modal').focus();
+        onReady?.()
+    }
+
+    function closeModal() {
+        if (uploadStarted) {
+            toast('正在演示入库，请稍候');
+            return
+        }
+        $('#modal-root').innerHTML = '';
+        oneTimeToken = null;
+        pendingUpload = [];
+        modalReturnFocus?.focus?.();
+        modalReturnFocus = null
+    }
+
+    function confirmAction(title, text, fn) {
+        showModal(title, text, `<div class="form-actions"><button class="btn ghost" data-action="close-modal">取消</button><button class="btn danger" id="confirm-button">确认${title.startsWith('撤销') ? '撤销' : title.startsWith('移除') ? '移除' : title.includes('重置') ? '重置' : '删除'}</button></div>`, () => $('#confirm-button').onclick = () => {
+            closeModal();
+            fn()
+        })
+    }
+
+    function openUpload() {
+        pendingUpload = [];
+        uploadTarget = current.scope.length === 1 && writable(current.scope[0]) ? current.scope[0] : 'personal';
+        uploadStarted = false;
+        renderUploadModal()
+    }
+
+    function renderUploadModal() {
+        showModal('留住每一份灵感', '将文档、笔记或图片收进知识库。此处演示上传与解析流程，文件不会发送到服务器。', `<label class="field">保存到<select id="upload-target">${libs.filter(l => writable(l.id)).map(l => `<option value="${l.id}" ${uploadTarget === l.id ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}</select></label><button class="dropzone" type="button" id="upload-drop" data-action="pick-upload">${icon('upload')}<strong>点击选择，或把文件轻放在这里</strong><small>PDF、Word、PPT、Excel、TXT、Markdown 与图片<br>支持多文件选择</small></button><div id="upload-list">${pendingUpload.map((f, i) => `<div class="upload-row">${icon('file')}<span>${esc(f.name)}</span><small>${formatSize(f.size)}</small><button class="icon-btn" data-action="remove-upload" data-index="${i}" aria-label="移除${esc(f.name)}">${icon('close')}</button></div>`).join('')}</div><div id="upload-progress"></div><div class="form-actions"><button class="btn ghost" data-action="close-modal">稍后再说</button><button class="btn primary" data-action="start-upload" ${pendingUpload.length ? '' : 'disabled'}>开始入库${pendingUpload.length ? ' · ' + pendingUpload.length : ''}</button></div>`);
+        const drop = $('#upload-drop');
+        drop.ondragover = e => {
+            e.preventDefault();
+            drop.classList.add('dragging')
+        };
+        drop.ondragleave = () => drop.classList.remove('dragging');
+        drop.ondrop = e => {
+            e.preventDefault();
+            collectFiles([...e.dataTransfer.files])
+        }
+    }
+
+    function formatSize(n) {
+        return n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'
+    }
+
+    function collectFiles(files) {
+        const accept = /\.(pdf|docx?|pptx?|xlsx?|txt|md|jpe?g|png|webp|bmp)$/i;
+        const valid = files.filter(f => accept.test(f.name));
+        if (valid.length !== files.length) toast('已跳过不支持的格式。请上传文档、笔记或常见图片。', true);
+        for (const f of valid) if (!pendingUpload.some(p => p.name === f.name && p.size === f.size)) pendingUpload.push(f);
+        renderUploadModal()
+    }
+
+    async function startUpload() {
+        if (!pendingUpload.length || uploadStarted) return;
+        uploadStarted = true;
+        const target = $('#upload-target').value;
+        if (!writable(target)) {
+            uploadStarted = false;
+            toast('当前知识库没有上传权限', true);
+            return
+        }
+        const files = [...pendingUpload];
+        const fresh = files.map(f => ({
+            id: uuid(),
+            title: f.name.replace(/\.[^.]+$/, ''),
+            ext: f.name.split('.').at(-1).toLowerCase(),
+            lib: target,
+            status: '排队',
+            date: '2026-10-16',
+            size: formatSize(f.size),
+            page: 1,
+            pages: 1,
+            section: '上传文件 · 原型演示',
+            tags: f.name,
+            text: '',
+            context: '文件已在浏览器中完成模拟入库。当前原型不解析实际文件正文。',
+            after: '可体验状态流转、删除、恢复与列表筛选。真实内容检索需要接入解析、索引和模型服务。'
+        }));
+        docs.push(...fresh);
+        $('#upload-target').disabled = true;
+        $$('#modal-root button').forEach(b => b.disabled = true);
+        $('#upload-progress').innerHTML = '<div class="upload-progress"><div></div></div><p class="table-note" id="upload-state">排队 · 等待解析</p>';
+        for (const state of ['解析中', '索引中', '可用']) {
+            await new Promise(r => setTimeout(r, 700));
+            fresh.forEach(d => d.status = state);
+            $('#upload-state').textContent = state === '可用' ? '已完成模拟入库' : state + ' · 正在处理示例任务'
+        }
+        persist();
+        renderNav();
+        uploadStarted = false;
+        closeModal();
+        if (page === 'manage') renderManage(); else renderChat();
+        toast(`${files.length} 份资料已完成模拟入库；未解析实际正文`)
+    }
+
+    function credentialModal() {
+        showModal('为工具打开一扇门', '新凭证默认只读。访问范围始终跟随你当前有权访问的知识库。', `<form id="credential-form"><label class="field">凭证名称<input id="credential-name" required maxlength="50" placeholder="例如：我的 Codex"></label><label class="field">有效期<select id="credential-days"><option value="90">90 天 · 默认</option><option value="30">30 天</option><option value="7">7 天</option></select></label><div class="info-banner">${icon('lock')}<span>只读工具：search、search_images、ask、list_knowledge_bases。写入工具本期不开放。</span></div><div class="form-actions"><button type="button" class="btn ghost" data-action="close-modal">取消</button><button class="btn primary" type="submit">创建演示凭证</button></div></form>`, () => $('#credential-form').onsubmit = e => {
+            e.preventDefault();
+            const name = $('#credential-name').value.trim();
+            if (!name) {
+                toast('请填写凭证名称', true);
+                return
+            }
+            const days = Number($('#credential-days').value), date = new Date('2026-10-16T12:00:00+08:00');
+            date.setDate(date.getDate() + days);
+            credentials.push({
+                id: uuid(),
+                name,
+                expires: date.toISOString().slice(0, 10),
+                status: '有效',
+                last: '尚未使用',
+                tools: ['search', 'search_images', 'ask', 'list_knowledge_bases']
+            });
+            persist();
+            oneTimeToken = 'DEMO_ONLY_' + uuid() + '_' + uuid();
+            renderManage();
+            showModal('你的连接已准备好', '这是无真实访问能力的演示令牌。仅展示这一次，关闭后无法重新查看。', `<div class="info-banner">${icon('shield')}<span>请妥善保管令牌。演示令牌不会保存至浏览器存储。</span></div><pre class="code-box" id="token-text">${esc(oneTimeToken)}</pre><div class="form-actions"><button class="btn" data-action="copy-token">${icon('copy')}复制演示令牌</button><button class="btn primary" data-action="close-modal">已妥善保存</button></div>`)
+        })
+    }
+
+    function createLibrary() {
+        showModal('给共同的知识，一个家', '创建共享知识库，与同伴一起整理与发现。', `<form id="library-form"><label class="field">知识库名称<input id="library-name" maxlength="50" required placeholder="例如：我们的研究室"></label><label class="field">说明 · 选填<textarea id="library-description" maxlength="200" placeholder="这里会收集哪些资料？"></textarea></label><div class="form-actions"><button type="button" class="btn ghost" data-action="close-modal">取消</button><button class="btn primary">创建知识库</button></div></form>`, () => $('#library-form').onsubmit = e => {
+            e.preventDefault();
+            const name = $('#library-name').value.trim();
+            if (!name) {
+                toast('请填写知识库名称', true);
+                return
+            }
+            const l = {
+                id: uuid(),
+                name,
+                type: 'shared',
+                role: '所有者',
+                description: $('#library-description').value.trim()
+            };
+            libs.push(l);
+            members.push({name: '林予', role: '所有者', lib: l.id});
+            memberLib = l.id;
+            persist();
+            closeModal();
+            renderNav();
+            showManage('members');
+            toast('共享知识库已创建，可添加演示成员')
+        })
+    }
+
+    function invite() {
+        showModal('让知识，在彼此之间流动', '此原型不连接真实账号系统，提交后将添加本地演示成员。', `<form id="invite-form"><label class="field">用户名<input id="invite-name" required maxlength="30" placeholder="填写演示用户名"></label><label class="field">角色<select id="invite-role"><option>查看者</option><option>编辑者</option></select></label><div class="form-actions"><button type="button" class="btn ghost" data-action="close-modal">取消</button><button class="btn primary">添加演示成员</button></div></form>`, () => $('#invite-form').onsubmit = e => {
+            e.preventDefault();
+            const name = $('#invite-name').value.trim();
+            if (!name) return;
+            if (members.some(m => m.lib === memberLib && m.name === name)) {
+                toast('该成员已在知识库中', true);
+                return
+            }
+            members.push({name, role: $('#invite-role').value, lib: memberLib});
+            persist();
+            closeModal();
+            renderManage();
+            toast('演示成员已添加')
+        })
+    }
+
+    async function copy(text) {
+        try {
+            await navigator.clipboard.writeText(text);
+            toast('已复制到剪贴板')
+        } catch {
+            showModal('复制内容', '当前浏览器限制自动复制。选中下方内容即可手动复制。', `<textarea readonly class="code-box" style="width:100%;min-height:130px" id="manual-copy">${esc(text)}</textarea><div class="form-actions"><button class="btn primary" data-action="close-modal">完成</button></div>`, () => $('#manual-copy').select())
+        }
+    }
+
+    function updateDocs() {
+        persist();
+        renderNav();
+        if (page === 'manage' && tab === 'docs') renderManage()
+    }
+
+    async function retryDoc(d) {
+        if (!d || !writable(d.lib) || d.status !== '失败') return;
+        for (const status of ['排队', '解析中', '索引中', '可用']) {
+            if (d.status === '已删除') return;
+            d.status = status;
+            updateDocs();
+            await new Promise(r => setTimeout(r, 500))
+        }
+        toast('已完成模拟重试。实际文件解析结果取决于后端服务。')
+    }
+
+    document.addEventListener('click', async e => {
+        const b = e.target.closest('[data-action]');
+        if (!b) {
+            if (!e.target.closest('#popover')) closePopover();
+            return
+        }
+        const a = b.dataset.action, id = b.dataset.id;
+        const d = docs.find(x => x.id === id);
+        if (a !== 'popover' && !e.target.closest('#popover')) closePopover();
+        switch (a) {
+            case 'new-chat':
+                newChat();
+                break;
+            case 'toggle-sidebar':
+                setSidebar(!$('#sidebar').classList.contains('open'));
+                break;
+            case 'close-sidebar':
+                setSidebar(false);
+                break;
+            case 'scope-single':
+                current.scope = id ? [id] : [];
+                renderNav();
+                renderComposer();
+                setSidebar(false);
+                if (page !== 'chat') showChat();
+                break;
+            case 'history':
+                openHistory(id);
+                break;
+            case 'popover':
+                openPopover(b.dataset.menu);
+                break;
+            case 'scope-all':
+                current.scope = [];
+                renderNav();
+                renderComposer();
+                popover = '';
+                openPopover('scope');
+                break;
+            case 'scope-check':
+                if (b.checked) current.scope.push(id); else current.scope = current.scope.filter(x => x !== id);
+                renderNav();
+                renderComposer();
+                const was = popover;
+                popover = '';
+                openPopover(was);
+                break;
+            case 'mode':
+                current.mode = b.dataset.mode;
+                closePopover();
+                renderComposer();
+                syncSession();
+                $('#query').focus();
+                break;
+            case 'model':
+                current.model = b.dataset.model;
+                closePopover();
+                renderComposer();
+                syncSession();
+                break;
+            case 'tier':
+                current.tier = b.dataset.tier;
+                closePopover();
+                renderComposer();
+                syncSession();
+                break;
+            case 'skill-remove':
+                current.skills = current.skills.filter(s => s !== b.dataset.skill);
+                renderComposer();
+                syncSession();
+                break;
+            case 'skill-toggle':
+                current.skills = current.skills.includes(b.dataset.skill) ? current.skills.filter(s => s !== b.dataset.skill) : [...current.skills, b.dataset.skill];
+                renderComposer();
+                popover = '';
+                openPopover('skills');
+                syncSession();
+                break;
+            case 'shuffle':
+                suggestionIndex++;
+                renderChat();
+                break;
+            case 'suggest':
+                current.mode = b.dataset.mode;
+                if (b.dataset.image === 'true' && !current.skills.includes('图片搜索')) current.skills.push('图片搜索');
+                showChat();
+                await sendQuery(b.dataset.query);
+                break;
+            case 'image-start':
+                if (!current.skills.includes('图片搜索')) current.skills.push('图片搜索');
+                renderComposer();
+                $('#query').value = '';
+                $('#query').focus();
+                toast('已开启图片搜索：输入描述，或从「＋」选择图片');
+                break;
+            case 'image-file':
+                $('#image-input').click();
+                closePopover();
+                break;
+            case 'remove-attachment':
+                attachment = null;
+                renderAttachment();
+                break;
+            case 'preview':
+                showPreview(id);
+                break;
+            case 'close-preview':
+                closePreview();
+                $('#query').focus();
+                break;
+            case 'preview-prev':
+                if (preview && previewPage > 1) {
+                    previewPage--;
+                    renderPreview()
+                }
+                break;
+            case 'preview-next':
+                if (preview && previewPage < preview.pages) {
+                    previewPage++;
+                    renderPreview()
+                }
+                break;
+            case 'preview-hit':
+                previewPage = preview.page;
+                renderPreview();
+                break;
+            case 'preview-context':
+                contextExpanded = !contextExpanded;
+                renderPreview();
+                break;
+            case 'preview-new':
+                previewNew();
+                break;
+            case 'manage':
+                showManage(b.dataset.tab);
+                break;
+            case 'manage-tab':
+                tab = b.dataset.tab;
+                renderManage();
+                break;
+            case 'back-chat':
+                showChat();
+                break;
+            case 'upload':
+                openUpload();
+                break;
+            case 'pick-upload':
+                $('#upload-input').click();
+                break;
+            case 'remove-upload':
+                pendingUpload.splice(Number(b.dataset.index), 1);
+                renderUploadModal();
+                break;
+            case 'start-upload':
+                await startUpload();
+                break;
+            case 'close-modal':
+                closeModal();
+                break;
+            case 'create-credential':
+                credentialModal();
+                break;
+            case 'copy-token':
+                if (oneTimeToken) await copy(oneTimeToken);
+                break;
+            case 'config-client':
+                lastConfigClient = b.dataset.client;
+                renderManage();
+                break;
+            case 'copy-config':
+                await copy(config());
+                break;
+            case 'revoke':
+                confirmAction('撤销凭证', '撤销后，该凭证将立即无法继续调用。此操作不可恢复。', () => {
+                    credentials.find(c => c.id === id).status = '已撤销';
+                    persist();
+                    renderManage();
+                    toast('凭证已撤销（演示）')
+                });
+                break;
+            case 'create-library':
+                createLibrary();
+                break;
+            case 'invite':
+                invite();
+                break;
+            case 'remove-member':
+                confirmAction('移除成员', `移除「${b.dataset.name}」后，该成员与其 MCP 凭证将无法访问此共享库。`, () => {
+                    members = members.filter(m => !(m.lib === memberLib && m.name === b.dataset.name));
+                    persist();
+                    renderManage();
+                    toast('演示成员已移除')
+                });
+                break;
+            case 'delete-library':
+                if (libs.find(l => l.id === id)?.role !== '所有者') break;
+                confirmAction('删除共享知识库', `「${libName(id)}」的内容将对所有成员不可见。请确认已保留需要的资料。`, () => {
+                    libs = libs.filter(l => l.id !== id);
+                    docs = docs.filter(d => d.lib !== id);
+                    members = members.filter(m => m.lib !== id);
+                    current.scope = current.scope.filter(s => s !== id);
+                    persist();
+                    renderNav();
+                    renderManage();
+                    toast('共享知识库已删除')
+                });
+                break;
+            case 'delete-doc':
+                if (!d || !writable(d.lib)) break;
+                confirmAction('删除文档', `「${d.title}」将移至回收站，30 天内可恢复。`, () => {
+                    d.previousStatus = d.status;
+                    d.status = '已删除';
+                    d.deletedAt = '2026-10-16';
+                    updateDocs();
+                    toast('已移至回收站')
+                });
+                break;
+            case 'restore-doc':
+                if (!d || !writable(d.lib)) break;
+                d.status = d.previousStatus || '可用';
+                updateDocs();
+                toast('文档已恢复');
+                break;
+            case 'purge-doc':
+                if (!d || !writable(d.lib)) break;
+                confirmAction('彻底删除文档', '这将从原型本地存储中移除此文件记录，无法恢复。', () => {
+                    docs = docs.filter(x => x.id !== id);
+                    updateDocs();
+                    toast('已彻底删除')
+                });
+                break;
+            case 'retry-doc':
+                await retryDoc(d);
+                break;
+            case 'guide-choice':
+                if (!guide || current.messages.find(m => m.id === id)?.done) break;
+                await sendQuery(b.dataset.value);
+                break;
+            case 'guide-skip':
+                if (!guide || current.messages.find(m => m.id === id)?.done) break;
+                const g = guide;
+                current.messages.filter(m => m.type === 'guide').forEach(m => m.done = true);
+                guide = null;
+                await executeQuery(g.query, '直接检索', current.scope.length ? current.scope.map(libName).join('、') : '全部知识库');
+                break;
+            case 'broaden':
+                current.scope = [];
+                current.mode = '模糊检索';
+                current.skills = [];
+                renderNav();
+                renderComposer();
+                await sendQuery(b.dataset.query);
+                break;
+            case 'copy-answer':
+                const m = current.messages.find(m => m.id === id);
+                if (m) {
+                    const tmp = document.createElement('div');
+                    tmp.innerHTML = m.answer;
+                    await copy(tmp.textContent)
+                }
+                break;
+            case 'feedback':
+                const ans = current.messages.find(m => m.id === id);
+                if (ans) {
+                    ans.feedback = !ans.feedback;
+                    syncSession();
+                    renderChat();
+                    toast(ans.feedback ? '已记录“有帮助”的反馈' : '已撤回反馈')
+                }
+                break;
+            case 'test-model':
+                const form = b.closest('form');
+                if (!form.reportValidity()) break;
+                b.disabled = true;
+                b.textContent = '检查中…';
+                await new Promise(r => setTimeout(r, 600));
+                b.disabled = false;
+                b.textContent = '测试连接';
+                $('#model-state-' + id).textContent = '演示检查通过';
+                $('#model-result-' + id).textContent = '仅检查字段格式，未发起实际服务请求';
+                toast('演示检查通过，未调用模型服务');
+                break;
+            case 'reset':
+                confirmAction('重置演示', '将清除当前浏览器中保存的原型修改，恢复初始示例数据。', () => {
+                    try {
+                        localStorage.removeItem(STORE)
+                    } catch {
+                    }
+                    location.reload()
+                });
+                break;
+        }
+    });
+    document.addEventListener('change', e => {
+        const t = e.target;
+        if (t.id === 'doc-filter') {
+            docFilter = t.value;
+            renderManage()
+        }
+        if (t.id === 'member-lib') {
+            memberLib = t.value;
+            renderManage()
+        }
+        if (t.id === 'upload-target') uploadTarget = t.value;
+        if (t.dataset.action === 'member-role') {
+            const m = members.find(m => m.lib === memberLib && m.name === t.dataset.name);
+            if (m) {
+                m.role = t.value;
+                persist();
+                toast('成员角色已更新（演示）')
+            }
+        }
+    });
+    document.addEventListener('input', e => {
+        if (e.target.id === 'query') renderComposer();
+        if (e.target.id === 'doc-search') {
+            docSearch = e.target.value;
+            const selection = e.target.selectionStart;
+            $('#manage-body').innerHTML = docsHTML();
+            const input = $('#doc-search');
+            input.focus();
+            input.setSelectionRange(selection, selection)
+        }
+    });
+    document.addEventListener('submit', e => {
+        if (e.target.classList.contains('model-form')) {
+            e.preventDefault();
+            const f = e.target;
+            if (f.reportValidity()) {
+                const save = () => {
+                    modelConfig[f.dataset.kind] = {
+                        name: f.elements.model.value.trim(),
+                        url: f.elements.url.value.trim(),
+                        type: f.elements.type.value
+                    };
+                    if (f.dataset.kind === 'chat') current.model = modelConfig.chat.name + ' · ' + (modelConfig.chat.type === '本地模型服务' ? '本地' : '私有服务');
+                    persist();
+                    f.elements.key.value = '';
+                    renderComposer();
+                    toast('模型演示配置已保存，未连接实际服务')
+                };
+                if (f.dataset.kind === 'embedding') confirmActionModel(save); else save()
+            }
+        }
+    });
+
+    function confirmActionModel(fn) {
+        showModal('更新向量模型', '更换向量模型需要重建索引。此原型仅演示设置流程，不执行真实重建。', `<div class="form-actions"><button class="btn ghost" data-action="close-modal">取消</button><button class="btn primary" id="save-vector">保存演示配置</button></div>`, () => $('#save-vector').onclick = () => {
+            closeModal();
+            fn()
+        })
+    }
+
+    $('#composer').onsubmit = e => {
+        e.preventDefault();
+        sendQuery()
+    };
+    $('#query').onkeydown = e => {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+            e.preventDefault();
+            sendQuery()
+        }
+    };
+    $('#upload-input').onchange = e => {
+        collectFiles([...e.target.files]);
+        e.target.value = ''
+    };
+    $('#image-input').onchange = e => {
+        setImage(e.target.files[0]);
+        e.target.value = ''
+    };
+    $('#composer').ondragover = e => {
+        e.preventDefault();
+        $('#composer').classList.add('dragging')
+    };
+    $('#composer').ondragleave = () => $('#composer').classList.remove('dragging');
+    $('#composer').ondrop = e => {
+        e.preventDefault();
+        $('#composer').classList.remove('dragging');
+        const f = e.dataTransfer.files[0];
+        if (f?.type.startsWith('image/')) setImage(f); else if (f) {
+            openUpload();
+            collectFiles([...e.dataTransfer.files])
+        }
+    };
+    document.addEventListener('keydown', e => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+            e.preventDefault();
+            newChat();
+            $('#query').focus()
+        }
+        if (e.key === 'Escape') {
+            if ($('#modal-root').children.length) closeModal(); else if (popover) {
+                closePopover();
+                $('#query').focus()
+            } else if (preview) closePreview(); else setSidebar(false)
+        }
+        if (e.key === 'Tab' && $('#modal-root').children.length) {
+            const modal = $('#modal-root .modal');
+            const focus = [...modal.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex="0"]')];
+            const first = focus[0], last = focus.at(-1);
+            if (e.shiftKey && (document.activeElement === first || document.activeElement === modal)) {
+                e.preventDefault();
+                last?.focus()
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first?.focus()
+            }
+        }
+    });
+    renderNav();
+    renderChat();
+</script>
+</body>
+</html>
