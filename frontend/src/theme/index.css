@@ -1,0 +1,38 @@
+/* 「知序」色板 —— 唯一色源的 CSS 侧，与 theme/tokens.ts 成对维护。 */
+:root {
+  --bg: #fafaf8;
+  --paper: #fff;
+  --side: #f2f3ee;
+  --ink: #29392f;
+  --text: #475249;
+  --muted: #65725e;
+  --line: #e5e8df;
+  --sage: #657d62;
+  --sage-dark: #435c42;
+  --sage-tint: #e7ecdf;
+  --oat: #f4efe4;
+  --blue: #eaf0f2;
+  --danger: #a04e43;
+  --shadow: 0 6px 30px #29392f06;
+  --serif: Georgia, 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', SimSun, serif;
+  --sans: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
