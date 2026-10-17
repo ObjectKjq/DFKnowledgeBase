@@ -4,6 +4,7 @@ import { createRoot } from 'react-dom/client'
 import 'antd/dist/reset.css'
 
 import '@/theme/index.css'
+import '@/styles/prototype.css'
 import '@/app/app.css'
 
 import { App } from '@/app/App'

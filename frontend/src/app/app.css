@@ -1,187 +1,102 @@
-/* 布局与页面样式：色值统一取自 theme/index.css 的 CSS 变量。 */
+/* 登录页补充样式：主体设计沿用 styles/prototype.css 的知序变量与组件类。 */
 
-.app-shell {
-  display: flex;
-  height: 100vh;
-  background: var(--bg);
-}
-
-/* 左侧栏 */
-.app-sider {
-  flex: 0 0 260px;
-  width: 260px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  padding: 16px 12px;
-  overflow-y: auto;
-  background: var(--side);
-  border-right: 1px solid var(--line);
-}
-
-.app-sider-brand {
-  padding: 0 6px;
-  font-family: var(--serif);
-  font-size: 20px;
-  letter-spacing: 3px;
-  color: var(--ink);
-}
-
-.app-sider-section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.app-sider-title {
-  padding: 0 6px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.app-sider-footer {
-  margin-top: auto;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-}
-
-.app-sider-user {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 4px;
-  padding: 0 6px;
-}
-
-/* 主区 */
-.app-main {
-  flex: 1 1 auto;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg);
-}
-
-.app-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  height: 52px;
-  padding: 0 20px;
-  background: var(--paper);
-  border-bottom: 1px solid var(--line);
-}
-
-.app-content {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: auto;
-}
-
-/* 聊天主区：消息流 + 常驻输入框 */
-.chat-page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.chat-stream {
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 24px;
-  overflow: auto;
-}
-
-.chat-greeting {
-  margin: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  text-align: center;
-}
-
-.chat-greeting-title {
-  font-family: var(--serif);
-}
-
-.chat-composer {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px 20px 16px;
-  background: var(--paper);
-  border-top: 1px solid var(--line);
-}
-
-.chat-composer-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-/* 登录页 */
 .login-page {
-  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  background: var(--bg);
+  padding: 40px 24px;
+  background: radial-gradient(120% 90% at 50% -10%, #eef1e7 0%, var(--bg) 58%) no-repeat;
 }
 
-.login-card {
-  width: 380px;
-  box-shadow: var(--shadow);
+.login-panel {
+  width: 100%;
+  max-width: 404px;
 }
 
 .login-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 34px;
+}
+
+.login-brand .brand-mark {
+  width: 36px;
+  height: 40px;
+  color: var(--sage-dark);
+}
+
+.login-hero {
+  text-align: center;
+  margin-bottom: 26px;
+}
+
+.login-hero h1 {
   font-family: var(--serif);
-  color: var(--ink);
+  font-size: 30px;
+  font-weight: 400;
+  letter-spacing: 3px;
+  line-height: 1.5;
+  margin-top: 4px;
 }
 
-/* 管理页外壳 */
-.settings-shell {
-  display: flex;
-  height: 100vh;
-  background: var(--bg);
+.login-hero h1 span {
+  color: var(--sage);
 }
 
-.settings-sider {
-  flex: 0 0 220px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 16px 12px;
-  background: var(--side);
-  border-right: 1px solid var(--line);
+.login-description {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.9;
+  margin-top: 12px;
+  letter-spacing: 0.3px;
 }
 
-.settings-title {
-  margin: 0 !important;
-  color: var(--ink) !important;
-}
-
-.settings-main {
-  flex: 1 1 auto;
-  min-width: 0;
-  padding: 24px;
-  overflow: auto;
-}
-
-/* 占位面板 */
-.placeholder-panel {
-  padding: 20px 24px;
+.login-card {
+  padding: 28px 26px 26px;
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 10px;
   box-shadow: var(--shadow);
-  max-width: 760px;
+}
+
+.login-card .field:first-child {
+  margin-top: 0;
+}
+
+.login-card .field:last-of-type {
+  margin-bottom: 18px;
+}
+
+.login-error {
+  font-size: 11px;
+  color: var(--danger);
+  margin-bottom: 12px;
+}
+
+.login-submit {
+  width: 100%;
+  padding: 12px 15px;
+}
+
+.login-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 20px;
+  padding: 13px 15px;
+  background: #ebeee5;
+  border: 1px solid #e1e6d9;
+  border-radius: 7px;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.login-note svg {
+  width: 14px;
+  height: 14px;
+  margin-top: 2px;
+  color: #5e7055;
 }

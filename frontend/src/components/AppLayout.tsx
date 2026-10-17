@@ -1,52 +1,84 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
-import { Button, Drawer, Space, Typography } from 'antd'
 
-import { useAuthStore } from '@/stores/auth'
+import { PreviewDrawer } from '@/features/chat/PreviewDrawer'
+import { useKb } from '@/stores/knowledge'
 
 import { AppSidebar } from './AppSidebar'
+import { AppTopbar } from './AppTopbar'
+import { ModalHost } from './ModalHost'
+import { ToastHost } from './ToastHost'
 
-/** 三区布局壳：左侧栏 + 主区 + 右侧预览抽屉（抽屉由 antd Drawer 承载）。 */
+/** 三区布局壳（复刻原型 `.app`）：左侧栏 + 主区（顶栏 + 工作区）+ 原文预览抽屉。 */
 export function AppLayout() {
-  const user = useAuthStore((s) => s.user)
-  const [preview, setPreview] = useState({ open: false, title: '' })
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const previewId = useKb((s) => s.previewId)
+  const closeSidebar = () => setSidebarOpen(false)
+
+  // 原型全局快捷键：Ctrl/Cmd+K 新检索；Esc 逐层关闭弹层。
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const s = useKb.getState()
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        s.newChat()
+        document.getElementById('query')?.focus()
+      }
+      if (e.key === 'Escape') {
+        if (s.modal) s.closeModal()
+        else if (s.popover) {
+          s.closePopover()
+          document.getElementById('query')?.focus()
+        } else if (s.previewId) s.closePreview()
+        else setSidebarOpen(false)
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
-    <div className="app-shell">
-      <AppSidebar />
-
-      <div className="app-main">
-        <header className="app-topbar">
-          <Typography.Text strong>新检索</Typography.Text>
-          <Space size={12}>
-            {/* 占位触发：后续右侧抽屉由结果卡片/引用点击打开 */}
-            <Button
-              type="text"
-              size="small"
-              onClick={() => setPreview({ open: true, title: '示例 · 命中片段预览' })}
-            >
-              预览抽屉
-            </Button>
-            <Typography.Text type="secondary">{user?.username ?? '未登录'}</Typography.Text>
-          </Space>
-        </header>
-
-        <div className="app-content">
-          <Outlet />
-        </div>
+    <>
+      <div className="app" id="app">
+        <div
+          className={`overlay-mobile ${sidebarOpen ? 'open' : ''}`}
+          onClick={closeSidebar}
+          aria-hidden="true"
+        />
+        <AppSidebar open={sidebarOpen} onClose={closeSidebar} />
+        <main className="main">
+          <AppTopbar onToggleSidebar={() => setSidebarOpen((v) => !v)} />
+          <div className={`workspace ${previewId ? 'with-drawer' : ''}`} id="workspace">
+            <Outlet />
+            <PreviewDrawer />
+          </div>
+        </main>
       </div>
-
-      <Drawer
-        open={preview.open}
-        title={preview.title}
-        placement="right"
-        width={420}
-        onClose={() => setPreview((prev) => ({ ...prev, open: false }))}
-      >
-        <Typography.Paragraph type="secondary">
-          原文预览占位。后续在此展示命中分块或图片资源，并自动滚动定位到命中处。
-        </Typography.Paragraph>
-      </Drawer>
-    </div>
+      <ModalHost />
+      <ToastHost />
+      <input
+        type="file"
+        className="hidden"
+        id="upload-input"
+        multiple
+        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.jpg,.jpeg,.png,.webp,.bmp"
+        onChange={(e) => {
+          const files = [...(e.target.files ?? [])].map((f) => ({ name: f.name, size: f.size }))
+          useKb.getState().addPendingFiles(files)
+          e.target.value = ''
+        }}
+      />
+      <input
+        type="file"
+        className="hidden"
+        id="image-input"
+        accept="image/png,image/jpeg,image/webp,image/bmp"
+        onChange={(e) => {
+          const f = e.target.files?.[0]
+          if (f) useKb.getState().setImage(f)
+          e.target.value = ''
+        }}
+      />
+    </>
   )
 }
