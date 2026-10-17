@@ -1,0 +1,42 @@
+### 创建菜单
+POST {{baseUrl}}/system/menu/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "用户导出",
+  "permission": "system:user:export",
+  "type": 3,
+  "sort": 7,
+  "parentId": 101,
+  "status": 0,
+  "visible": true
+}
+
+### 修改菜单
+PUT {{baseUrl}}/system/menu/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": 1015,
+  "name": "用户导出",
+  "permission": "system:user:export",
+  "type": 3,
+  "sort": 7,
+  "parentId": 101,
+  "status": 0,
+  "visible": true
+}
+
+### 删除菜单
+DELETE {{baseUrl}}/system/menu/delete?id=1015
+Authorization: Bearer {{token}}
+
+### 获取菜单
+GET {{baseUrl}}/system/menu/get?id=101
+Authorization: Bearer {{token}}
+
+### 获取全部菜单列表
+GET {{baseUrl}}/system/menu/list
+Authorization: Bearer {{token}}

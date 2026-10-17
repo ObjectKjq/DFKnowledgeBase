@@ -20,3 +20,18 @@ mybatis-plus:
     banner: false
     db-config:
       id-type: auto
+
+--- ################### sa-token ###################
+sa-token:
+  # 令牌名称与前端前缀（Authorization: Bearer xxx）
+  token-name: Authorization
+  token-prefix: Bearer
+  # 令牌有效期 7 天（秒）
+  timeout: 604800
+  # 活跃续签：2 小时内有操作则续签
+  active-timeout: 7200
+  # 允许同一账号多端同时在线，每次登录签发独立令牌
+  is-concurrent: true
+  is-share: false
+  token-style: uuid
+  is-log: false
