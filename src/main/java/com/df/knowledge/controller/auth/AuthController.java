@@ -33,7 +33,7 @@ import static com.df.knowledge.common.CommonResult.success;
  *
  * 提供登录、登出与登录用户的权限信息（用户信息 + 角色 + 权限串 + 菜单树）
  */
-@Tag(name = "管理后台 - 认证")
+@Tag(name = "authController")
 @RestController
 @RequestMapping("/system/auth")
 @Validated

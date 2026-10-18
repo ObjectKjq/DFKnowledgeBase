@@ -38,7 +38,7 @@ import static com.df.knowledge.common.CommonResult.success;
  * 管理端接口（创建/修改/删除/查询/状态/重置密码）受 RBAC 权限控制；
  * 个人资料与个人改密接口仅要求登录，任意用户可维护自己的信息
  */
-@Tag(name = "管理后台 - 用户")
+@Tag(name = "userController")
 @RestController
 @RequestMapping("/system/user")
 @Validated

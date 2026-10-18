@@ -30,7 +30,7 @@ import static com.df.knowledge.common.CommonResult.success;
  *
  * 菜单树含目录（1）、菜单（2）与按钮权限点（3）
  */
-@Tag(name = "管理后台 - 菜单")
+@Tag(name = "menuController")
 @RestController
 @RequestMapping("/system/menu")
 @Validated
