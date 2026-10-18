@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import request from '@/api/http'
+import request from '@/lib/http'
 
 /** 创建菜单 POST /system/menu/create */
 export async function createMenu(body: API.MenuSaveReqVO, options?: { [key: string]: any }) {

@@ -3,7 +3,7 @@ import { App as AntdApp, ConfigProvider } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { useEffect, type ReactNode } from 'react'
 
-import { setHttpErrorNotifier } from '@/api/http'
+import { setHttpErrorNotifier } from '@/lib/http'
 import { antdTheme } from '@/theme/tokens'
 
 const queryClient = new QueryClient({

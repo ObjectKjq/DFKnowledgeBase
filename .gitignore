@@ -27,3 +27,5 @@ frontend/coverage/
 frontend/.vite/
 frontend/*.local
 frontend/.env.local
+
+issue2.json

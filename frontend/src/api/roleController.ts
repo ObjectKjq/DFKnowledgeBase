@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import request from '@/api/http'
+import request from '@/lib/http'
 
 /** 分配角色菜单 整体覆盖该角色的菜单权限，变更立即生效 PUT /system/role/assign-menu */
 export async function assignRoleMenus(

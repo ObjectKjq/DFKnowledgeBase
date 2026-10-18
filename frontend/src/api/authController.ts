@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import request from '@/api/http'
+import request from '@/lib/http'
 
 /** 获取登录用户的权限信息 一次返回用户信息、角色标识、权限标识与菜单树 GET /system/auth/get-permission-info */
 export async function getPermissionInfo(options?: { [key: string]: any }) {

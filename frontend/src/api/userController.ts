@@ -1,6 +1,6 @@
 // @ts-ignore
 /* eslint-disable */
-import request from '@/api/http'
+import request from '@/lib/http'
 
 /** 创建用户 创建用户并分配角色 POST /system/user/create */
 export async function createUser(body: API.UserSaveReqVO, options?: { [key: string]: any }) {
