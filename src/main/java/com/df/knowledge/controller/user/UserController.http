@@ -1,0 +1,85 @@
+### 创建用户
+POST {{baseUrl}}/system/user/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "username": "zhangsan",
+  "password": "123456",
+  "nickname": "张三",
+  "email": "zhangsan@df.com",
+  "mobile": "13800000000",
+  "status": 0,
+  "roleIds": [2]
+}
+
+### 修改用户
+PUT {{baseUrl}}/system/user/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": 2,
+  "nickname": "张三",
+  "email": "zhangsan@df.com",
+  "mobile": "13800000000",
+  "status": 0,
+  "roleIds": [2]
+}
+
+### 删除用户
+DELETE {{baseUrl}}/system/user/delete?id=2
+Authorization: Bearer {{token}}
+
+### 获取用户
+GET {{baseUrl}}/system/user/get?id=2
+Authorization: Bearer {{token}}
+
+### 分页查询用户
+GET {{baseUrl}}/system/user/page?pageNum=1&pageSize=10&username=zhang&status=0
+Authorization: Bearer {{token}}
+
+### 修改用户状态
+PUT {{baseUrl}}/system/user/update-status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": 2,
+  "status": 1
+}
+
+### 重置用户密码
+PUT {{baseUrl}}/system/user/reset-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": 2,
+  "password": "123456"
+}
+
+### 获取个人资料
+GET {{baseUrl}}/system/user/profile
+Authorization: Bearer {{token}}
+
+### 修改个人资料
+PUT {{baseUrl}}/system/user/profile/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "nickname": "管理员",
+  "email": "admin@df.com",
+  "mobile": "13800000000"
+}
+
+### 修改个人密码
+PUT {{baseUrl}}/system/user/profile/update-password
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "oldPassword": "admin123",
+  "newPassword": "admin456"
+}

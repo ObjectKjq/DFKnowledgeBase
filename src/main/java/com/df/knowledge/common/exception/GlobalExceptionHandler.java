@@ -1,5 +1,8 @@
 package com.df.knowledge.common.exception;
 
+import cn.dev33.satoken.exception.NotLoginException;
+import cn.dev33.satoken.exception.NotPermissionException;
+import cn.dev33.satoken.exception.NotRoleException;
 import cn.hutool.core.util.StrUtil;
 import com.df.knowledge.common.CommonResult;
 import com.df.knowledge.common.GlobalErrorCodeConstants;
@@ -10,6 +13,7 @@ import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Iterator;
 
@@ -55,6 +59,33 @@ public class GlobalExceptionHandler {
             message = StrUtil.format("请求参数不正确：{} {}", violation.getPropertyPath(), violation.getMessage());
         }
         return CommonResult.error(GlobalErrorCodeConstants.BAD_REQUEST.getCode(), message);
+    }
+
+    /**
+     * sa-token 未登录异常（未登录、令牌失效、被踢下线）
+     */
+    @ExceptionHandler(NotLoginException.class)
+    public CommonResult<?> handleNotLoginException(NotLoginException ex) {
+        log.warn("[handleNotLoginException][{}]", ex.getType());
+        return CommonResult.error(GlobalErrorCodeConstants.UNAUTHORIZED);
+    }
+
+    /**
+     * sa-token 无权限异常（权限串不满足、角色不满足）
+     */
+    @ExceptionHandler({NotPermissionException.class, NotRoleException.class})
+    public CommonResult<?> handleNotPermissionException(Exception ex) {
+        log.warn("[handleNotPermissionException]", ex);
+        return CommonResult.error(GlobalErrorCodeConstants.FORBIDDEN);
+    }
+
+    /**
+     * 静态资源或接口路径不存在（例如访问未映射的 URL、缺失的文档页面）
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public CommonResult<?> handleNoResourceFoundException(NoResourceFoundException ex) {
+        log.warn("[handleNoResourceFoundException][{}]", ex.getMessage());
+        return CommonResult.error(GlobalErrorCodeConstants.NOT_FOUND);
     }
 
     /**

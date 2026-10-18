@@ -1,0 +1,56 @@
+### 创建角色
+POST {{baseUrl}}/system/role/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "运营",
+  "code": "operator",
+  "sort": 3,
+  "status": 0,
+  "remark": "运营角色"
+}
+
+### 修改角色
+PUT {{baseUrl}}/system/role/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": 3,
+  "name": "运营",
+  "code": "operator",
+  "sort": 3,
+  "status": 0,
+  "remark": "运营角色"
+}
+
+### 删除角色
+DELETE {{baseUrl}}/system/role/delete?id=3
+Authorization: Bearer {{token}}
+
+### 获取角色
+GET {{baseUrl}}/system/role/get?id=3
+Authorization: Bearer {{token}}
+
+### 分页查询角色
+GET {{baseUrl}}/system/role/page?pageNum=1&pageSize=10&name=&status=0
+Authorization: Bearer {{token}}
+
+### 获取角色精简列表
+GET {{baseUrl}}/system/role/list
+Authorization: Bearer {{token}}
+
+### 获取角色拥有的菜单编号列表
+GET {{baseUrl}}/system/role/get-menu-id-list?roleId=2
+Authorization: Bearer {{token}}
+
+### 分配角色菜单
+PUT {{baseUrl}}/system/role/assign-menu
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "roleId": 2,
+  "menuIds": [1]
+}
