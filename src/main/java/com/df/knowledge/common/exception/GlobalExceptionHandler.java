@@ -13,6 +13,7 @@ import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Iterator;
 
@@ -76,6 +77,15 @@ public class GlobalExceptionHandler {
     public CommonResult<?> handleNotPermissionException(Exception ex) {
         log.warn("[handleNotPermissionException]", ex);
         return CommonResult.error(GlobalErrorCodeConstants.FORBIDDEN);
+    }
+
+    /**
+     * 静态资源或接口路径不存在（例如访问未映射的 URL、缺失的文档页面）
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public CommonResult<?> handleNoResourceFoundException(NoResourceFoundException ex) {
+        log.warn("[handleNoResourceFoundException][{}]", ex.getMessage());
+        return CommonResult.error(GlobalErrorCodeConstants.NOT_FOUND);
     }
 
     /**
