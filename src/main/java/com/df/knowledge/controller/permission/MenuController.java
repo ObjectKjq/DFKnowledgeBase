@@ -75,6 +75,6 @@ public class MenuController {
     @Operation(summary = "获取全部菜单列表", description = "平铺返回全部菜单（含按钮），按 sort 升序，由前端按 parentId 组装为树")
     @SaCheckPermission("system:menu:list")
     public CommonResult<List<MenuRespVO>> getMenuList() {
-        return success(BeanUtil.copyProperties(menuService.getMenuList(), MenuRespVO.class));
+        return success(BeanUtil.copyToList(menuService.getMenuList(), MenuRespVO.class));
     }
 }

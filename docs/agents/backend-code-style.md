@@ -45,7 +45,7 @@ VO/DTO 归属：VO 归 controller 层（`controller/.../vo`），跨层传输对
 - 返回统一 `CommonResult<T>`，静态导入 `CommonResult.success`；分页返回 `CommonResult<PageResult<XxxRespVO>>`。
 - 路径用动词风格（非 RESTful 名词风格）：`POST /create`、`PUT /update`、`DELETE /delete`、`GET /get`、`GET /page`、`GET /list`。单条查询/删除用 `@RequestParam("id")`，不用路径变量。
 - 参数校验：body 前 `@Valid`，字段用 JSR-303（`@NotNull`/`@NotBlank`/`@Size`）；校验失败由 `GlobalExceptionHandler` 统一转 400。
-- Service 返回 DO 时，在 Controller 层转 VO（Hutool `BeanUtil.copyProperties(list, XxxRespVO.class)`）；Controller 不写业务逻辑。
+- Service 返回 DO 时，在 Controller 层转 VO：单个对象用 Hutool `BeanUtil.copyProperties(do, XxxRespVO.class)`，集合用 `BeanUtil.copyToList(list, XxxRespVO.class)`（`copyProperties` 不支持集合，传 List 只会得到字段为 null 的单个对象）；Controller 不写业务逻辑。
 - 权限体系见 ADR-0005（sa-token）：方法用 `@SaCheckPermission("system:{资源}:{操作}")` 声明所需权限；全局登录态由 `SaTokenConfiguration` 的 `SaInterceptor` 兜底（放行登录接口与接口文档）。未登录 → 401、无权限 → 403，均由 `GlobalExceptionHandler` 统一转换。
 - 惯例：Controller 同目录放同名 `.http` 文件记录请求示例（IDE HTTP Client）。
 

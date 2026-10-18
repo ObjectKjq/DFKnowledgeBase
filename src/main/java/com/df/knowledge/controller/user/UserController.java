@@ -88,7 +88,7 @@ public class UserController {
     public CommonResult<PageResult<UserRespVO>> getUserPage(@Valid UserPageReqVO reqVO) {
         PageResult<UserDO> pageResult = userService.getUserPage(reqVO);
         return success(PageResult.build(pageResult.getTotal(),
-                BeanUtil.copyProperties(pageResult.getList(), UserRespVO.class)));
+                BeanUtil.copyToList(pageResult.getList(), UserRespVO.class)));
     }
 
     @PutMapping("/update-status")

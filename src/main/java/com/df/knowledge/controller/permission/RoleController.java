@@ -80,14 +80,14 @@ public class RoleController {
     public CommonResult<PageResult<RoleRespVO>> getRolePage(@Valid RolePageReqVO reqVO) {
         PageResult<RoleDO> pageResult = roleService.getRolePage(reqVO);
         return success(PageResult.build(pageResult.getTotal(),
-                BeanUtil.copyProperties(pageResult.getList(), RoleRespVO.class)));
+                BeanUtil.copyToList(pageResult.getList(), RoleRespVO.class)));
     }
 
     @GetMapping("/list")
     @Operation(summary = "获取角色精简列表", description = "仅返回开启状态的角色，供用户分配角色时下拉选择")
     @SaCheckPermission("system:role:list")
     public CommonResult<List<RoleSimpleRespVO>> getSimpleRoleList() {
-        return success(BeanUtil.copyProperties(roleService.getSimpleRoleList(), RoleSimpleRespVO.class));
+        return success(BeanUtil.copyToList(roleService.getSimpleRoleList(), RoleSimpleRespVO.class));
     }
 
     @GetMapping("/get-menu-id-list")
