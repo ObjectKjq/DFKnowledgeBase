@@ -1,7 +1,7 @@
 import { useEffect, type ReactElement } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 
-import { TAB_KEYS, TAB_TITLES } from '@/mock/data'
+import { hasMenuPath, useAuthStore } from '@/stores/auth'
 import { useKb } from '@/stores/knowledge'
 
 import { Icon } from '@/components/Icon'
@@ -9,25 +9,32 @@ import { Icon } from '@/components/Icon'
 import { AccountTab } from './AccountTab'
 import { DocsTab } from './DocsTab'
 import { McpTab } from './McpTab'
-import { MembersTab } from './MembersTab'
+import { MenusTab } from './MenusTab'
 import { ModelsTab } from './ModelsTab'
+import { RolesTab } from './RolesTab'
+import { TAB_CONFIGS } from './tabs'
+import { UsersTab } from './UsersTab'
 
 const TABS: Record<string, () => ReactElement> = {
   docs: DocsTab,
   mcp: McpTab,
   models: ModelsTab,
-  members: MembersTab,
+  users: UsersTab,
+  roles: RolesTab,
+  menus: MenusTab,
   account: AccountTab,
 }
 
-/** 管理页（复刻原型 `#management` / renderManage）。五个 Tab 由子路由承载。 */
+/** 管理页（复刻原型 `#management` / renderManage）。页签由子路由承载，按菜单树显隐。 */
 export function ManagementPage() {
   const { tab } = useParams()
   const navigate = useNavigate()
   const closePreview = useKb((s) => s.closePreview)
   const closePopover = useKb((s) => s.closePopover)
+  const menus = useAuthStore((s) => s.menus)
 
-  const active = tab && TAB_KEYS.includes(tab) ? tab : 'docs'
+  const tabs = TAB_CONFIGS.filter((t) => hasMenuPath(menus, t.menuPath))
+  const active = tab && tabs.some((t) => t.key === tab) ? tab : (tabs[0]?.key ?? 'docs')
 
   // 原型 showManage：进入管理页时关闭预览抽屉与输入选项弹层。
   useEffect(() => {
@@ -35,7 +42,7 @@ export function ManagementPage() {
     closePopover()
   }, [closePreview, closePopover])
 
-  if (tab && !TAB_KEYS.includes(tab)) {
+  if (tab && !tabs.some((t) => t.key === tab)) {
     return <Navigate to="/settings/docs" replace />
   }
 
@@ -52,13 +59,13 @@ export function ManagementPage() {
         <h1 className="page-title">让知识，有序生长。</h1>
         <p className="page-subtitle">整理资料，连接工具，照顾好属于你的知识空间。</p>
         <nav className="manage-tabs" aria-label="管理模块">
-          {TAB_KEYS.map((k) => (
+          {tabs.map((t) => (
             <button
-              key={k}
-              className={active === k ? 'active' : ''}
-              onClick={() => navigate(`/settings/${k}`)}
+              key={t.key}
+              className={active === t.key ? 'active' : ''}
+              onClick={() => navigate(`/settings/${t.key}`)}
             >
-              {TAB_TITLES[k]}
+              {t.title}
             </button>
           ))}
         </nav>

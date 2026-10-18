@@ -44,12 +44,6 @@ export interface Credential {
   tools: string[]
 }
 
-export interface Member {
-  name: string
-  role: string
-  lib: string
-}
-
 export interface ModelCfg {
   name: string
   url: string
@@ -127,7 +121,8 @@ export const DEFAULT_DOCS: Doc[] = [
     text: '可信的知识问答需要建立完整的证据链。采用关键字与语义融合检索，在答案中为每一项结论附上来源引用，并允许用户直接定位到原文对应的页或分块。',
     context:
       '关键字检索适合编号、术语和精确表达；语义检索能够找回意思相近但措辞不同的内容。两种方式融合排序，可以兼顾准确匹配与模糊回忆。',
-    after: '当知识库中没有足够依据时，应明确说明未找到足够的支撑资料，引导用户扩大检索范围或补充文档，不生成缺乏出处的答案。',
+    after:
+      '当知识库中没有足够依据时，应明确说明未找到足够的支撑资料，引导用户扩大检索范围或补充文档，不生成缺乏出处的答案。',
   },
   {
     id: 'd2',
@@ -142,8 +137,10 @@ export const DEFAULT_DOCS: Doc[] = [
     section: '02 / 在恰当的时刻呈现信息',
     tags: '设计 交互 渐进式披露 复杂 简约 认知 负担',
     text: '渐进式披露将次要功能收纳在需要时才出现的位置。让用户首先看到当前任务最重要的动作，再根据上下文展开更多选项，可以降低认知负担。',
-    context: '在知识工具里，主要任务是提出问题与阅读结果。模型参数、知识库管理和高级过滤应当让位于这个核心流程。',
-    after: '输入区只保留范围、当前模式与发送动作。附加能力通过轻量菜单出现，原文预览则按需在侧边展开，保持会话上下文连续。',
+    context:
+      '在知识工具里，主要任务是提出问题与阅读结果。模型参数、知识库管理和高级过滤应当让位于这个核心流程。',
+    after:
+      '输入区只保留范围、当前模式与发送动作。附加能力通过轻量菜单出现，原文预览则按需在侧边展开，保持会话上下文连续。',
   },
   {
     id: 'd3',
@@ -158,7 +155,8 @@ export const DEFAULT_DOCS: Doc[] = [
     section: '01 / 视觉参考',
     tags: '图片 设计 极简 参考图 自然 留白 米白 苔绿 情绪板 色彩',
     text: '图片内文字（OCR）：Less, but better. 自然色、纸张肌理与大面积留白，构成安静而有层次的视觉体验。',
-    context: '色彩记录：米白 #FAFAFA、浅苔绿 #D6DFCA、燕麦 #E5D9C4。图片向量与 OCR 文字可以共同参与图片检索。',
+    context:
+      '色彩记录：米白 #FAFAFA、浅苔绿 #D6DFCA、燕麦 #E5D9C4。图片向量与 OCR 文字可以共同参与图片检索。',
     after: '参考图以“自然”“极简”“留白”为标签，适合用于知识工具的视觉方向探索。',
   },
   {
@@ -253,12 +251,6 @@ export const DEFAULT_CREDENTIALS: Credential[] = [
   },
 ]
 
-export const DEFAULT_MEMBERS: Member[] = [
-  { name: '林予', role: '所有者', lib: 'design' },
-  { name: '陈禾', role: '编辑者', lib: 'design' },
-  { name: '许知', role: '查看者', lib: 'design' },
-]
-
 export const DEFAULT_MODEL_CONFIG: ModelConfig = {
   chat: { name: 'Qwen3', url: 'http://localhost:11434/v1', type: '本地模型服务' },
   embedding: { name: 'bge-m3', url: 'http://localhost:8001/v1', type: '本地模型服务' },
@@ -275,17 +267,6 @@ export const MODES: [string, string][] = [
   ['引导检索', '先澄清需求，再帮你找到'],
   ['RAG 检索', '基于资料回答，逐条附上引用'],
 ]
-
-/** 管理页 Tab：键 → 标题。 */
-export const TAB_TITLES: Record<string, string> = {
-  docs: '文档管理',
-  mcp: 'MCP 接入',
-  models: '实例设置',
-  members: '共享成员',
-  account: '账号',
-}
-
-export const TAB_KEYS = Object.keys(TAB_TITLES)
 
 export const SUGGESTION_SETS: string[][] = [
   ['帮我找关于知识管理的笔记', '如何让知识检索更可信？', '找一张极简设计的参考图'],

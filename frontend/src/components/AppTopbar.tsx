@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from 'react-router-dom'
 
-import { TAB_TITLES } from '@/mock/data'
+import { TAB_CONFIGS } from '@/features/manage/tabs'
 import { useAuthStore } from '@/stores/auth'
 import { useKb } from '@/stores/knowledge'
 
@@ -16,7 +16,7 @@ export function AppTopbar({ onToggleSidebar }: { onToggleSidebar: () => void }) 
   const isSettings = location.pathname.startsWith('/settings')
   const tab = location.pathname.split('/')[2] ?? 'docs'
   const currentLabel = isSettings
-    ? TAB_TITLES[tab] ?? '设置'
+    ? (TAB_CONFIGS.find((t) => t.key === tab)?.title ?? '设置')
     : title === '新检索'
       ? '新检索'
       : title.slice(0, 18)
@@ -38,7 +38,11 @@ export function AppTopbar({ onToggleSidebar }: { onToggleSidebar: () => void }) 
           <span className="dot" />
           本地知识 · 交互原型
         </span>
-        <button className="avatar" aria-label="账号设置" onClick={() => navigate('/settings/account')}>
+        <button
+          className="avatar"
+          aria-label="账号设置"
+          onClick={() => navigate('/settings/account')}
+        >
           {avatar}
         </button>
       </div>

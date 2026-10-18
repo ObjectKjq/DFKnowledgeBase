@@ -1,20 +1,43 @@
+import { useMutation } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
+import { getPermissionInfo, login } from '@/api/authController'
 import { useAuthStore } from '@/stores/auth'
 
 import { Icon } from '@/components/Icon'
 
 /**
- * 登录页：本期无真实鉴权接口，任意非空用户名/密码即写入本地会话。
+ * 登录页：真实账号密码登录（sa-token 令牌），成功后拉取权限信息并进入平台。
  * 视觉沿用原型「知序」的米白纸感与苔绿点缀，与主界面保持同一套设计语言。
  */
 export function LoginPage() {
   const navigate = useNavigate()
-  const setSession = useAuthStore((s) => s.setSession)
+  const location = useLocation()
+  const setToken = useAuthStore((s) => s.setToken)
+  const setPermissionInfo = useAuthStore((s) => s.setPermissionInfo)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+
+  const from = (location.state as { from?: string } | null)?.from ?? '/'
+
+  // 登录失败的提示内联展示在表单里，因此接口层传 silent 关闭全局弹错。
+  const loginMutation = useMutation({
+    mutationFn: async (values: { username: string; password: string }) => {
+      const { data } = await login(values, { silent: true })
+      if (!data?.token) throw new Error('登录失败，请稍后重试')
+      setToken(data.token)
+      const { data: info } = await getPermissionInfo({ silent: true })
+      if (!info) throw new Error('获取权限信息失败，请稍后重试')
+      return info
+    },
+    onSuccess: (info) => {
+      setPermissionInfo(info)
+      navigate(from, { replace: true })
+    },
+    onError: (e) => setError(e instanceof Error ? e.message : '登录失败，请稍后重试'),
+  })
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -22,8 +45,7 @@ export function LoginPage() {
       setError('请输入用户名与密码')
       return
     }
-    setSession('dev-token', { id: 1, username: username.trim() })
-    navigate('/', { replace: true })
+    loginMutation.mutate({ username: username.trim(), password })
   }
 
   return (
@@ -94,9 +116,7 @@ export function LoginPage() {
 
         <div className="login-note">
           <Icon name="shield" />
-          <span>
-            当前为交互演示版本，任意非空用户名与密码即可进入。数据仅保存在你的浏览器中，不会发送到服务器。
-          </span>
+          <span>请使用实例管理员为你创建的账号登录。忘记密码可联系管理员重置。</span>
         </div>
       </div>
     </div>

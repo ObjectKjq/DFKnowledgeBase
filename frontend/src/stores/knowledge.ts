@@ -9,7 +9,6 @@ import {
   DEFAULT_CREDENTIALS,
   DEFAULT_DOCS,
   DEFAULT_LIBS,
-  DEFAULT_MEMBERS,
   DEFAULT_MODEL_CONFIG,
   MCP_TOOLS,
   STORE_KEY,
@@ -18,7 +17,6 @@ import {
   type DocStatus,
   type Lib,
   type LibType,
-  type Member,
   type Message,
   type ModelConfig,
   type Session,
@@ -49,7 +47,6 @@ export type ModalState =
   | { kind: 'credential' }
   | { kind: 'token'; token: string }
   | { kind: 'library' }
-  | { kind: 'invite' }
   | { kind: 'vector-confirm' }
   | { kind: 'copy'; text: string }
   | { kind: 'confirm'; title: string; text: string; confirmLabel: string }
@@ -70,7 +67,6 @@ interface KbState {
   libs: Lib[]
   docs: Doc[]
   credentials: Credential[]
-  members: Member[]
   sessions: Session[]
   modelConfig: ModelConfig
 
@@ -94,7 +90,6 @@ interface KbState {
   // 管理页
   docFilter: string
   docSearch: string
-  memberLib: string
   lastConfigClient: string
 
   // 上传
@@ -144,8 +139,6 @@ interface KbState {
 
   setDocFilter: (v: string) => void
   setDocSearch: (v: string) => void
-  setMemberLib: (v: string) => void
-  setMemberRole: (name: string, role: string) => void
 
   deleteDoc: (id: string) => void
   restoreDoc: (id: string) => void
@@ -156,9 +149,6 @@ interface KbState {
   revokeCredential: (id: string) => void
 
   createLibrary: (name: string, description: string) => void
-  deleteLibrary: (id: string) => void
-  inviteMember: (name: string, role: string) => void
-  removeMember: (name: string) => void
 
   openUpload: () => void
   addPendingFiles: (files: { name: string; size: number }[]) => void
@@ -166,7 +156,10 @@ interface KbState {
   setUploadTarget: (id: string) => void
   startUpload: () => Promise<void>
 
-  saveModelConfig: (kind: keyof ModelConfig, cfg: { name: string; url: string; type: string }) => void
+  saveModelConfig: (
+    kind: keyof ModelConfig,
+    cfg: { name: string; url: string; type: string },
+  ) => void
   setLastConfigClient: (c: string) => void
 
   copyText: (text: string) => Promise<void>
@@ -182,7 +175,6 @@ export const useKb = create<KbState>()(
       libs: structuredClone(DEFAULT_LIBS),
       docs: structuredClone(DEFAULT_DOCS),
       credentials: structuredClone(DEFAULT_CREDENTIALS),
-      members: structuredClone(DEFAULT_MEMBERS),
       sessions: [],
       modelConfig: structuredClone(DEFAULT_MODEL_CONFIG),
 
@@ -203,7 +195,6 @@ export const useKb = create<KbState>()(
 
       docFilter: 'all',
       docSearch: '',
-      memberLib: 'design',
       lastConfigClient: 'Codex',
 
       pendingUpload: [],
@@ -284,7 +275,9 @@ export const useKb = create<KbState>()(
         get().syncSession()
       },
       removeSkill: (skill) => {
-        set({ current: { ...get().current, skills: get().current.skills.filter((s) => s !== skill) } })
+        set({
+          current: { ...get().current, skills: get().current.skills.filter((s) => s !== skill) },
+        })
         get().syncSession()
       },
 
@@ -382,7 +375,9 @@ export const useKb = create<KbState>()(
         set({ busy: true, popover: '' })
         const imageQuery = !!get().attachment?.image
         const pool = get().docs.filter(
-          (d) => d.status === '可用' && (!get().current.scope.length || get().current.scope.includes(d.lib)),
+          (d) =>
+            d.status === '可用' &&
+            (!get().current.scope.length || get().current.scope.includes(d.lib)),
         )
         let found = retrieve(pool, query, mode, get().current.skills, imageQuery).filter(
           (d) => mode !== 'RAG 检索' || d.text,
@@ -395,7 +390,9 @@ export const useKb = create<KbState>()(
         set({ attachment: null })
         await sleep(650)
         const hasContent = get().docs.some(
-          (d) => d.status === '可用' && (!get().current.scope.length || get().current.scope.includes(d.lib)),
+          (d) =>
+            d.status === '可用' &&
+            (!get().current.scope.length || get().current.scope.includes(d.lib)),
         )
         const ids = found.map((d) => d.id)
         let msg: Message
@@ -412,7 +409,15 @@ export const useKb = create<KbState>()(
                 : '试试更短的关键词、切换模糊检索，或检查当前知识库范围。',
           }
         } else if (mode === 'RAG 检索') {
-          msg = { id: uuid(), type: 'answer', query, ids, scope, model: responseModel, web: responseWeb }
+          msg = {
+            id: uuid(),
+            type: 'answer',
+            query,
+            ids,
+            scope,
+            model: responseModel,
+            web: responseWeb,
+          }
         } else {
           msg = {
             id: uuid(),
@@ -461,9 +466,15 @@ export const useKb = create<KbState>()(
         let skills = get().current.skills
         if (g.answers.some((a) => a.includes('我的知识库'))) scope = ['personal']
         if (g.answers.some((a) => a.includes('产品与设计'))) scope = ['design']
-        if (g.answers.some((a) => a.includes('图片'))) skills = [...new Set([...skills, '图片搜索'])]
-        const merged = g.query + ' ' + g.answers.filter((a) => !a.includes('范围') && !a.includes('优先')).join(' ')
-        const scopeLabel = scope.length ? scope.map((l) => libName(get().libs, l)).join('、') : '全部知识库'
+        if (g.answers.some((a) => a.includes('图片')))
+          skills = [...new Set([...skills, '图片搜索'])]
+        const merged =
+          g.query +
+          ' ' +
+          g.answers.filter((a) => !a.includes('范围') && !a.includes('优先')).join(' ')
+        const scopeLabel = scope.length
+          ? scope.map((l) => libName(get().libs, l)).join('、')
+          : '全部知识库'
         set({ guide: null, current: { ...get().current, messages, scope, skills } })
         await get().executeQuery(merged, '直接检索', scopeLabel)
       },
@@ -472,7 +483,9 @@ export const useKb = create<KbState>()(
         const { guide, current } = get()
         if (!guide) return
         if (current.messages.find((m) => m.type === 'guide' && !m.done) === undefined) return
-        const messages = current.messages.map((m) => (m.type === 'guide' ? { ...m, done: true } : m))
+        const messages = current.messages.map((m) =>
+          m.type === 'guide' ? { ...m, done: true } : m,
+        )
         const scope = current.scope.length
           ? current.scope.map((l) => libName(get().libs, l)).join('、')
           : '全部知识库'
@@ -528,12 +541,30 @@ export const useKb = create<KbState>()(
           }
           const title = titles[id] ?? '新检索'
           const mode = id === 'demo-rag' ? 'RAG 检索' : '直接检索'
-          const sc = { id, title, mode, scope: [] as string[], skills: [], model: 'Qwen3 · 本地', tier: '均衡', messages: [] as Message[] }
-          const clean = (demoIds[id] ?? []).map((x) => get().docs.find((d) => d.id === x)).filter(Boolean) as Doc[]
+          const sc = {
+            id,
+            title,
+            mode,
+            scope: [] as string[],
+            skills: [],
+            model: 'Qwen3 · 本地',
+            tier: '均衡',
+            messages: [] as Message[],
+          }
+          const clean = (demoIds[id] ?? [])
+            .map((x) => get().docs.find((d) => d.id === x))
+            .filter(Boolean) as Doc[]
           const msgs: Message[] = [
             { id: uuid(), type: 'user', text: title, scope: '全部知识库', mode },
             id === 'demo-rag'
-              ? { id: uuid(), type: 'answer', query: title, ids: clean.map((d) => d.id), scope: '全部知识库', model: sc.model }
+              ? {
+                  id: uuid(),
+                  type: 'answer',
+                  query: title,
+                  ids: clean.map((d) => d.id),
+                  scope: '全部知识库',
+                  model: sc.model,
+                }
               : {
                   id: uuid(),
                   type: 'results',
@@ -543,7 +574,13 @@ export const useKb = create<KbState>()(
                   mode: '直接检索',
                 },
           ]
-          set({ current: { ...sc, messages: msgs }, guide: null, attachment: null, popover: '', previewId: null })
+          set({
+            current: { ...sc, messages: msgs },
+            guide: null,
+            attachment: null,
+            popover: '',
+            previewId: null,
+          })
         }
         get().syncSession()
       },
@@ -597,26 +634,30 @@ export const useKb = create<KbState>()(
 
       setDocFilter: (v) => set({ docFilter: v }),
       setDocSearch: (v) => set({ docSearch: v }),
-      setMemberLib: (v) => set({ memberLib: v }),
-      setMemberRole: (name, role) => {
-        const { members, memberLib } = get()
-        set({ members: members.map((m) => (m.lib === memberLib && m.name === name ? { ...m, role } : m)) })
-        get().toastMsg('成员角色已更新（演示）')
-      },
 
       deleteDoc: (id) => {
         const d = get().docs.find((x) => x.id === id)
         if (!d) return
-        get().confirmThen('删除文档', `「${d.title}」将移至回收站，30 天内可恢复。`, '确认删除', () => {
-          set({
-            docs: get().docs.map((x) =>
-              x.id === id
-                ? { ...x, previousStatus: x.status, status: '已删除' as DocStatus, deletedAt: '2026-10-16' }
-                : x,
-            ),
-          })
-          get().toastMsg('已移至回收站')
-        })
+        get().confirmThen(
+          '删除文档',
+          `「${d.title}」将移至回收站，30 天内可恢复。`,
+          '确认删除',
+          () => {
+            set({
+              docs: get().docs.map((x) =>
+                x.id === id
+                  ? {
+                      ...x,
+                      previousStatus: x.status,
+                      status: '已删除' as DocStatus,
+                      deletedAt: '2026-10-16',
+                    }
+                  : x,
+              ),
+            })
+            get().toastMsg('已移至回收站')
+          },
+        )
       },
       restoreDoc: (id) => {
         set({
@@ -627,10 +668,15 @@ export const useKb = create<KbState>()(
         get().toastMsg('文档已恢复')
       },
       purgeDoc: (id) => {
-        get().confirmThen('彻底删除文档', '这将从原型本地存储中移除此文件记录，无法恢复。', '确认删除', () => {
-          set({ docs: get().docs.filter((x) => x.id !== id) })
-          get().toastMsg('已彻底删除')
-        })
+        get().confirmThen(
+          '彻底删除文档',
+          '这将从原型本地存储中移除此文件记录，无法恢复。',
+          '确认删除',
+          () => {
+            set({ docs: get().docs.filter((x) => x.id !== id) })
+            get().toastMsg('已彻底删除')
+          },
+        )
       },
       retryDoc: async (id) => {
         const d = get().docs.find((x) => x.id === id)
@@ -655,63 +701,48 @@ export const useKb = create<KbState>()(
           tools: [...MCP_TOOLS],
         }
         const token = 'DEMO_ONLY_' + uuid() + '_' + uuid()
-        set({ credentials: [...get().credentials, cred], oneTimeToken: token, modal: { kind: 'token', token } })
+        set({
+          credentials: [...get().credentials, cred],
+          oneTimeToken: token,
+          modal: { kind: 'token', token },
+        })
       },
       revokeCredential: (id) => {
-        get().confirmThen('撤销凭证', '撤销后，该凭证将立即无法继续调用。此操作不可恢复。', '确认撤销', () => {
-          set({ credentials: get().credentials.map((c) => (c.id === id ? { ...c, status: '已撤销' } : c)) })
-          get().toastMsg('凭证已撤销（演示）')
-        })
+        get().confirmThen(
+          '撤销凭证',
+          '撤销后，该凭证将立即无法继续调用。此操作不可恢复。',
+          '确认撤销',
+          () => {
+            set({
+              credentials: get().credentials.map((c) =>
+                c.id === id ? { ...c, status: '已撤销' } : c,
+              ),
+            })
+            get().toastMsg('凭证已撤销（演示）')
+          },
+        )
       },
 
       createLibrary: (name, description) => {
         const l: Lib = { id: uuid(), name, type: 'shared' as LibType, role: '所有者', description }
-        set({
-          libs: [...get().libs, l],
-          members: [...get().members, { name: '林予', role: '所有者', lib: l.id }],
-          memberLib: l.id,
-        })
+        set({ libs: [...get().libs, l] })
         get().closeModal()
-        get().toastMsg('共享知识库已创建，可添加演示成员')
-      },
-      deleteLibrary: (id) => {
-        if (get().libs.find((l) => l.id === id)?.role !== '所有者') return
-        const name = libName(get().libs, id)
-        get().confirmThen('删除共享知识库', `「${name}」的内容将对所有成员不可见。请确认已保留需要的资料。`, '确认删除', () => {
-          set({
-            libs: get().libs.filter((l) => l.id !== id),
-            docs: get().docs.filter((d) => d.lib !== id),
-            members: get().members.filter((m) => m.lib !== id),
-            current: { ...get().current, scope: get().current.scope.filter((s) => s !== id) },
-          })
-          get().toastMsg('共享知识库已删除')
-        })
-      },
-      inviteMember: (name, role) => {
-        const { members, memberLib } = get()
-        if (members.some((m) => m.lib === memberLib && m.name === name)) {
-          get().toastMsg('该成员已在知识库中', true)
-          return
-        }
-        set({ members: [...members, { name, role, lib: memberLib }] })
-        get().closeModal()
-        get().toastMsg('演示成员已添加')
-      },
-      removeMember: (name) => {
-        const { memberLib } = get()
-        get().confirmThen('移除成员', `移除「${name}」后，该成员与其 MCP 凭证将无法访问此共享库。`, '确认移除', () => {
-          set({ members: get().members.filter((m) => !(m.lib === memberLib && m.name === name)) })
-          get().toastMsg('演示成员已移除')
-        })
+        get().toastMsg('共享知识库已创建')
       },
 
       openUpload: () => {
         const { current, libs } = get()
         const target =
-          current.scope.length === 1 && libs.find((l) => l.id === current.scope[0])?.role !== '查看者'
+          current.scope.length === 1 &&
+          libs.find((l) => l.id === current.scope[0])?.role !== '查看者'
             ? current.scope[0]
             : 'personal'
-        set({ pendingUpload: [], uploadTarget: target, uploadStarted: false, modal: { kind: 'upload' } })
+        set({
+          pendingUpload: [],
+          uploadTarget: target,
+          uploadStarted: false,
+          modal: { kind: 'upload' },
+        })
       },
       addPendingFiles: (files) => {
         const pending = [...get().pendingUpload]
@@ -720,7 +751,8 @@ export const useKb = create<KbState>()(
         }
         set({ pendingUpload: pending })
       },
-      removePending: (index) => set({ pendingUpload: get().pendingUpload.filter((_, i) => i !== index) }),
+      removePending: (index) =>
+        set({ pendingUpload: get().pendingUpload.filter((_, i) => i !== index) }),
       setUploadTarget: (id) => set({ uploadTarget: id }),
       startUpload: async () => {
         const { pendingUpload, uploadTarget, uploadStarted } = get()
@@ -738,7 +770,10 @@ export const useKb = create<KbState>()(
           lib: uploadTarget,
           status: '排队' as DocStatus,
           date: '2026-10-16',
-          size: (f.size > 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(f.size / 1024)) + ' KB'),
+          size:
+            f.size > 1048576
+              ? (f.size / 1048576).toFixed(1) + ' MB'
+              : Math.max(1, Math.round(f.size / 1024)) + ' KB',
           page: 1,
           pages: 1,
           section: '上传文件 · 原型演示',
@@ -750,7 +785,11 @@ export const useKb = create<KbState>()(
         set({ docs: [...get().docs, ...fresh] })
         for (const state of ['解析中', '索引中', '可用'] as DocStatus[]) {
           await sleep(700)
-          set({ docs: get().docs.map((d) => (fresh.some((f) => f.id === d.id) ? { ...d, status: state } : d)) })
+          set({
+            docs: get().docs.map((d) =>
+              fresh.some((f) => f.id === d.id) ? { ...d, status: state } : d,
+            ),
+          })
         }
         set({ uploadStarted: false, modal: null, pendingUpload: [] })
         get().toastMsg(`${pendingUpload.length} 份资料已完成模拟入库；未解析实际正文`)
@@ -759,7 +798,12 @@ export const useKb = create<KbState>()(
       saveModelConfig: (kind, cfg) => {
         set({ modelConfig: { ...get().modelConfig, [kind]: cfg } })
         if (kind === 'chat') {
-          set({ current: { ...get().current, model: cfg.name + ' · ' + (cfg.type === '本地模型服务' ? '本地' : '私有服务') } })
+          set({
+            current: {
+              ...get().current,
+              model: cfg.name + ' · ' + (cfg.type === '本地模型服务' ? '本地' : '私有服务'),
+            },
+          })
         }
         get().toastMsg('模型演示配置已保存，未连接实际服务')
       },
@@ -774,16 +818,22 @@ export const useKb = create<KbState>()(
         }
       },
       resetDemo: () => {
-        get().confirmThen('重置演示', '将清除当前浏览器中保存的原型修改，恢复初始示例数据。', '确认重置', () => {
-          try {
-            localStorage.removeItem(STORE_KEY)
-          } catch {
-            /* ignore */
-          }
-          location.reload()
-        })
+        get().confirmThen(
+          '重置演示',
+          '将清除当前浏览器中保存的原型修改，恢复初始示例数据。',
+          '确认重置',
+          () => {
+            try {
+              localStorage.removeItem(STORE_KEY)
+            } catch {
+              /* ignore */
+            }
+            location.reload()
+          },
+        )
       },
-      confirmThen: (title, text, confirmLabel, fn) => set({ modal: { kind: 'confirm', title, text, confirmLabel }, modalConfirm: fn }),
+      confirmThen: (title, text, confirmLabel, fn) =>
+        set({ modal: { kind: 'confirm', title, text, confirmLabel }, modalConfirm: fn }),
     }),
     {
       name: STORE_KEY,
@@ -791,7 +841,6 @@ export const useKb = create<KbState>()(
         libs: s.libs,
         docs: s.docs,
         credentials: s.credentials,
-        members: s.members,
         sessions: s.sessions,
         modelConfig: s.modelConfig,
       }),
