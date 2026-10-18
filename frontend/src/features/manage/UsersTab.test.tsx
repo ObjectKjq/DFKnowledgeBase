@@ -30,7 +30,13 @@ const PAGE = {
   data: {
     total: 1,
     list: [
-      { id: 2, username: 'alice', nickname: '爱丽丝', status: 0, createTime: '2026-10-18T10:00:00' },
+      {
+        id: 2,
+        username: 'alice',
+        nickname: '爱丽丝',
+        status: 0,
+        createTime: '2026-10-18T10:00:00',
+      },
     ],
   },
 }
@@ -86,7 +92,7 @@ describe('UsersTab', () => {
     vi.mocked(resetUserPassword).mockResolvedValue({ code: 0, msg: '', data: true })
     renderTab()
     fireEvent.click(await screen.findByRole('button', { name: '重置密码' }))
-    fireEvent.change(await screen.findByPlaceholderText('输入新密码'), {
+    fireEvent.change(await screen.findByLabelText('新密码'), {
       target: { value: 'new-pass' },
     })
     fireEvent.click(screen.getByRole('button', { name: '确认重置' }))

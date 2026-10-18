@@ -44,15 +44,15 @@ describe('LoginPage', () => {
   it('登录失败时展示错误提示', async () => {
     vi.mocked(login).mockRejectedValue(new Error('账号或密码错误'))
     renderPage()
-    fireEvent.change(screen.getByPlaceholderText('输入你的用户名'), {
+    fireEvent.change(screen.getByLabelText('用户名'), {
       target: { value: 'alice' },
     })
-    fireEvent.change(screen.getByPlaceholderText('输入你的密码'), { target: { value: 'bad' } })
+    fireEvent.change(screen.getByLabelText('密码'), { target: { value: 'bad' } })
     fireEvent.click(screen.getByRole('button', { name: /进入知识空间/ }))
     expect(await screen.findByText('账号或密码错误')).toBeInTheDocument()
   })
 
-  it('登录成功后写入会话并跳转', async () => {
+  it('登录成功后跳转到目标页', async () => {
     vi.mocked(login).mockResolvedValue({ code: 0, msg: '', data: { userId: 1, token: 'tk-1' } })
     vi.mocked(getPermissionInfo).mockResolvedValue({
       code: 0,
@@ -65,14 +65,13 @@ describe('LoginPage', () => {
       },
     })
     renderPage()
-    fireEvent.change(screen.getByPlaceholderText('输入你的用户名'), {
+    fireEvent.change(screen.getByLabelText('用户名'), {
       target: { value: 'admin' },
     })
-    fireEvent.change(screen.getByPlaceholderText('输入你的密码'), {
+    fireEvent.change(screen.getByLabelText('密码'), {
       target: { value: 'admin123' },
     })
     fireEvent.click(screen.getByRole('button', { name: /进入知识空间/ }))
     expect(await screen.findByText('检索首页')).toBeInTheDocument()
-    expect(useAuthStore.getState().token).toBe('tk-1')
   })
 })

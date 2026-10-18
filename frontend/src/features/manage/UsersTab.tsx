@@ -95,11 +95,8 @@ export function UsersTab() {
   }
 
   const remove = (u: API.UserRespVO) => {
-    confirmThen(
-      '删除用户',
-      `「${u.username}」将被删除，此操作不可恢复。`,
-      '确认删除',
-      () => deleteMutation.mutate({ id: u.id! }),
+    confirmThen('删除用户', `「${u.username}」将被删除，此操作不可恢复。`, '确认删除', () =>
+      deleteMutation.mutate({ id: u.id! }),
     )
   }
 
@@ -111,7 +108,7 @@ export function UsersTab() {
             <Icon name="search" />
             <input
               aria-label="搜索用户"
-              placeholder="搜索用户账号"
+              placeholder="搜索用户名"
               value={keyword}
               onChange={(e) => setKeyword(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && search()}
@@ -119,7 +116,7 @@ export function UsersTab() {
           </label>
           <select
             className="select"
-            aria-label="账号状态"
+            aria-label="用户状态"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
@@ -143,7 +140,7 @@ export function UsersTab() {
         <table>
           <thead>
             <tr>
-              <th>用户账号</th>
+              <th>用户名</th>
               <th>用户昵称</th>
               <th>状态</th>
               <th>创建时间</th>
@@ -177,7 +174,7 @@ export function UsersTab() {
             ))}
             {!rows.length && (
               <tr>
-                <td colSpan={5} style={{ textAlign: 'center', padding: 45 }}>
+                <td colSpan={5} className="empty-cell">
                   这里还没有符合条件的用户
                 </td>
               </tr>
@@ -200,7 +197,13 @@ export function UsersTab() {
       </div>
 
       {(creating || editing) && (
-        <UserFormModal user={editing} onClose={() => { setCreating(false); setEditing(null) }} />
+        <UserFormModal
+          user={editing}
+          onClose={() => {
+            setCreating(false)
+            setEditing(null)
+          }}
+        />
       )}
       {resetting && <ResetPasswordModal user={resetting} onClose={() => setResetting(null)} />}
     </>
@@ -280,7 +283,7 @@ function UserFormModal({ user, onClose }: { user: API.UserRespVO | null; onClose
   const submit = (e: FormEvent) => {
     e.preventDefault()
     if (!form.username.trim()) {
-      setHint('请输入用户账号')
+      setHint('请输入用户名')
       return
     }
     if (isCreate && !form.password) {
@@ -298,17 +301,17 @@ function UserFormModal({ user, onClose }: { user: API.UserRespVO | null; onClose
   return (
     <ModalShell
       title={isCreate ? '新增用户' : '编辑用户'}
-      description="账号用于登录平台；角色决定其可用的功能范围。"
+      description="用户名用于登录平台；角色决定其可用的功能范围。"
       onClose={onClose}
     >
       <form onSubmit={submit}>
         <label className="field">
-          用户账号
+          用户名
           <input
             value={form.username}
             disabled={!isCreate}
             onChange={(e) => setForm({ ...form, username: e.target.value })}
-            placeholder="登录用的唯一账号"
+            placeholder="登录用的唯一用户名"
             autoFocus
           />
         </label>
@@ -356,7 +359,7 @@ function UserFormModal({ user, onClose }: { user: API.UserRespVO | null; onClose
           />
         </label>
         <label className="field">
-          账号状态
+          用户状态
           <select
             value={form.status}
             onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
@@ -375,9 +378,7 @@ function UserFormModal({ user, onClose }: { user: API.UserRespVO | null; onClose
                   checked={roleIds.includes(r.id!)}
                   onChange={(e) =>
                     setRoleIds(
-                      e.target.checked
-                        ? [...roleIds, r.id!]
-                        : roleIds.filter((id) => id !== r.id),
+                      e.target.checked ? [...roleIds, r.id!] : roleIds.filter((id) => id !== r.id),
                     )
                   }
                 />

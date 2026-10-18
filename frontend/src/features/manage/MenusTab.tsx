@@ -8,7 +8,7 @@ import { useKb } from '@/stores/knowledge'
 import { Icon } from '@/components/Icon'
 import { ModalShell } from '@/components/ModalHost'
 
-import { flattenMenuTree, menuTypeLabel } from './menuTree'
+import { MENU_TYPE_BUTTON, flattenMenuTree, menuTypeLabel } from './menuTree'
 
 /** 菜单管理 Tab（最小实现）：菜单树与按钮权限点的列表、新增 / 编辑 / 删除。 */
 export function MenusTab() {
@@ -83,7 +83,7 @@ export function MenusTab() {
                   <span style={{ paddingLeft: depth * 18 }}>{menu.name}</span>
                 </td>
                 <td>
-                  <span className={`tag ${menu.type === 3 ? 'oat' : ''}`}>
+                  <span className={`tag ${menu.type === MENU_TYPE_BUTTON ? 'oat' : ''}`}>
                     {menuTypeLabel(menu.type)}
                   </span>
                 </td>
@@ -100,7 +100,7 @@ export function MenusTab() {
             ))}
             {!rows.length && (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: 45 }}>
+                <td colSpan={6} className="empty-cell">
                   这里还没有菜单
                 </td>
               </tr>
@@ -151,7 +151,7 @@ function MenuFormModal({
   })
   const [hint, setHint] = useState('')
 
-  const parents = all.filter((m) => m.type !== 3 && m.id !== menu?.id)
+  const parents = all.filter((m) => m.type !== MENU_TYPE_BUTTON && m.id !== menu?.id)
 
   const saveMutation = useMutation({
     mutationFn: () => {
@@ -179,7 +179,7 @@ function MenuFormModal({
       setHint('请输入菜单名称')
       return
     }
-    if (form.type === 3 && !form.permission.trim()) {
+    if (form.type === MENU_TYPE_BUTTON && !form.permission.trim()) {
       setHint('按钮类型需填写权限标识')
       return
     }
@@ -229,7 +229,7 @@ function MenuFormModal({
           </select>
         </label>
         <label className="field">
-          权限标识{form.type === 3 ? '' : ' · 选填'}
+          权限标识{form.type === MENU_TYPE_BUTTON ? '' : ' · 选填'}
           <input
             value={form.permission}
             onChange={(e) => setForm({ ...form, permission: e.target.value })}

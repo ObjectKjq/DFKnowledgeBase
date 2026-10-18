@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 
+import { MENU_TYPE_DIR } from '@/features/manage/menuTree'
 import { menuRoute } from '@/features/manage/tabs'
 import { useAuthStore } from '@/stores/auth'
 import { useKb } from '@/stores/knowledge'
@@ -139,7 +140,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
             <div className="section-label">功能菜单</div>
             <nav aria-label="功能菜单">
               {menus.map((m) =>
-                m.type === 1 ? (
+                m.type === MENU_TYPE_DIR ? (
                   <div key={m.id}>
                     <div className="side-subtitle">{m.name}</div>
                     {((m.children ?? []) as API.MenuVO[]).map((c) => (

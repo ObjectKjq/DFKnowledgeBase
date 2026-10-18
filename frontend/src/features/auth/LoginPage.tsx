@@ -116,7 +116,7 @@ export function LoginPage() {
 
         <div className="login-note">
           <Icon name="shield" />
-          <span>请使用实例管理员为你创建的账号登录。忘记密码可联系管理员重置。</span>
+          <span>请使用实例管理员为你创建的用户名登录。忘记密码可联系管理员重置。</span>
         </div>
       </div>
     </div>

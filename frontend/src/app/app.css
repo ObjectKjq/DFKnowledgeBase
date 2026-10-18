@@ -131,6 +131,12 @@
   cursor: default;
 }
 
+/* 表格空态单元格。 */
+.empty-cell {
+  text-align: center;
+  padding: 45px;
+}
+
 /* 弹窗里的勾选列表（角色分配、菜单分配）。 */
 .check-list {
   display: flex;

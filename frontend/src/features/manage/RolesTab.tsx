@@ -144,7 +144,7 @@ export function RolesTab() {
             ))}
             {!rows.length && (
               <tr>
-                <td colSpan={6} style={{ textAlign: 'center', padding: 45 }}>
+                <td colSpan={6} className="empty-cell">
                   这里还没有符合条件的角色
                 </td>
               </tr>

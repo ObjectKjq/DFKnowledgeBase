@@ -105,7 +105,7 @@ function ProfileForm({ data }: { data: API.UserRespVO }) {
   return (
     <form onSubmit={submit}>
       <div className="settings-pair">
-        <span>用户账号</span>
+        <span>用户名</span>
         <span>{data.username}</span>
       </div>
       <label className="field">
