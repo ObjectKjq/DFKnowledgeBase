@@ -33,7 +33,7 @@ import static com.df.knowledge.common.CommonResult.success;
 /**
  * 管理后台 - 角色 Controller
  */
-@Tag(name = "管理后台 - 角色")
+@Tag(name = "roleController")
 @RestController
 @RequestMapping("/system/role")
 @Validated

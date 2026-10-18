@@ -41,7 +41,8 @@ VO/DTO 归属：VO 归 controller 层（`controller/.../vo`），跨层传输对
 
 ## Controller 写法
 
-- 类注解组合：`@Tag(name = "管理后台 - 部门")`（中文名）+ `@RestController` + `@RequestMapping("/模块/业务")` + `@Validated`；方法 `@Operation(summary = "...")`，参数 `@Parameter`，VO 字段 `@Schema`——统一 springdoc（`io.swagger.v3.oas.annotations`），不引旧版 `io.swagger.annotations`。
+- 类注解组合：`@Tag(name = "deptController")` + `@RestController` + `@RequestMapping("/模块/业务")` + `@Validated`；方法 `@Operation(summary = "...")`，参数 `@Parameter`，VO 字段 `@Schema`——统一 springdoc（`io.swagger.v3.oas.annotations`），不引旧版 `io.swagger.annotations`。
+- `@Tag(name = "xxx")` 用与 Controller 类名一致的小驼峰（camelCase，类名首字母小写，如 `DeptController` → `deptController`），禁止中文或拼音：该值直接决定前端 `frontend/src/api` 生成的文件名（`npm run openapi2ts`），中文会被转成拼音文件名（如 `guanlihoutaicaidan.ts`）。
 - 返回统一 `CommonResult<T>`，静态导入 `CommonResult.success`；分页返回 `CommonResult<PageResult<XxxRespVO>>`。
 - 路径用动词风格（非 RESTful 名词风格）：`POST /create`、`PUT /update`、`DELETE /delete`、`GET /get`、`GET /page`、`GET /list`。单条查询/删除用 `@RequestParam("id")`，不用路径变量。
 - 参数校验：body 前 `@Valid`，字段用 JSR-303（`@NotNull`/`@NotBlank`/`@Size`）；校验失败由 `GlobalExceptionHandler` 统一转 400。
