@@ -1,5 +1,4 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import { useNavigate } from 'react-router-dom'
 
 import { formatSize } from '@/mock/logic'
 import { useKb } from '@/stores/knowledge'
@@ -8,16 +7,20 @@ import { Icon } from './Icon'
 
 const ACCEPT = /\.(pdf|docx?|pptx?|xlsx?|txt|md|jpe?g|png|webp|bmp)$/i
 
-function ModalShell({
+/** 弹窗外壳：默认用 store 的关闭动作，功能页的表单弹窗可传自己的 `onClose`。 */
+export function ModalShell({
   title,
   description,
   children,
+  onClose,
 }: {
   title: string
   description?: string
   children: ReactNode
+  onClose?: () => void
 }) {
   const closeModal = useKb((s) => s.closeModal)
+  const close = onClose ?? closeModal
   return (
     <div className="modal-backdrop">
       <section
@@ -30,7 +33,7 @@ function ModalShell({
       >
         <div className="modal-head">
           <h2 id="modal-title">{title}</h2>
-          <button className="icon-btn" onClick={closeModal} aria-label="关闭对话框">
+          <button className="icon-btn" onClick={close} aria-label="关闭对话框">
             <Icon name="close" />
           </button>
         </div>
@@ -57,7 +60,8 @@ function UploadModal() {
 
   const collect = (files: File[]) => {
     const valid = files.filter((f) => ACCEPT.test(f.name))
-    if (valid.length !== files.length) toastMsg('已跳过不支持的格式。请上传文档、笔记或常见图片。', true)
+    if (valid.length !== files.length)
+      toastMsg('已跳过不支持的格式。请上传文档、笔记或常见图片。', true)
     addFiles(valid.map((f) => ({ name: f.name, size: f.size })))
   }
 
@@ -68,11 +72,7 @@ function UploadModal() {
     >
       <label className="field">
         保存到
-        <select
-          value={target}
-          disabled={started}
-          onChange={(e) => setTarget(e.target.value)}
-        >
+        <select value={target} disabled={started} onChange={(e) => setTarget(e.target.value)}>
           {libs
             .filter((l) => l.role !== '查看者')
             .map((l) => (
@@ -113,7 +113,11 @@ function UploadModal() {
             <Icon name="file" />
             <span>{f.name}</span>
             <small>{formatSize(f.size)}</small>
-            <button className="icon-btn" onClick={() => removePending(i)} aria-label={`移除${f.name}`}>
+            <button
+              className="icon-btn"
+              onClick={() => removePending(i)}
+              aria-label={`移除${f.name}`}
+            >
               <Icon name="close" />
             </button>
           </div>
@@ -133,7 +137,11 @@ function UploadModal() {
         <button className="btn ghost" onClick={closeModal} disabled={started}>
           稍后再说
         </button>
-        <button className="btn primary" onClick={() => void startUpload()} disabled={!pending.length || started}>
+        <button
+          className="btn primary"
+          onClick={() => void startUpload()}
+          disabled={!pending.length || started}
+        >
           开始入库{pending.length ? ` · ${pending.length}` : ''}
         </button>
       </div>
@@ -186,7 +194,9 @@ function CredentialModal() {
         </label>
         <div className="info-banner">
           <Icon name="lock" />
-          <span>只读工具：search、search_images、ask、list_knowledge_bases。写入工具本期不开放。</span>
+          <span>
+            只读工具：search、search_images、ask、list_knowledge_bases。写入工具本期不开放。
+          </span>
         </div>
         <div className="form-actions">
           <button type="button" className="btn ghost" onClick={closeModal}>
@@ -235,7 +245,6 @@ function LibraryModal() {
   const createLibrary = useKb((s) => s.createLibrary)
   const closeModal = useKb((s) => s.closeModal)
   const toastMsg = useKb((s) => s.toastMsg)
-  const navigate = useNavigate()
 
   const submit = (e: FormEvent) => {
     e.preventDefault()
@@ -245,7 +254,6 @@ function LibraryModal() {
       return
     }
     createLibrary(value, description.trim())
-    navigate('/settings/members')
   }
 
   return (
@@ -276,56 +284,6 @@ function LibraryModal() {
             取消
           </button>
           <button className="btn primary">创建知识库</button>
-        </div>
-      </form>
-    </ModalShell>
-  )
-}
-
-/** 邀请演示成员弹窗。 */
-function InviteModal() {
-  const [name, setName] = useState('')
-  const [role, setRole] = useState('查看者')
-  const inviteMember = useKb((s) => s.inviteMember)
-  const closeModal = useKb((s) => s.closeModal)
-  const toastMsg = useKb((s) => s.toastMsg)
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    const value = name.trim()
-    if (!value) {
-      toastMsg('请填写演示用户名', true)
-      return
-    }
-    inviteMember(value, role)
-  }
-
-  return (
-    <ModalShell title="让知识，在彼此之间流动" description="此原型不连接真实账号系统，提交后将添加本地演示成员。">
-      <form onSubmit={submit}>
-        <label className="field">
-          用户名
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            maxLength={30}
-            placeholder="填写演示用户名"
-            autoFocus
-          />
-        </label>
-        <label className="field">
-          角色
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
-            <option>查看者</option>
-            <option>编辑者</option>
-          </select>
-        </label>
-        <div className="form-actions">
-          <button type="button" className="btn ghost" onClick={closeModal}>
-            取消
-          </button>
-          <button className="btn primary">添加演示成员</button>
         </div>
       </form>
     </ModalShell>
@@ -426,14 +384,14 @@ export function ModalHost() {
       return <TokenModal token={modal.token} />
     case 'library':
       return <LibraryModal />
-    case 'invite':
-      return <InviteModal />
     case 'vector-confirm':
       return <VectorConfirmModal />
     case 'copy':
       return <CopyModal text={modal.text} />
     case 'confirm':
-      return <ConfirmModal title={modal.title} text={modal.text} confirmLabel={modal.confirmLabel} />
+      return (
+        <ConfirmModal title={modal.title} text={modal.text} confirmLabel={modal.confirmLabel} />
+      )
     default:
       return null
   }

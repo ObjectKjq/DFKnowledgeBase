@@ -1,8 +1,13 @@
-import axios, { type AxiosError, type AxiosRequestConfig, type AxiosInstance } from 'axios'
+import axios, { type AxiosError, type AxiosRequestConfig } from 'axios'
 
 import { useAuthStore } from '@/stores/auth'
 
-import { SUCCESS_CODE, type CommonResult } from './types'
+import { SUCCESS_CODE, UNAUTHORIZED_CODE, type CommonResult } from './types'
+
+/** 请求配置：在 axios 配置之上允许 `silent`（表单内联提示场景跳过全局错误提示）。 */
+export interface RequestConfig extends AxiosRequestConfig {
+  silent?: boolean
+}
 
 /**
  * 错误提示的注入点：由 `app/providers` 把 antd 的 message 实例注册进来，
@@ -14,8 +19,8 @@ export function setHttpErrorNotifier(notifier: (msg: string) => void) {
   errorNotifier = notifier
 }
 
-/** 统一 HTTP 出口：baseURL `/api`（开发期由 Vite dev server 代理到 8080）。 */
-export const http: AxiosInstance = axios.create({
+/** 统一 HTTP 出口：baseURL `/api`（后端 context-path，开发期由 Vite dev server 代理到 8080）。 */
+const http = axios.create({
   baseURL: '/api',
   timeout: 30_000,
 })
@@ -28,26 +33,49 @@ http.interceptors.request.use((config) => {
   return config
 })
 
+/** 令牌失效（未登录 / 过期 / 被踢）：清会话并统一跳回登录页。 */
+function redirectToLogin() {
+  useAuthStore.getState().clearSession()
+  window.location.assign('/login')
+}
+
 http.interceptors.response.use(
   (response) => {
-    const body = response.data as CommonResult | undefined
+    const body = response.data as Partial<CommonResult> | undefined
     // 统一按后端 `{code,msg,data}` 契约判定成败：非成功码提示并 reject。
     if (body && typeof body.code === 'number' && body.code !== SUCCESS_CODE) {
+      if (body.code === UNAUTHORIZED_CODE) {
+        redirectToLogin()
+        return Promise.reject(new Error(body.msg || '登录已过期，请重新登录'))
+      }
       const msg = body.msg || `请求失败（code=${body.code}）`
-      errorNotifier?.(msg)
+      if (!(response.config as RequestConfig).silent) {
+        errorNotifier?.(msg)
+      }
       return Promise.reject(new Error(msg))
     }
     return response
   },
   (error: AxiosError<CommonResult>) => {
+    if (error.response?.status === UNAUTHORIZED_CODE) {
+      redirectToLogin()
+      return Promise.reject(error)
+    }
     const msg = error.response?.data?.msg || error.message || '网络异常，请稍后重试'
-    errorNotifier?.(msg)
-    return Promise.reject(error)
+    if (!(error.config as RequestConfig | undefined)?.silent) {
+      errorNotifier?.(msg)
+    }
+    return Promise.reject(new Error(msg))
   },
 )
 
-/** 已确认成功（拦截器已挡掉失败），返回值即 `CommonResult.data`。 */
-export async function apiRequest<T>(config: AxiosRequestConfig): Promise<T> {
-  const response = await http.request<CommonResult<T>>(config)
-  return response.data.data
+/**
+ * 生成的 `api/*Controller.ts` 使用的请求函数（umi 风格入参）。
+ * 契约判定已在拦截器完成，返回值即后端 `CommonResult` 全量，业务代码取 `.data`。
+ */
+export default function request<T>(url: string, options: RequestConfig = {}): Promise<T> {
+  const { silent, ...config } = options
+  // silent 需要透传进 axios config，拦截器据此判断是否弹全局错误提示。
+  const requestConfig: RequestConfig = { url, ...config, silent }
+  return http.request<T>(requestConfig).then((response) => response.data)
 }

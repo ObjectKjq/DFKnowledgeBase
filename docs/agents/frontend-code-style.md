@@ -41,9 +41,10 @@ Prettier 与 ESLint 是格式的唯一出处（`.prettierrc.json`、`eslint.conf
 
 ## API 契约
 
-- 所有请求走 `api/http.ts` 的 `apiRequest<T>()`，返回值即 `CommonResult.data`；请求/响应类型定义在 `api/types.ts` 或 feature 内 types。
-- 成功判定 `code === 0`（`SUCCESS_CODE`，对齐后端 `CommonResult.isSuccess()`）；失败提示由拦截器统一弹出，业务代码不重复弹错、不吞掉 reject。
-- 登录令牌由请求拦截器从 `useAuthStore` 取，业务代码不手写 `Authorization` 头。
+- 请求函数由 `npm run openapi2ts` 从后端 OpenAPI 文档生成到 `src/api/*Controller.ts`（类型在 `api/typings.d.ts`），生成文件不手改；唯一例外是 `import request` 一行，随 `openapi2ts.config.ts` 的 `requestLibPath` 保持一致。
+- 所有请求经 `api/http.ts` 的 `request<T>()` 发出（axios 实例 + 拦截器），返回值是后端 `CommonResult` 全量，业务代码取 `.data`；`CommonResult` 与 `SUCCESS_CODE`（`code === 0`，对齐后端 `CommonResult.isSuccess()`）定义在 `api/types.ts`。
+- 失败提示由拦截器统一弹出，业务代码不重复弹错、不吞掉 reject；表单需要内联提示时传 `options: { silent: true }` 关闭全局弹错。
+- 登录令牌由请求拦截器从 `useAuthStore` 取，业务代码不手写 `Authorization` 头；`code === 401`（未登录 / 被踢）由拦截器清会话并统一跳回登录页。
 - 错误提示走 `setHttpErrorNotifier` 注入的 message 实例（`app/providers.tsx` 注册）——antd 静态 message 读不到 `ConfigProvider` 主题，不要直接调用。
 
 ## 样式

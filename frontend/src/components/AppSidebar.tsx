@@ -1,5 +1,8 @@
 import { useNavigate } from 'react-router-dom'
 
+import { MENU_TYPE_DIR } from '@/features/manage/menuTree'
+import { menuRoute } from '@/features/manage/tabs'
+import { useAuthStore } from '@/stores/auth'
 import { useKb } from '@/stores/knowledge'
 
 import { Icon } from './Icon'
@@ -16,6 +19,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
   const libs = useKb((s) => s.libs)
   const docs = useKb((s) => s.docs)
   const sessions = useKb((s) => s.sessions)
+  const menus = useAuthStore((s) => s.menus)
   const scope = useKb((s) => s.current.scope)
   const currentId = useKb((s) => s.current.id)
   const setScope = useKb((s) => s.setScope)
@@ -79,10 +83,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
           </button>
         </div>
         <nav aria-label="知识库">
-          <button
-            className={`nav-item ${!scope.length ? 'active' : ''}`}
-            onClick={() => goScope()}
-          >
+          <button className={`nav-item ${!scope.length ? 'active' : ''}`} onClick={() => goScope()}>
             <Icon name="layers" />
             <span>全部知识库</span>
             <span className="count">{available()}</span>
@@ -132,6 +133,47 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
             </button>
           ))}
         </nav>
+
+        {/* 功能入口由登录返回的菜单树驱动，无权的菜单不渲染。 */}
+        {menus.length > 0 && (
+          <>
+            <div className="section-label">功能菜单</div>
+            <nav aria-label="功能菜单">
+              {menus.map((m) =>
+                m.type === MENU_TYPE_DIR ? (
+                  <div key={m.id}>
+                    <div className="side-subtitle">{m.name}</div>
+                    {((m.children ?? []) as API.MenuVO[]).map((c) => (
+                      <button
+                        key={c.id}
+                        className="nav-item"
+                        onClick={() => {
+                          navigate(menuRoute(c.path))
+                          onClose()
+                        }}
+                      >
+                        <Icon name="settings" />
+                        <span>{c.name}</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <button
+                    key={m.id}
+                    className="nav-item"
+                    onClick={() => {
+                      navigate(menuRoute(m.path))
+                      onClose()
+                    }}
+                  >
+                    <Icon name="layers" />
+                    <span>{m.name}</span>
+                  </button>
+                ),
+              )}
+            </nav>
+          </>
+        )}
       </div>
 
       <div className="side-bottom">

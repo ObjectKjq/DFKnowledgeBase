@@ -9,3 +9,6 @@ export interface CommonResult<T = unknown> {
 
 /** 后端成功码，对齐 `CommonResult.isSuccess()`。 */
 export const SUCCESS_CODE = 0
+
+/** 后端「未登录」错误码（GlobalErrorCodeConstants.UNAUTHORIZED），统一跳回登录页。 */
+export const UNAUTHORIZED_CODE = 401
