@@ -1,0 +1,31 @@
+### 上传文档（multipart/form-data，格式白名单与 50 MB 上限）
+POST {{baseUrl}}/knowledge/doc/upload?knowledgeBaseId=1
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="期末复习笔记.pdf"
+Content-Type: application/pdf
+
+< ./期末复习笔记.pdf
+--WebAppBoundary--
+
+### 分页查询文档（可按知识库、标题、状态收窄）
+GET {{baseUrl}}/knowledge/doc/page?pageNum=1&pageSize=10&knowledgeBaseId=1&status=4
+Authorization: Bearer {{token}}
+
+### 获取文档详情
+GET {{baseUrl}}/knowledge/doc/get?id=1
+Authorization: Bearer {{token}}
+
+### 重试入库（仅失败文档，回到「排队」重新执行）
+POST {{baseUrl}}/knowledge/doc/retry?id=1
+Authorization: Bearer {{token}}
+
+### 删除文档（软删除，30 天内可恢复）
+DELETE {{baseUrl}}/knowledge/doc/delete?id=1
+Authorization: Bearer {{token}}
+
+### 恢复文档（恢复到删除前状态）
+POST {{baseUrl}}/knowledge/doc/restore?id=1
+Authorization: Bearer {{token}}

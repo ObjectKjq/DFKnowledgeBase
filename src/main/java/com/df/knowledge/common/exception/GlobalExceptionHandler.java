@@ -13,6 +13,7 @@ import org.springframework.validation.BindException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Iterator;
@@ -86,6 +87,15 @@ public class GlobalExceptionHandler {
     public CommonResult<?> handleNoResourceFoundException(NoResourceFoundException ex) {
         log.warn("[handleNoResourceFoundException][{}]", ex.getMessage());
         return CommonResult.error(GlobalErrorCodeConstants.NOT_FOUND);
+    }
+
+    /**
+     * 上传文件超过 multipart 上限（与业务上限 50 MB 对齐；文案与业务错误码 DOC_FILE_TOO_LARGE 一致，common 层不引用业务错误码）
+     */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public CommonResult<?> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex) {
+        log.warn("[handleMaxUploadSizeExceededException]", ex);
+        return CommonResult.error(GlobalErrorCodeConstants.BAD_REQUEST.getCode(), "文件大小超过 50 MB 上限");
     }
 
     /**

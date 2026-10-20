@@ -1,0 +1,112 @@
+package com.df.knowledge.service.doc;
+
+import cn.hutool.core.util.StrUtil;
+import com.df.knowledge.dal.dataobject.doc.DocDO;
+import com.df.knowledge.dal.mysql.doc.DocMapper;
+import com.df.knowledge.enums.doc.DocStatusEnum;
+import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
+import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
+
+import java.util.List;
+
+/**
+ * 文档入库 Service 实现类
+ *
+ * 状态迁移唯一依据 PRD §8.2 文档生命周期；迁移用 CAS 条件更新，避免与删除/恢复并发时把已删除文档拉回流程
+ */
+@Service
+@Validated
+@Slf4j
+public class DocIngestServiceImpl implements DocIngestService {
+
+    @Resource
+    private DocMapper docMapper;
+
+    @Resource
+    private DocParseService docParseService;
+
+    @Resource
+    private DocIndexService docIndexService;
+
+    @Resource
+    private ThreadPoolTaskExecutor docIngestExecutor;
+
+    @Override
+    public void submit(Long docId) {
+        docIngestExecutor.execute(() -> processDoc(docId));
+    }
+
+    @Override
+    public void processDoc(Long docId) {
+        // 1. 仅处理入库进行中的文档（已删除或已结束的任务直接退出）
+        DocDO doc = docMapper.selectById(docId);
+        if (doc == null || !DocStatusEnum.isInFlight(doc.getStatus())) {
+            return;
+        }
+        Integer entryStatus = doc.getStatus();
+        // 2. 解析阶段（解析、切分与分块落库）：排队迁移到解析中，重启恢复的解析中文档续跑，索引中文档解析已完成、跳过
+        if (!DocStatusEnum.INDEXING.getCode().equals(entryStatus)) {
+            if (!DocStatusEnum.PARSING.getCode().equals(entryStatus)
+                    && docMapper.updateStatus(docId, entryStatus, DocStatusEnum.PARSING.getCode(), null) == 0) {
+                log.warn("[processDoc][文档({})状态已变化，跳过入库]", docId);
+                return;
+            }
+            try {
+                docParseService.parse(docId);
+            } catch (Exception ex) {
+                markFailed(docId, doc, DocStatusEnum.PARSING.getCode(), ex);
+                return;
+            }
+        }
+        // 3. 索引阶段（向量化与写入分块索引）：解析中迁移到索引中，重启恢复的索引中文档续跑
+        if (!DocStatusEnum.INDEXING.getCode().equals(entryStatus)
+                && docMapper.updateStatus(docId, DocStatusEnum.PARSING.getCode(), DocStatusEnum.INDEXING.getCode(), null) == 0) {
+            log.warn("[processDoc][文档({})状态已变化，跳过索引]", docId);
+            return;
+        }
+        try {
+            docIndexService.index(docId);
+        } catch (Exception ex) {
+            markFailed(docId, doc, DocStatusEnum.INDEXING.getCode(), ex);
+            return;
+        }
+        // 4. 迁移到可用，参与检索与问答
+        if (docMapper.updateStatus(docId, DocStatusEnum.INDEXING.getCode(), DocStatusEnum.AVAILABLE.getCode(), null) == 0) {
+            log.warn("[processDoc][文档({})状态已变化，入库结束]", docId);
+        }
+    }
+
+    @Override
+    @EventListener(ApplicationReadyEvent.class)
+    public void recoverInterruptedDocs() {
+        // 服务启动时把停留在排队/解析中/索引中的文档重新入队（ADR-0007），不丢任务
+        List<DocDO> docs = docMapper.selectListByStatuses(DocStatusEnum.IN_FLIGHT_STATUS_CODES);
+        docs.forEach(doc -> submit(doc.getId()));
+        if (!docs.isEmpty()) {
+            log.info("[recoverInterruptedDocs][重新入队中断的入库任务({}个)]", docs.size());
+        }
+    }
+
+    /**
+     * 迁移到失败并记录失败原因
+     *
+     * 失败原因保留首次值：重试后再次失败不覆盖首次原因（PRD FR-3）
+     *
+     * @param docId 文档编号
+     * @param doc 文档（用于读取已有失败原因）
+     * @param fromStatus 迁移前状态，枚举 {@link DocStatusEnum}
+     * @param ex 失败异常
+     */
+    private void markFailed(Long docId, DocDO doc, Integer fromStatus, Exception ex) {
+        String failReason = StrUtil.isBlank(doc.getFailReason())
+                ? StrUtil.blankToDefault(ex.getMessage(), "文档处理失败")
+                : doc.getFailReason();
+        log.warn("[markFailed][文档({})入库失败，原因({})]", docId, failReason, ex);
+        docMapper.updateStatus(docId, fromStatus, DocStatusEnum.FAILED.getCode(), failReason);
+    }
+}

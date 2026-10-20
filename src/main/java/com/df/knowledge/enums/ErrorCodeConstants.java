@@ -7,7 +7,7 @@ import com.df.knowledge.common.ErrorCodeImpl;
  * 业务错误码常量
  *
  * 编码为四段十位制 {@code 1-001-001-002}（类型-系统-模块-序号）：第一段固定 1（业务级异常），
- * 第二段固定 001，第三段按业务模块认领（001 用户功能：认证/用户/角色/菜单，002 知识库模块），
+ * 第二段固定 001，第三段按业务模块认领（001 用户功能：认证/用户/角色/菜单，002 知识库模块，003 文档模块），
  * 第四段为模块内序号
  */
 public interface ErrorCodeConstants {
@@ -39,4 +39,14 @@ public interface ErrorCodeConstants {
     ErrorCode KB_PERSONAL_NOT_ALLOW_MEMBER = new ErrorCodeImpl(1_001_002_004, "个人知识库不支持添加成员");
     ErrorCode KB_MEMBER_EXISTS = new ErrorCodeImpl(1_001_002_005, "该用户已是知识库成员");
     ErrorCode KB_MEMBER_NOT_FOUND = new ErrorCodeImpl(1_001_002_006, "知识库成员不存在");
+
+    // ========== 文档模块 1-001-003-0xx ==========
+    ErrorCode DOC_NOT_FOUND = new ErrorCodeImpl(1_001_003_001, "文档不存在");
+    ErrorCode DOC_FORMAT_NOT_SUPPORTED = new ErrorCodeImpl(1_001_003_002, "不支持的文件格式，仅支持 PDF、Word、PPT、Excel、TXT、Markdown");
+    ErrorCode DOC_FILE_TOO_LARGE = new ErrorCodeImpl(1_001_003_003, "文件大小超过 50 MB 上限");
+    ErrorCode DOC_RETRY_NOT_ALLOWED = new ErrorCodeImpl(1_001_003_004, "仅失败的文档支持重试");
+    ErrorCode DOC_DELETE_NOT_ALLOWED = new ErrorCodeImpl(1_001_003_005, "文档已删除，无法重复删除");
+    ErrorCode DOC_RESTORE_NOT_ALLOWED = new ErrorCodeImpl(1_001_003_006, "仅已删除的文档支持恢复");
+    ErrorCode DOC_RESTORE_EXPIRED = new ErrorCodeImpl(1_001_003_007, "文档删除超过 30 天，无法恢复");
+    ErrorCode DOC_FILE_STORE_FAILED = new ErrorCodeImpl(1_001_003_008, "文件存储失败");
 }

@@ -9,6 +9,20 @@ spring:
   profiles:
     active: local
 
+--- ################### 文件上传 ###################
+spring:
+  servlet:
+    multipart:
+      # multipart 上限与业务上限对齐（单文件 50 MB，服务层校验并给出业务错误码）；超出时由全局异常处理给出同一文案提示
+      max-file-size: 50MB
+      max-request-size: 55MB
+
+--- ################### 文档存储 ###################
+knowledge:
+  doc:
+    # 文档落盘根目录，存储路径 = 根目录/知识库编号/随机文件名.扩展名
+    storage-path: ./data/docs
+
 --- ################### MyBatis-Plus ###################
 mybatis-plus:
   # Mapper XML 位置

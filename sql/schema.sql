@@ -165,3 +165,31 @@ CREATE TABLE `knowledge_base_member` (
     KEY `idx_knowledge_base_id` (`knowledge_base_id`) USING BTREE,
     KEY `idx_user_id` (`user_id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识库成员表';
+
+-- ----------------------------
+-- 文档表
+-- 状态机（PRD §8.2）：1 排队 2 解析中 3 索引中 4 可用 5 失败 6 已删除（软删除）
+-- 软删除 30 天保留期：delete_time 为起算点，prev_status 记录删除前状态供恢复
+-- ----------------------------
+DROP TABLE IF EXISTS `knowledge_doc`;
+CREATE TABLE `knowledge_doc` (
+    `id`                bigint       NOT NULL AUTO_INCREMENT COMMENT '文档ID',
+    `knowledge_base_id` bigint       NOT NULL COMMENT '知识库ID（关联 knowledge_base 表）',
+    `title`             varchar(200) NOT NULL COMMENT '文档标题（默认取上传文件名）',
+    `file_name`         varchar(255) NOT NULL COMMENT '上传时的原始文件名',
+    `format`            tinyint      NOT NULL COMMENT '文档格式（1 PDF 2 Word 3 PPT 4 Excel 5 TXT 6 Markdown）',
+    `file_size`         bigint       NOT NULL COMMENT '文件大小（字节）',
+    `file_path`         varchar(500) NOT NULL COMMENT '文件存储路径',
+    `status`            tinyint      NOT NULL COMMENT '文档状态（1 排队 2 解析中 3 索引中 4 可用 5 失败 6 已删除）',
+    `fail_reason`       varchar(500) NULL DEFAULT NULL COMMENT '失败原因（保留首次失败原因）',
+    `prev_status`       tinyint      NULL DEFAULT NULL COMMENT '删除前状态（软删除恢复到删除前状态用）',
+    `delete_time`       datetime     NULL DEFAULT NULL COMMENT '删除时间（软删除 30 天保留期起算点）',
+    `creator`           varchar(64)  NULL DEFAULT '' COMMENT '创建者',
+    `create_time`       datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updater`           varchar(64)  NULL DEFAULT '' COMMENT '更新者',
+    `update_time`       datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted`           bit(1)       NOT NULL DEFAULT b'0' COMMENT '是否删除',
+    PRIMARY KEY (`id`) USING BTREE,
+    KEY `idx_knowledge_base_id` (`knowledge_base_id`) USING BTREE,
+    KEY `idx_status` (`status`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '文档表';
