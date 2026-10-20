@@ -1,0 +1,29 @@
+### 邀请成员
+POST {{baseUrl}}/knowledge/base/member/invite
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "knowledgeBaseId": 2,
+  "username": "lisi",
+  "memberRole": 2
+}
+
+### 更改成员角色
+PUT {{baseUrl}}/knowledge/base/member/update-role
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "knowledgeBaseId": 2,
+  "id": 1,
+  "memberRole": 1
+}
+
+### 移除成员
+DELETE {{baseUrl}}/knowledge/base/member/delete?knowledgeBaseId=2&id=1
+Authorization: Bearer {{token}}
+
+### 获取成员列表
+GET {{baseUrl}}/knowledge/base/member/list?knowledgeBaseId=2
+Authorization: Bearer {{token}}

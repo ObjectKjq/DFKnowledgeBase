@@ -20,6 +20,7 @@ import com.df.knowledge.dal.dataobject.user.UserDO;
 import com.df.knowledge.dal.mysql.permission.UserRoleMapper;
 import com.df.knowledge.dal.mysql.user.UserMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
+import com.df.knowledge.service.knowledge.KnowledgeBaseService;
 import com.df.knowledge.service.permission.PermissionService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +50,9 @@ public class UserServiceImpl implements UserService {
     private PermissionService permissionService;
 
     @Resource
+    private KnowledgeBaseService knowledgeBaseService;
+
+    @Resource
     private PasswordEncoder passwordEncoder;
 
     @Override
@@ -63,7 +67,9 @@ public class UserServiceImpl implements UserService {
             user.setStatus(CommonStatusEnum.ENABLE.getCode());
         }
         userMapper.insert(user);
-        // 3. 分配角色
+        // 3. 创建默认个人知识库「我的知识库」
+        knowledgeBaseService.createDefaultKnowledgeBase(user.getId());
+        // 4. 分配角色
         assignUserRoles(user.getId(), reqVO.getRoleIds());
         return user.getId();
     }

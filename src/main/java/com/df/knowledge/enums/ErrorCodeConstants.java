@@ -7,7 +7,8 @@ import com.df.knowledge.common.ErrorCodeImpl;
  * 业务错误码常量
  *
  * 编码为四段十位制 {@code 1-001-001-002}（类型-系统-模块-序号）：第一段固定 1（业务级异常），
- * 第二段固定 001，第三段 001 由用户功能（认证/用户/角色/菜单）认领，第四段为模块内序号
+ * 第二段固定 001，第三段按业务模块认领（001 用户功能：认证/用户/角色/菜单，002 知识库模块），
+ * 第四段为模块内序号
  */
 public interface ErrorCodeConstants {
 
@@ -30,4 +31,12 @@ public interface ErrorCodeConstants {
     ErrorCode MENU_PARENT_ERROR = new ErrorCodeImpl(1_001_001_202, "父菜单不能是自己");
     ErrorCode MENU_PARENT_NOT_FOUND = new ErrorCodeImpl(1_001_001_203, "父菜单不存在");
     ErrorCode MENU_EXISTS_CHILD = new ErrorCodeImpl(1_001_001_204, "存在子菜单，无法删除");
+
+    // ========== 知识库模块 1-001-002-0xx ==========
+    ErrorCode KB_NOT_FOUND = new ErrorCodeImpl(1_001_002_001, "知识库不存在");
+    ErrorCode KB_DEFAULT_NOT_DELETABLE = new ErrorCodeImpl(1_001_002_002, "默认知识库不允许删除");
+    ErrorCode KB_NO_PERMISSION = new ErrorCodeImpl(1_001_002_003, "无权操作该知识库");
+    ErrorCode KB_PERSONAL_NOT_ALLOW_MEMBER = new ErrorCodeImpl(1_001_002_004, "个人知识库不支持添加成员");
+    ErrorCode KB_MEMBER_EXISTS = new ErrorCodeImpl(1_001_002_005, "该用户已是知识库成员");
+    ErrorCode KB_MEMBER_NOT_FOUND = new ErrorCodeImpl(1_001_002_006, "知识库成员不存在");
 }

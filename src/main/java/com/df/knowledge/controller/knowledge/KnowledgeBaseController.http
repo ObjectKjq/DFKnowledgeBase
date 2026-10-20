@@ -1,0 +1,33 @@
+### 创建个人知识库
+POST {{baseUrl}}/knowledge/base/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "期末复习",
+  "type": 1,
+  "description": "高数与线代资料"
+}
+
+### 创建共享知识库
+POST {{baseUrl}}/knowledge/base/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "课题组资料",
+  "type": 2,
+  "description": "论文与实验记录"
+}
+
+### 删除知识库（默认知识库会被拒绝）
+DELETE {{baseUrl}}/knowledge/base/delete?id=2
+Authorization: Bearer {{token}}
+
+### 获取知识库详情
+GET {{baseUrl}}/knowledge/base/get?id=2
+Authorization: Bearer {{token}}
+
+### 分页查询知识库
+GET {{baseUrl}}/knowledge/base/page?pageNum=1&pageSize=10&type=2
+Authorization: Bearer {{token}}

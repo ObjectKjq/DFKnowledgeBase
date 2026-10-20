@@ -19,7 +19,7 @@ import java.util.List;
 public interface UserService {
 
     /**
-     * 创建用户（含角色分配）
+     * 创建用户（含默认知识库创建与角色分配）
      *
      * @param reqVO 创建信息
      * @return 用户编号

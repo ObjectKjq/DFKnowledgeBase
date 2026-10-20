@@ -1,5 +1,5 @@
 -- ----------------------------------------------------------------------------
--- 知识库平台 · 用户功能（RBAC）建表脚本
+-- 知识库平台建表脚本（用户功能 RBAC、知识库与成员）
 -- 适用 MySQL 5.7+ / 8.0，InnoDB + utf8mb4
 -- 逻辑删除约定：deleted = 0 未删除、1 已删除（登录日志除外，不删除）
 -- ----------------------------------------------------------------------------
@@ -124,3 +124,44 @@ CREATE TABLE `system_login_log` (
     PRIMARY KEY (`id`) USING BTREE,
     KEY `idx_user_id` (`user_id`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '登录日志表';
+
+-- ----------------------------
+-- 知识库表
+-- ----------------------------
+DROP TABLE IF EXISTS `knowledge_base`;
+CREATE TABLE `knowledge_base` (
+    `id`           bigint       NOT NULL AUTO_INCREMENT COMMENT '知识库ID',
+    `name`         varchar(50)  NOT NULL COMMENT '知识库名称',
+    `type`         tinyint      NOT NULL COMMENT '知识库类型（1 个人 2 共享）',
+    `owner_id`     bigint       NOT NULL COMMENT '所有者用户ID（关联 system_user 表）',
+    `default_flag` bit(1)       NOT NULL DEFAULT b'0' COMMENT '是否默认知识库（用户创建时自动生成，不可删除）',
+    `description`  varchar(200) NULL DEFAULT '' COMMENT '知识库说明',
+    `creator`      varchar(64)  NULL DEFAULT '' COMMENT '创建者',
+    `create_time`  datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updater`      varchar(64)  NULL DEFAULT '' COMMENT '更新者',
+    `update_time`  datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted`      bit(1)       NOT NULL DEFAULT b'0' COMMENT '是否删除',
+    PRIMARY KEY (`id`) USING BTREE,
+    KEY `idx_owner_id` (`owner_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识库表';
+
+-- ----------------------------
+-- 知识库成员表
+-- 「知识库 + 用户」的唯一性由服务层校验保证：本表随公共字段逻辑删除，
+-- 若建联合唯一约束，成员被移除后将无法再次邀请同一用户
+-- ----------------------------
+DROP TABLE IF EXISTS `knowledge_base_member`;
+CREATE TABLE `knowledge_base_member` (
+    `id`                bigint      NOT NULL AUTO_INCREMENT COMMENT '自增编号',
+    `knowledge_base_id` bigint      NOT NULL COMMENT '知识库ID（关联 knowledge_base 表）',
+    `user_id`           bigint      NOT NULL COMMENT '成员用户ID（关联 system_user 表）',
+    `member_role`       tinyint     NOT NULL COMMENT '成员角色（1 编辑者 2 查看者）',
+    `creator`           varchar(64) NULL DEFAULT '' COMMENT '创建者',
+    `create_time`       datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updater`           varchar(64) NULL DEFAULT '' COMMENT '更新者',
+    `update_time`       datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted`           bit(1)      NOT NULL DEFAULT b'0' COMMENT '是否删除',
+    PRIMARY KEY (`id`) USING BTREE,
+    KEY `idx_knowledge_base_id` (`knowledge_base_id`) USING BTREE,
+    KEY `idx_user_id` (`user_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识库成员表';

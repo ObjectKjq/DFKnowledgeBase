@@ -12,6 +12,7 @@ import com.df.knowledge.dal.dataobject.user.UserDO;
 import com.df.knowledge.dal.mysql.permission.UserRoleMapper;
 import com.df.knowledge.dal.mysql.user.UserMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
+import com.df.knowledge.service.knowledge.KnowledgeBaseService;
 import com.df.knowledge.service.permission.PermissionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -46,6 +47,9 @@ class UserServiceImplTest {
 
     @Mock
     private PermissionService permissionService;
+
+    @Mock
+    private KnowledgeBaseService knowledgeBaseService;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -86,9 +90,10 @@ class UserServiceImplTest {
         // 调用
         Long userId = userService.createUser(reqVO);
 
-        // 断言：密码加密后落库，角色关联已写入
+        // 断言：密码加密后落库，默认知识库已创建，角色关联已写入
         assertEquals(10L, userId.longValue());
         verify(passwordEncoder).encode("123456");
+        verify(knowledgeBaseService).createDefaultKnowledgeBase(10L);
         verify(userRoleMapper).deleteByUserId(10L);
         verify(userRoleMapper).insert(any(UserRoleDO.class));
     }
