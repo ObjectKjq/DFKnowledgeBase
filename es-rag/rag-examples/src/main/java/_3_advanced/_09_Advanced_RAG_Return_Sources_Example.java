@@ -1,0 +1,118 @@
+package _3_advanced;
+
+import _2_naive.Naive_RAG_Example;
+import dev.langchain4j.data.document.Document;
+import dev.langchain4j.data.document.DocumentParser;
+import dev.langchain4j.data.document.DocumentSplitter;
+import dev.langchain4j.data.document.parser.TextDocumentParser;
+import dev.langchain4j.data.document.splitter.DocumentSplitters;
+import dev.langchain4j.data.embedding.Embedding;
+import dev.langchain4j.data.segment.TextSegment;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.embedding.onnx.bgesmallenv15q.BgeSmallEnV15QuantizedEmbeddingModel;
+import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.rag.content.Content;
+import dev.langchain4j.rag.content.retriever.ContentRetriever;
+import dev.langchain4j.rag.content.retriever.EmbeddingStoreContentRetriever;
+import dev.langchain4j.service.AiServices;
+import dev.langchain4j.service.Result;
+import dev.langchain4j.store.embedding.EmbeddingStore;
+import dev.langchain4j.store.embedding.inmemory.InMemoryEmbeddingStore;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Scanner;
+
+import static dev.langchain4j.data.document.loader.FileSystemDocumentLoader.loadDocument;
+import static dev.langchain4j.model.openai.OpenAiChatModelName.GPT_4_O_MINI;
+import static shared.Utils.OPENAI_API_KEY;
+import static shared.Utils.toPath;
+
+public class _09_Advanced_RAG_Return_Sources_Example {
+
+
+    /**
+     * 关于基础背景请参见 {@link Naive_RAG_Example}。
+     * <p>
+     * LangChain4j 中的高级 RAG 说明见：https://github.com/langchain4j/langchain4j/pull/538
+     * <p>
+     * 本示例演示如何返回来源（被检索到的内容）。
+     */
+
+    interface Assistant {
+
+        Result<String> answer(String query);
+    }
+
+    public static void main(String[] args) {
+
+        Assistant assistant = createAssistant();
+
+        Logger log = LoggerFactory.getLogger(shared.Assistant.class);
+        try (Scanner scanner = new Scanner(System.in)) {
+            while (true) {
+                log.info("==================================================");
+                log.info("User: ");
+                String userQuery = scanner.nextLine();
+                log.info("==================================================");
+
+                if ("exit".equalsIgnoreCase(userQuery)) {
+                    break;
+                }
+
+                Result<String> result = assistant.answer(userQuery);
+                log.info("==================================================");
+                log.info("Assistant: " + result.content());
+
+                log.info("Sources: ");
+                List<Content> sources = result.sources();
+                sources.forEach(content -> log.info(content.toString()));
+            }
+        }
+    }
+
+    private static Assistant createAssistant() {
+
+        // 让我们创建基于向量存储的内容检索器。
+        EmbeddingModel embeddingModel = new BgeSmallEnV15QuantizedEmbeddingModel();
+
+        EmbeddingStore<TextSegment> embeddingStore =
+                embed(toPath("documents/miles-of-smiles-terms-of-use.txt"), embeddingModel);
+
+        ContentRetriever contentRetriever = EmbeddingStoreContentRetriever.builder()
+                .embeddingStore(embeddingStore)
+                .embeddingModel(embeddingModel)
+                .maxResults(2)
+                .minScore(0.6)
+                .build();
+
+        ChatModel chatModel = OpenAiChatModel.builder()
+                .apiKey(OPENAI_API_KEY)
+                .modelName(GPT_4_O_MINI)
+                .build();
+
+        return AiServices.builder(Assistant.class)
+                .chatModel(chatModel)
+                .contentRetriever(contentRetriever)
+                .chatMemory(MessageWindowChatMemory.withMaxMessages(10))
+                .build();
+    }
+
+    private static EmbeddingStore<TextSegment> embed(Path documentPath, EmbeddingModel embeddingModel) {
+        DocumentParser documentParser = new TextDocumentParser();
+        Document document = loadDocument(documentPath, documentParser);
+
+        DocumentSplitter splitter = DocumentSplitters.recursive(300, 0);
+        List<TextSegment> segments = splitter.split(document);
+
+        List<Embedding> embeddings = embeddingModel.embedAll(segments).content();
+
+        EmbeddingStore<TextSegment> embeddingStore = new InMemoryEmbeddingStore<>();
+        embeddingStore.addAll(embeddings, segments);
+        return embeddingStore;
+    }
+}
