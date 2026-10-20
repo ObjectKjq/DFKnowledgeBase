@@ -16,4 +16,4 @@ Issue 与 spec 在本仓库的 GitHub Issues 中跟踪（使用 `gh` CLI）。�
 
 ### Code style
 
-写代码前先读对应规范：后端 Java（`src/`）见 `docs/agents/backend-code-style.md`，前端 TS/React（`frontend/`）见 `docs/agents/frontend-code-style.md`。前后端契约唯一出处：后端 `com.df.knowledge.common`，前端 `frontend/src/api`。
+写代码前先读对应规范：后端 Java（`src/`）见 `docs/agents/backend-code-style.md`，前端 TS/React（`frontend/`）见 `docs/agents/frontend-code-style.md`。前后端契约唯一出处：后端 `com.df.knowledge.common`，前端 `frontend/src/api`。只有在编码的时候你才去加载代码规范，写前端代码就加载前端代码规范，写后端就加载后端代码规范。
