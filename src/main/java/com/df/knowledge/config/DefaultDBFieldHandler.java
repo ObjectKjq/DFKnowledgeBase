@@ -4,6 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import com.baomidou.mybatisplus.core.handlers.MetaObjectHandler;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
 
 import java.time.LocalDateTime;
 
@@ -39,6 +40,10 @@ public class DefaultDBFieldHandler implements MetaObjectHandler {
      * @return 登录用户编号字符串
      */
     private String getLoginUserId() {
+        // 入库线程与定时任务没有 Web 上下文，不向 sa-token 查询请求中的登录态
+        if (RequestContextHolder.getRequestAttributes() == null) {
+            return "";
+        }
         Object loginId = StpUtil.getLoginIdDefaultNull();
         return loginId != null ? loginId.toString() : "";
     }

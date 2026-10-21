@@ -6,6 +6,7 @@ import com.df.knowledge.dal.mysql.doc.DocMapper;
 import com.df.knowledge.enums.doc.DocStatusEnum;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -30,7 +31,7 @@ public class DocIngestServiceImpl implements DocIngestService {
     @Resource
     private DocParseService docParseService;
 
-    @Resource
+    @Autowired(required = false)
     private DocIndexService docIndexService;
 
     @Resource
@@ -69,6 +70,10 @@ public class DocIngestServiceImpl implements DocIngestService {
             log.warn("[processDoc][文档({})状态已变化，跳过索引]", docId);
             return;
         }
+        // 索引段由后续交付补充；没有实现时停留在索引中，不能提前标记为可用
+        if (docIndexService == null) {
+            return;
+        }
         try {
             docIndexService.index(docId);
         } catch (Exception ex) {
@@ -104,7 +109,7 @@ public class DocIngestServiceImpl implements DocIngestService {
      */
     private void markFailed(Long docId, DocDO doc, Integer fromStatus, Exception ex) {
         String failReason = StrUtil.isBlank(doc.getFailReason())
-                ? StrUtil.blankToDefault(ex.getMessage(), "文档处理失败")
+                ? StrUtil.subPre(StrUtil.blankToDefault(ex.getMessage(), "文档处理失败"), 500)
                 : doc.getFailReason();
         log.warn("[markFailed][文档({})入库失败，原因({})]", docId, failReason, ex);
         docMapper.updateStatus(docId, fromStatus, DocStatusEnum.FAILED.getCode(), failReason);

@@ -8,6 +8,7 @@ import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.controller.doc.vo.DocPageReqVO;
 import com.df.knowledge.dal.dataobject.doc.DocDO;
 import com.df.knowledge.dal.mysql.doc.DocMapper;
+import com.df.knowledge.dal.mysql.doc.DocChunkMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
 import com.df.knowledge.enums.doc.DocConstants;
 import com.df.knowledge.enums.doc.DocFormatEnum;
@@ -36,6 +37,9 @@ public class DocServiceImpl implements DocService {
 
     @Resource
     private DocMapper docMapper;
+
+    @Resource
+    private DocChunkMapper docChunkMapper;
 
     @Resource
     private DocFileService docFileService;
@@ -166,6 +170,7 @@ public class DocServiceImpl implements DocService {
         // 2. 彻底删除：移除记录与存储文件
         docs.forEach(doc -> {
             docMapper.deleteById(doc.getId());
+            docChunkMapper.deleteByDocId(doc.getId());
             docFileService.delete(doc.getFilePath());
         });
         if (!docs.isEmpty()) {

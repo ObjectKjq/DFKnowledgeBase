@@ -53,6 +53,7 @@ class AuthServiceImplTest {
     void testLogin_badCredentials_logAndThrow() {
         // 准备参数：账号存在但密码不匹配
         AuthLoginReqVO reqVO = buildLoginReqVO();
+        reqVO.setPassword("wrong");
         UserDO user = buildUser(10L, CommonStatusEnum.ENABLE.getCode());
         user.setPassword("encoded");
         when(userService.getUserByUsername("zhangsan")).thenReturn(user);

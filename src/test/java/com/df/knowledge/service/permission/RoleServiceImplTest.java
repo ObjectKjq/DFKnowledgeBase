@@ -4,6 +4,7 @@ import com.df.knowledge.common.CommonStatusEnum;
 import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.controller.permission.vo.role.RoleSaveReqVO;
 import com.df.knowledge.dal.dataobject.permission.RoleDO;
+import com.df.knowledge.dal.dataobject.permission.RoleMenuDO;
 import com.df.knowledge.dal.dataobject.permission.UserRoleDO;
 import com.df.knowledge.dal.mysql.permission.RoleMapper;
 import com.df.knowledge.dal.mysql.permission.RoleMenuMapper;
@@ -117,7 +118,7 @@ class RoleServiceImplTest {
 
         // 断言：先清旧关联再写入新关联，并失效权限缓存
         verify(roleMenuMapper).deleteByRoleId(3L);
-        verify(roleMenuMapper, times(2)).insert(any());
+        verify(roleMenuMapper, times(2)).insert(any(RoleMenuDO.class));
         verify(permissionService).resetRoleCache(3L);
     }
 

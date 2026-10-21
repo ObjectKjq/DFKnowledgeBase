@@ -22,6 +22,16 @@ import java.util.List;
 public interface DocMapper extends BaseMapper<DocDO> {
 
     /**
+     * 锁定文档，串行化同一文档的分块替换与彻底删除
+     *
+     * @param id 文档编号
+     * @return 文档，不存在时为空
+     */
+    default DocDO selectByIdForUpdate(Long id) {
+        return selectOne(new LambdaQueryWrapper<DocDO>().eq(DocDO::getId, id).last("FOR UPDATE"));
+    }
+
+    /**
      * 分页查询指定范围内的文档
      *
      * @param reqVO 分页查询条件

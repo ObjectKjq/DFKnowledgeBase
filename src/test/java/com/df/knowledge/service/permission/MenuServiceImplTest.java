@@ -46,7 +46,7 @@ class MenuServiceImplTest {
         // 调用并断言
         ServiceException exception = assertThrows(ServiceException.class, () -> menuService.createMenu(reqVO));
         assertEquals(ErrorCodeConstants.MENU_PARENT_NOT_FOUND.getCode(), exception.getErrorCode().getCode());
-        verify(menuMapper, never()).insert(any());
+        verify(menuMapper, never()).insert(any(MenuDO.class));
     }
 
     @Test

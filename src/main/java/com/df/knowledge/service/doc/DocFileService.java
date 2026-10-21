@@ -2,6 +2,9 @@ package com.df.knowledge.service.doc;
 
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 /**
  * 文档存储 Service 接口（外部端口：文件系统）
  *
@@ -18,6 +21,15 @@ public interface DocFileService {
      * @return 文件存储路径
      */
     String store(Long knowledgeBaseId, String extension, MultipartFile file);
+
+    /**
+     * 打开已存储的文档，由调用方关闭流
+     *
+     * @param filePath 文件存储路径
+     * @return 文档输入流
+     * @throws IOException 文件无法读取
+     */
+    InputStream open(String filePath) throws IOException;
 
     /**
      * 删除存储的文件（文档彻底删除时清理，文件不存在时静默跳过）

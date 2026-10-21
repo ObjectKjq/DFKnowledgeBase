@@ -6,6 +6,7 @@ import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.controller.doc.vo.DocPageReqVO;
 import com.df.knowledge.dal.dataobject.doc.DocDO;
 import com.df.knowledge.dal.mysql.doc.DocMapper;
+import com.df.knowledge.dal.mysql.doc.DocChunkMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
 import com.df.knowledge.enums.doc.DocConstants;
 import com.df.knowledge.enums.doc.DocFormatEnum;
@@ -46,6 +47,9 @@ class DocServiceImplTest {
 
     @Mock
     private DocMapper docMapper;
+
+    @Mock
+    private DocChunkMapper docChunkMapper;
 
     @Mock
     private DocFileService docFileService;
@@ -207,7 +211,7 @@ class DocServiceImplTest {
         // 调用并断言
         ServiceException exception = assertThrows(ServiceException.class, () -> docService.retryDoc(10L, 5L));
         assertEquals(ErrorCodeConstants.DOC_RETRY_NOT_ALLOWED.getCode(), exception.getErrorCode().getCode());
-        verify(docMapper, never()).updateById(any());
+        verify(docMapper, never()).updateById(any(DocDO.class));
     }
 
     @Test
@@ -251,7 +255,7 @@ class DocServiceImplTest {
         // 调用并断言
         ServiceException exception = assertThrows(ServiceException.class, () -> docService.deleteDoc(10L, 5L));
         assertEquals(ErrorCodeConstants.DOC_DELETE_NOT_ALLOWED.getCode(), exception.getErrorCode().getCode());
-        verify(docMapper, never()).updateById(any());
+        verify(docMapper, never()).updateById(any(DocDO.class));
     }
 
     @Test
@@ -299,7 +303,7 @@ class DocServiceImplTest {
         // 调用并断言
         ServiceException exception = assertThrows(ServiceException.class, () -> docService.restoreDoc(10L, 5L));
         assertEquals(ErrorCodeConstants.DOC_RESTORE_NOT_ALLOWED.getCode(), exception.getErrorCode().getCode());
-        verify(docMapper, never()).updateById(any());
+        verify(docMapper, never()).updateById(any(DocDO.class));
     }
 
     @Test
@@ -313,7 +317,7 @@ class DocServiceImplTest {
         // 调用并断言：超期不可恢复
         ServiceException exception = assertThrows(ServiceException.class, () -> docService.restoreDoc(10L, 5L));
         assertEquals(ErrorCodeConstants.DOC_RESTORE_EXPIRED.getCode(), exception.getErrorCode().getCode());
-        verify(docMapper, never()).updateById(any());
+        verify(docMapper, never()).updateById(any(DocDO.class));
     }
 
     @Test
@@ -328,6 +332,7 @@ class DocServiceImplTest {
 
         // 断言：移除记录与存储文件
         verify(docMapper).deleteById(5L);
+        verify(docChunkMapper).deleteByDocId(5L);
         verify(docFileService).delete("./data/docs/1/abc.pdf");
     }
 

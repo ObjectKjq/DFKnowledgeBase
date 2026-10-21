@@ -12,6 +12,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
  * 文档存储 Service 实现类（本地文件系统）
@@ -41,6 +44,11 @@ public class DocFileServiceImpl implements DocFileService {
             throw new ServiceException(ErrorCodeConstants.DOC_FILE_STORE_FAILED);
         }
         return target.getPath();
+    }
+
+    @Override
+    public InputStream open(String filePath) throws IOException {
+        return Files.newInputStream(Path.of(filePath));
     }
 
     @Override
