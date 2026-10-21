@@ -7,6 +7,7 @@ export interface TabConfig {
 }
 
 export const TAB_CONFIGS: TabConfig[] = [
+  { key: 'libraries', title: '知识库与成员' },
   { key: 'docs', title: '文档管理' },
   { key: 'mcp', title: 'MCP 接入' },
   { key: 'models', title: '实例设置' },

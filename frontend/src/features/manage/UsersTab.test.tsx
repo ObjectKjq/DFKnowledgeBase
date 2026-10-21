@@ -3,7 +3,6 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getSimpleRoleList } from '@/api/roleController'
 import { getUserPage, resetUserPassword, updateUserStatus } from '@/api/userController'
 import { ModalHost } from '@/components/ModalHost'
 import { useAuthStore } from '@/stores/auth'

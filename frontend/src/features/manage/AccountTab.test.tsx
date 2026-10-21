@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { logout } from '@/api/authController'
-import { getProfile, updateProfile, updateProfilePassword } from '@/api/userController'
+import { getProfile, updateProfilePassword } from '@/api/userController'
 
 import { AccountTab } from './AccountTab'
 

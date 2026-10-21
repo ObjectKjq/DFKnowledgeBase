@@ -1,3 +1,4 @@
+import { useLibraries } from '@/features/knowledge/useLibraries'
 import type { Doc, Message } from '@/mock/data'
 import { IMAGE_ART } from '@/mock/data'
 import { isTrustQuery, libName } from '@/mock/logic'
@@ -50,7 +51,9 @@ function AnswerBlock({ query, ids }: { query: string; ids: string[] }) {
     const b = found.findIndex((d) => d.id === 'd5')
     return (
       <>
-        <p>让知识检索更可信，关键是让“找到什么”和“依据在哪里”始终清晰。结合已有资料，可以从三个方面着手：</p>
+        <p>
+          让知识检索更可信，关键是让“找到什么”和“依据在哪里”始终清晰。结合已有资料，可以从三个方面着手：
+        </p>
         <h3>01 · 兼顾准确匹配与语义理解</h3>
         <p>
           融合关键字与语义检索：用关键字找到编号和术语，用语义找回不同措辞下的相近内容。
@@ -91,10 +94,20 @@ function AnswerBlock({ query, ids }: { query: string; ids: string[] }) {
 }
 
 function ResultCard({ doc, query, mode, i }: { doc: Doc; query: string; mode: string; i: number }) {
-  const libs = useKb((s) => s.libs)
+  const { libs } = useLibraries()
   const showPreview = useKb((s) => s.showPreview)
   const type =
-    doc.ext === 'png' ? '图片' : mode === '精确检索' ? '精确' : mode === '模糊检索' ? '模糊' : doc.id === 'd8' ? 'OCR' : i === 0 ? '精确' : '模糊'
+    doc.ext === 'png'
+      ? '图片'
+      : mode === '精确检索'
+        ? '精确'
+        : mode === '模糊检索'
+          ? '模糊'
+          : doc.id === 'd8'
+            ? 'OCR'
+            : i === 0
+              ? '精确'
+              : '模糊'
   return (
     <button className="result-card" onClick={() => showPreview(doc.id)}>
       <span className="result-top">
@@ -122,7 +135,7 @@ function ResultCard({ doc, query, mode, i }: { doc: Doc; query: string; mode: st
 }
 
 function CitationCard({ doc, i }: { doc: Doc; i: number }) {
-  const libs = useKb((s) => s.libs)
+  const { libs } = useLibraries()
   const showPreview = useKb((s) => s.showPreview)
   return (
     <button className="citation-card" onClick={() => showPreview(doc.id)}>
@@ -137,15 +150,7 @@ function CitationCard({ doc, i }: { doc: Doc; i: number }) {
   )
 }
 
-function EmptyResult({
-  query,
-  rag,
-  text,
-}: {
-  query?: string
-  rag?: boolean
-  text?: string
-}) {
+function EmptyResult({ query, rag, text }: { query?: string; rag?: boolean; text?: string }) {
   const broaden = useKb((s) => s.broaden)
   const openUpload = useKb((s) => s.openUpload)
   return (

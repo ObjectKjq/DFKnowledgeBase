@@ -42,6 +42,18 @@ declare namespace API {
     data?: boolean
   }
 
+  type CommonResultKnowledgeBaseRespVO = {
+    code?: number
+    msg?: string
+    data?: KnowledgeBaseRespVO
+  }
+
+  type CommonResultListKnowledgeBaseMemberRespVO = {
+    code?: number
+    msg?: string
+    data?: KnowledgeBaseMemberRespVO[]
+  }
+
   type CommonResultListLong = {
     code?: number
     msg?: string
@@ -72,6 +84,12 @@ declare namespace API {
     data?: MenuRespVO
   }
 
+  type CommonResultPageResultKnowledgeBaseRespVO = {
+    code?: number
+    msg?: string
+    data?: PageResultKnowledgeBaseRespVO
+  }
+
   type CommonResultPageResultRoleRespVO = {
     code?: number
     msg?: string
@@ -96,6 +114,11 @@ declare namespace API {
     data?: UserRespVO
   }
 
+  type deleteKnowledgeBaseParams = {
+    /** 知识库编号 */
+    id: number
+  }
+
   type deleteMenuParams = {
     /** 菜单编号 */
     id: number
@@ -109,6 +132,20 @@ declare namespace API {
   type deleteUserParams = {
     /** 用户编号 */
     id: number
+  }
+
+  type getKnowledgeBasePageParams = {
+    reqVO: KnowledgeBasePageReqVO
+  }
+
+  type getKnowledgeBaseParams = {
+    /** 知识库编号 */
+    id: number
+  }
+
+  type getMemberListParams = {
+    /** 知识库编号 */
+    knowledgeBaseId: number
   }
 
   type getMenuParams = {
@@ -137,6 +174,80 @@ declare namespace API {
   type getUserParams = {
     /** 用户编号 */
     id: number
+  }
+
+  type JsonNode = true
+
+  type KnowledgeBaseMemberInviteReqVO = {
+    /** 知识库编号 */
+    knowledgeBaseId: number
+    /** 被邀请用户账号 */
+    username: string
+    /** 成员角色（1 编辑者 2 查看者） */
+    memberRole: number
+  }
+
+  type KnowledgeBaseMemberRespVO = {
+    /** 成员编号 */
+    id?: number
+    /** 知识库编号 */
+    knowledgeBaseId?: number
+    /** 成员用户编号 */
+    userId?: number
+    /** 成员用户账号 */
+    username?: string
+    /** 成员用户昵称 */
+    nickname?: string
+    /** 成员角色（1 编辑者 2 查看者） */
+    memberRole?: number
+    /** 加入时间 */
+    createTime?: string
+  }
+
+  type KnowledgeBaseMemberUpdateReqVO = {
+    /** 知识库编号 */
+    knowledgeBaseId: number
+    /** 成员编号 */
+    id: number
+    /** 成员角色（1 编辑者 2 查看者） */
+    memberRole: number
+  }
+
+  type KnowledgeBasePageReqVO = {
+    /** 页码，从 1 开始 */
+    pageNum?: number
+    /** 每页条数 */
+    pageSize?: number
+    /** 知识库名称（模糊匹配） */
+    name?: string
+    /** 知识库类型（1 个人 2 共享） */
+    type?: number
+  }
+
+  type KnowledgeBaseRespVO = {
+    /** 知识库编号 */
+    id?: number
+    /** 知识库名称 */
+    name?: string
+    /** 知识库类型（1 个人 2 共享） */
+    type?: number
+    /** 所有者用户编号 */
+    ownerId?: number
+    /** 是否默认知识库（不可删除） */
+    defaultFlag?: boolean
+    /** 知识库说明 */
+    description?: string
+    /** 创建时间 */
+    createTime?: string
+  }
+
+  type KnowledgeBaseSaveReqVO = {
+    /** 知识库名称 */
+    name: string
+    /** 知识库类型（1 个人 2 共享） */
+    type: number
+    /** 知识库说明 */
+    description?: string
   }
 
   type MenuRespVO = {
@@ -210,6 +321,11 @@ declare namespace API {
     children?: any
   }
 
+  type PageResultKnowledgeBaseRespVO = {
+    total?: number
+    list?: KnowledgeBaseRespVO[]
+  }
+
   type PageResultRoleRespVO = {
     total?: number
     list?: RoleRespVO[]
@@ -218,6 +334,13 @@ declare namespace API {
   type PageResultUserRespVO = {
     total?: number
     list?: UserRespVO[]
+  }
+
+  type removeMemberParams = {
+    /** 知识库编号 */
+    knowledgeBaseId: number
+    /** 成员编号 */
+    id: number
   }
 
   type RoleAssignMenuReqVO = {

@@ -1,3 +1,4 @@
+import { useLibraries } from '@/features/knowledge/useLibraries'
 import { useNavigate } from 'react-router-dom'
 
 import { MENU_TYPE_DIR } from '@/features/manage/menuTree'
@@ -16,8 +17,7 @@ const DEMO_HISTORY: [string, string][] = [
 /** 左侧主导航（复刻原型 `.sidebar`）。 */
 export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
-  const libs = useKb((s) => s.libs)
-  const docs = useKb((s) => s.docs)
+  const { libs, isPending, isError, refetch } = useLibraries()
   const sessions = useKb((s) => s.sessions)
   const menus = useAuthStore((s) => s.menus)
   const scope = useKb((s) => s.current.scope)
@@ -26,9 +26,6 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
   const openHistory = useKb((s) => s.openHistory)
   const newChat = useKb((s) => s.newChat)
   const openModal = useKb((s) => s.openModal)
-
-  const available = (libId?: string) =>
-    docs.filter((d) => d.status === '可用' && (!libId || d.lib === libId)).length
 
   const goScope = (id?: string) => {
     setScope(id ? [id] : [])
@@ -77,16 +74,21 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
 
       <div className="side-scroll">
         <div className="section-label">
-          知识空间
-          <button aria-label="新建共享知识库" onClick={() => openModal({ kind: 'library' })}>
+          知识库
+          <button aria-label="新建知识库" onClick={() => openModal({ kind: 'library' })}>
             <Icon name="plus" />
           </button>
         </div>
+        {isPending && <p className="table-note">正在加载知识库…</p>}
+        {isError && (
+          <button className="nav-item" onClick={() => void refetch()}>
+            知识库加载失败，重试
+          </button>
+        )}
         <nav aria-label="知识库">
           <button className={`nav-item ${!scope.length ? 'active' : ''}`} onClick={() => goScope()}>
             <Icon name="layers" />
             <span>全部知识库</span>
-            <span className="count">{available()}</span>
           </button>
           {personalLibs.map((l) => (
             <button
@@ -96,7 +98,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
             >
               <Icon name="book" />
               <span>{l.name}</span>
-              <span className="count">{available(l.id)}</span>
+              <span className="count">{l.role}</span>
             </button>
           ))}
           <div className="side-subtitle">共享知识库</div>
@@ -108,7 +110,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
             >
               <Icon name="users" />
               <span>{l.name}</span>
-              <span className="count">{available(l.id)}</span>
+              <span className="count">{l.role}</span>
             </button>
           ))}
         </nav>

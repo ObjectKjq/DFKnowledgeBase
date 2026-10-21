@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useMemo, useState, type FormEvent } from 'react'
 
 import { getMenuList } from '@/api/menuController'
 import {
@@ -68,7 +68,7 @@ export function RolesTab() {
       '删除角色',
       `「${r.name}」将被删除，此操作不可恢复。若仍有用户使用该角色，删除会被拒绝。`,
       '确认删除',
-      () => deleteMutation.mutate({ id: r.id! }),
+      () => deleteMutation.mutate(r.id!),
     )
   }
 
@@ -195,7 +195,7 @@ function RoleFormModal({ role, onClose }: { role: API.RoleRespVO | null; onClose
   const [hint, setHint] = useState('')
 
   const saveMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const payload = {
         name: form.name.trim(),
         code: form.code.trim(),
@@ -302,11 +302,8 @@ function AssignMenuModal({ role, onClose }: { role: API.RoleRespVO; onClose: () 
     queryFn: async () => (await getRoleMenuIdList({ roleId: role.id! })).data ?? [],
   })
 
-  const [checked, setChecked] = useState<number[]>([])
-
-  useEffect(() => {
-    if (owned.data) setChecked(owned.data)
-  }, [owned.data])
+  const [selection, setChecked] = useState<number[] | null>(null)
+  const checked = selection ?? owned.data ?? []
 
   const rows = useMemo(() => flattenMenuTree(menus.data ?? []), [menus.data])
 

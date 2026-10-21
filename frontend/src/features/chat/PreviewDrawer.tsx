@@ -1,3 +1,4 @@
+import { useLibraries } from '@/features/knowledge/useLibraries'
 import { useEffect } from 'react'
 
 import { IMAGE_ART } from '@/mock/data'
@@ -10,7 +11,7 @@ import { Icon } from '@/components/Icon'
 export function PreviewDrawer() {
   const previewId = useKb((s) => s.previewId)
   const docs = useKb((s) => s.docs)
-  const libs = useKb((s) => s.libs)
+  const { libs } = useLibraries()
   const previewPage = useKb((s) => s.previewPage)
   const contextExpanded = useKb((s) => s.contextExpanded)
   const closePreview = useKb((s) => s.closePreview)
@@ -24,7 +25,9 @@ export function PreviewDrawer() {
   useEffect(() => {
     if (match) {
       requestAnimationFrame(() =>
-        document.getElementById('preview-hit')?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
+        document
+          .getElementById('preview-hit')
+          ?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
       )
     }
   }, [match, previewId, previewPage])
@@ -75,7 +78,9 @@ export function PreviewDrawer() {
           <p className="table-note">原文样式预览 · 预置示例片段</p>
           {doc.ext === 'png' && (
             <div
-              dangerouslySetInnerHTML={{ __html: IMAGE_ART.replace('viewBox=', 'class="doc-art" viewBox=') }}
+              dangerouslySetInnerHTML={{
+                __html: IMAGE_ART.replace('viewBox=', 'class="doc-art" viewBox='),
+              }}
             />
           )}
           <h3>{doc.section}</h3>
@@ -83,7 +88,8 @@ export function PreviewDrawer() {
             <>
               <p>{doc.context || '以下展示导入文件的基本信息。'}</p>
               <blockquote id="preview-hit">
-                {doc.text || '该文件已完成模拟入库。原型未读取其实际文本，不参与有依据的 RAG 生成。'}
+                {doc.text ||
+                  '该文件已完成模拟入库。原型未读取其实际文本，不参与有依据的 RAG 生成。'}
               </blockquote>
               <p>{doc.after || `文件名：${doc.title}.${doc.ext}`}</p>
             </>

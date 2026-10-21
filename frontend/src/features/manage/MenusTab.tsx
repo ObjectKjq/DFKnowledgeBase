@@ -46,7 +46,7 @@ export function MenusTab() {
       '删除菜单',
       `「${m.name}」将被删除。若其下仍有子菜单，删除会被拒绝。`,
       '确认删除',
-      () => deleteMutation.mutate({ id: m.id! }),
+      () => deleteMutation.mutate(m.id!),
     )
   }
 
@@ -154,7 +154,7 @@ function MenuFormModal({
   const parents = all.filter((m) => m.type !== MENU_TYPE_BUTTON && m.id !== menu?.id)
 
   const saveMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const payload = {
         name: form.name.trim(),
         type: form.type,

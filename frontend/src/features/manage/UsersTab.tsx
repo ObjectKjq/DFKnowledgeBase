@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useState, type FormEvent } from 'react'
 
 import { getSimpleRoleList } from '@/api/roleController'
 import {
@@ -96,7 +96,7 @@ export function UsersTab() {
 
   const remove = (u: API.UserRespVO) => {
     confirmThen('删除用户', `「${u.username}」将被删除，此操作不可恢复。`, '确认删除', () =>
-      deleteMutation.mutate({ id: u.id! }),
+      deleteMutation.mutate(u.id!),
     )
   }
 
@@ -226,36 +226,24 @@ function UserFormModal({ user, onClose }: { user: API.UserRespVO | null; onClose
     queryFn: async () => (await getSimpleRoleList()).data ?? [],
   })
 
-  const [form, setForm] = useState({
-    username: '',
+  const initialForm = {
+    username: detail.data?.username ?? '',
     password: '',
-    nickname: '',
-    avatar: '',
-    email: '',
-    mobile: '',
-    status: 0,
-    remark: '',
-  })
-  const [roleIds, setRoleIds] = useState<number[]>([])
+    nickname: detail.data?.nickname ?? '',
+    avatar: detail.data?.avatar ?? '',
+    email: detail.data?.email ?? '',
+    mobile: detail.data?.mobile ?? '',
+    status: detail.data?.status ?? 0,
+    remark: detail.data?.remark ?? '',
+  }
+  const [draft, setForm] = useState<typeof initialForm | null>(null)
+  const form = draft ?? initialForm
+  const [selectedRoles, setRoleIds] = useState<number[] | null>(null)
+  const roleIds = selectedRoles ?? detail.data?.roleIds ?? []
   const [hint, setHint] = useState('')
 
-  useEffect(() => {
-    if (!detail.data) return
-    setForm({
-      username: detail.data.username ?? '',
-      password: '',
-      nickname: detail.data.nickname ?? '',
-      avatar: detail.data.avatar ?? '',
-      email: detail.data.email ?? '',
-      mobile: detail.data.mobile ?? '',
-      status: detail.data.status ?? 0,
-      remark: detail.data.remark ?? '',
-    })
-    setRoleIds(detail.data.roleIds ?? [])
-  }, [detail.data])
-
   const saveMutation = useMutation({
-    mutationFn: () => {
+    mutationFn: async () => {
       const payload = {
         nickname: form.nickname.trim(),
         avatar: form.avatar.trim(),

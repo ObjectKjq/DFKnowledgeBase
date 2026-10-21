@@ -1,3 +1,5 @@
+import { CreateLibraryModal } from '@/features/knowledge/CreateLibraryModal'
+import { useLibraries } from '@/features/knowledge/useLibraries'
 import { useState, type FormEvent, type ReactNode } from 'react'
 
 import { formatSize } from '@/mock/logic'
@@ -46,7 +48,7 @@ export function ModalShell({
 
 /** 上传入库弹窗。 */
 function UploadModal() {
-  const libs = useKb((s) => s.libs)
+  const { libs } = useLibraries()
   const pending = useKb((s) => s.pendingUpload)
   const target = useKb((s) => s.uploadTarget)
   const started = useKb((s) => s.uploadStarted)
@@ -238,58 +240,6 @@ function TokenModal({ token }: { token: string }) {
   )
 }
 
-/** 新建共享知识库弹窗。 */
-function LibraryModal() {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const createLibrary = useKb((s) => s.createLibrary)
-  const closeModal = useKb((s) => s.closeModal)
-  const toastMsg = useKb((s) => s.toastMsg)
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    const value = name.trim()
-    if (!value) {
-      toastMsg('请填写知识库名称', true)
-      return
-    }
-    createLibrary(value, description.trim())
-  }
-
-  return (
-    <ModalShell title="给共同的知识，一个家" description="创建共享知识库，与同伴一起整理与发现。">
-      <form onSubmit={submit}>
-        <label className="field">
-          知识库名称
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={50}
-            required
-            placeholder="例如：我们的研究室"
-            autoFocus
-          />
-        </label>
-        <label className="field">
-          说明 · 选填
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            maxLength={200}
-            placeholder="这里会收集哪些资料？"
-          />
-        </label>
-        <div className="form-actions">
-          <button type="button" className="btn ghost" onClick={closeModal}>
-            取消
-          </button>
-          <button className="btn primary">创建知识库</button>
-        </div>
-      </form>
-    </ModalShell>
-  )
-}
-
 /** 向量模型更新确认弹窗。 */
 function VectorConfirmModal() {
   const closeModal = useKb((s) => s.closeModal)
@@ -383,7 +333,7 @@ export function ModalHost() {
     case 'token':
       return <TokenModal token={modal.token} />
     case 'library':
-      return <LibraryModal />
+      return <CreateLibraryModal />
     case 'vector-confirm':
       return <VectorConfirmModal />
     case 'copy':

@@ -1,3 +1,4 @@
+import { useLibraries } from '@/features/knowledge/useLibraries'
 import { useNavigate } from 'react-router-dom'
 
 import { HERO_ART, SUGGESTION_SETS } from '@/mock/data'
@@ -9,14 +10,16 @@ import { Icon } from '@/components/Icon'
 /** 首屏空态（复刻原型 homeHTML）。 */
 export function Home() {
   const docs = useKb((s) => s.docs)
-  const libs = useKb((s) => s.libs)
+  const { libs } = useLibraries()
   const suggestionIndex = useKb((s) => s.suggestionIndex)
   const shuffleSuggestions = useKb((s) => s.shuffleSuggestions)
   const openUpload = useKb((s) => s.openUpload)
   const showPreview = useKb((s) => s.showPreview)
   const navigate = useNavigate()
 
-  const recent = docs.filter((d) => d.status === '可用').slice(0, 3)
+  const recent = docs
+    .filter((d) => d.status === '可用' && libs.some((library) => library.id === d.lib))
+    .slice(0, 3)
   const suggestions = SUGGESTION_SETS[suggestionIndex % 2]
 
   const startImageSearch = () => {
@@ -100,7 +103,7 @@ export function Home() {
               <button
                 className="suggestion"
                 key={q}
-                onClick={() => suggest(q, i === 1 ? 'RAG 检索' : '直接检索', image)}
+                onClick={() => suggest(q, i === 1 ? 'RAG 检索' : '混合检索', image)}
               >
                 <Icon name={i === 2 ? 'image' : i === 1 ? 'spark' : 'search'} />
                 {q}

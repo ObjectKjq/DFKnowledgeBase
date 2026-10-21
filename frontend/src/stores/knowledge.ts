@@ -8,19 +8,18 @@ import { persist } from 'zustand/middleware'
 import {
   DEFAULT_CREDENTIALS,
   DEFAULT_DOCS,
-  DEFAULT_LIBS,
   DEFAULT_MODEL_CONFIG,
   MCP_TOOLS,
+  MODES,
   STORE_KEY,
   type Credential,
   type Doc,
   type DocStatus,
-  type Lib,
-  type LibType,
   type Message,
   type ModelConfig,
   type Session,
 } from '@/mock/data'
+import { getLibraries } from '@/features/knowledge/libraries'
 import { configText, isTrustQuery, libName, retrieve, uuid } from '@/mock/logic'
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
@@ -54,7 +53,7 @@ export type ModalState =
 const NEW_SESSION = (): Session => ({
   id: 'new',
   title: '新检索',
-  mode: '直接检索',
+  mode: '混合检索',
   scope: [],
   skills: [],
   model: 'Qwen3 · 本地',
@@ -64,7 +63,6 @@ const NEW_SESSION = (): Session => ({
 
 interface KbState {
   // 领域数据
-  libs: Lib[]
   docs: Doc[]
   credentials: Credential[]
   sessions: Session[]
@@ -148,8 +146,6 @@ interface KbState {
   createCredential: (name: string, days: number) => void
   revokeCredential: (id: string) => void
 
-  createLibrary: (name: string, description: string) => void
-
   openUpload: () => void
   addPendingFiles: (files: { name: string; size: number }[]) => void
   removePending: (index: number) => void
@@ -172,7 +168,6 @@ let toastTimer: ReturnType<typeof setTimeout> | undefined
 export const useKb = create<KbState>()(
   persist(
     (set, get) => ({
-      libs: structuredClone(DEFAULT_LIBS),
       docs: structuredClone(DEFAULT_DOCS),
       credentials: structuredClone(DEFAULT_CREDENTIALS),
       sessions: [],
@@ -198,7 +193,7 @@ export const useKb = create<KbState>()(
       lastConfigClient: 'Codex',
 
       pendingUpload: [],
-      uploadTarget: 'personal',
+      uploadTarget: '',
       uploadStarted: false,
       oneTimeToken: null,
 
@@ -327,7 +322,7 @@ export const useKb = create<KbState>()(
         }
         const query = q || (attachment ? '查找与这张图片相似的内容' : '')
         const scope = session.scope.length
-          ? session.scope.map((l) => libName(get().libs, l)).join('、')
+          ? session.scope.map((l) => libName(getLibraries(), l)).join('、')
           : '全部知识库'
         const title = session.title === '新检索' ? query.slice(0, 22) : session.title
         const userMsg: Message = {
@@ -377,6 +372,7 @@ export const useKb = create<KbState>()(
         const pool = get().docs.filter(
           (d) =>
             d.status === '可用' &&
+            getLibraries().some((library) => library.id === d.lib) &&
             (!get().current.scope.length || get().current.scope.includes(d.lib)),
         )
         let found = retrieve(pool, query, mode, get().current.skills, imageQuery).filter(
@@ -392,6 +388,7 @@ export const useKb = create<KbState>()(
         const hasContent = get().docs.some(
           (d) =>
             d.status === '可用' &&
+            getLibraries().some((library) => library.id === d.lib) &&
             (!get().current.scope.length || get().current.scope.includes(d.lib)),
         )
         const ids = found.map((d) => d.id)
@@ -453,7 +450,12 @@ export const useKb = create<KbState>()(
                   id: uuid(),
                   type: 'guide',
                   text: '还想按哪种方式收窄范围？也可以直接输入更多线索。',
-                  options: ['优先查我的知识库', '优先查产品与设计', '保持当前范围'],
+                  options: [
+                    ...getLibraries()
+                      .slice(0, 2)
+                      .map((library) => `优先查${library.name}`),
+                    '保持当前范围',
+                  ],
                 },
               ],
             },
@@ -464,8 +466,10 @@ export const useKb = create<KbState>()(
         const g = guide
         let scope = get().current.scope
         let skills = get().current.skills
-        if (g.answers.some((a) => a.includes('我的知识库'))) scope = ['personal']
-        if (g.answers.some((a) => a.includes('产品与设计'))) scope = ['design']
+        const preferred = getLibraries().find((library) =>
+          g.answers.includes(`优先查${library.name}`),
+        )
+        if (preferred) scope = [preferred.id]
         if (g.answers.some((a) => a.includes('图片')))
           skills = [...new Set([...skills, '图片搜索'])]
         const merged =
@@ -473,10 +477,10 @@ export const useKb = create<KbState>()(
           ' ' +
           g.answers.filter((a) => !a.includes('范围') && !a.includes('优先')).join(' ')
         const scopeLabel = scope.length
-          ? scope.map((l) => libName(get().libs, l)).join('、')
+          ? scope.map((l) => libName(getLibraries(), l)).join('、')
           : '全部知识库'
         set({ guide: null, current: { ...get().current, messages, scope, skills } })
-        await get().executeQuery(merged, '直接检索', scopeLabel)
+        await get().executeQuery(merged, '混合检索', scopeLabel)
       },
 
       skipGuide: async () => {
@@ -487,10 +491,10 @@ export const useKb = create<KbState>()(
           m.type === 'guide' ? { ...m, done: true } : m,
         )
         const scope = current.scope.length
-          ? current.scope.map((l) => libName(get().libs, l)).join('、')
+          ? current.scope.map((l) => libName(getLibraries(), l)).join('、')
           : '全部知识库'
         set({ guide: null, current: { ...current, messages } })
-        await get().executeQuery(guide.query, '直接检索', scope)
+        await get().executeQuery(guide.query, '混合检索', scope)
       },
 
       broaden: async (query) => {
@@ -540,7 +544,7 @@ export const useKb = create<KbState>()(
             'demo-image': ['d3'],
           }
           const title = titles[id] ?? '新检索'
-          const mode = id === 'demo-rag' ? 'RAG 检索' : '直接检索'
+          const mode = id === 'demo-rag' ? 'RAG 检索' : '混合检索'
           const sc = {
             id,
             title,
@@ -571,7 +575,7 @@ export const useKb = create<KbState>()(
                   query: title,
                   ids: clean.map((d) => d.id),
                   scope: '全部知识库',
-                  mode: '直接检索',
+                  mode: '混合检索',
                 },
           ]
           set({
@@ -595,7 +599,7 @@ export const useKb = create<KbState>()(
           get().toastMsg('原文已删除，可在文档管理的回收站中恢复', true)
           return
         }
-        if (!get().libs.some((l) => l.id === d.lib)) {
+        if (!getLibraries().some((l) => l.id === d.lib)) {
           get().toastMsg('无权访问该原文', true)
           return
         }
@@ -723,20 +727,14 @@ export const useKb = create<KbState>()(
         )
       },
 
-      createLibrary: (name, description) => {
-        const l: Lib = { id: uuid(), name, type: 'shared' as LibType, role: '所有者', description }
-        set({ libs: [...get().libs, l] })
-        get().closeModal()
-        get().toastMsg('共享知识库已创建')
-      },
-
       openUpload: () => {
-        const { current, libs } = get()
+        const { current } = get()
+        const libs = getLibraries()
         const target =
           current.scope.length === 1 &&
-          libs.find((l) => l.id === current.scope[0])?.role !== '查看者'
+          libs.some((l) => l.id === current.scope[0] && l.role !== '查看者')
             ? current.scope[0]
-            : 'personal'
+            : (libs.find((l) => l.role !== '查看者')?.id ?? '')
         set({
           pendingUpload: [],
           uploadTarget: target,
@@ -757,7 +755,7 @@ export const useKb = create<KbState>()(
       startUpload: async () => {
         const { pendingUpload, uploadTarget, uploadStarted } = get()
         if (!pendingUpload.length || uploadStarted) return
-        const targetLib = get().libs.find((l) => l.id === uploadTarget)
+        const targetLib = getLibraries().find((l) => l.id === uploadTarget)
         if (!targetLib || targetLib.role === '查看者') {
           get().toastMsg('当前知识库没有上传权限', true)
           return
@@ -837,8 +835,29 @@ export const useKb = create<KbState>()(
     }),
     {
       name: STORE_KEY,
+      merge: (persisted, current) => {
+        const saved = persisted as Partial<KbState> | undefined
+        return {
+          ...current,
+          docs: saved?.docs ?? current.docs,
+          credentials: saved?.credentials ?? current.credentials,
+          modelConfig: saved?.modelConfig ?? current.modelConfig,
+          sessions: (saved?.sessions ?? []).map((session) => ({
+            ...session,
+            mode: MODES.some(([mode]) => mode === session.mode) ? session.mode : '混合检索',
+            messages: session.messages.map((message) => ({
+              ...message,
+              mode:
+                message.mode &&
+                !MODES.some(([mode]) => mode === message.mode) &&
+                message.mode !== '引导补充'
+                  ? '混合检索'
+                  : message.mode,
+            })),
+          })),
+        }
+      },
       partialize: (s) => ({
-        libs: s.libs,
         docs: s.docs,
         credentials: s.credentials,
         sessions: s.sessions,

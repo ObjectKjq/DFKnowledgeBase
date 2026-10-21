@@ -1,19 +1,11 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { App as AntdApp, ConfigProvider } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { useEffect, type ReactNode } from 'react'
 
+import { queryClient } from '@/lib/queryClient'
 import { setHttpErrorNotifier } from '@/lib/http'
 import { antdTheme } from '@/theme/tokens'
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-    },
-  },
-})
 
 /**
  * 把 antd 的 message 实例注入到 axios 拦截器，使接口错误提示吃到知序主题。

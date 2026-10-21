@@ -1,3 +1,4 @@
+import { useLibraries } from '@/features/knowledge/useLibraries'
 import { libName, writable } from '@/mock/logic'
 import { useKb } from '@/stores/knowledge'
 
@@ -6,7 +7,7 @@ import { Icon } from '@/components/Icon'
 /** 文档管理 Tab（复刻原型 docsHTML）。 */
 export function DocsTab() {
   const docs = useKb((s) => s.docs)
-  const libs = useKb((s) => s.libs)
+  const { libs } = useLibraries()
   const docFilter = useKb((s) => s.docFilter)
   const docSearch = useKb((s) => s.docSearch)
   const setDocFilter = useKb((s) => s.setDocFilter)
@@ -19,6 +20,7 @@ export function DocsTab() {
   const retryDoc = useKb((s) => s.retryDoc)
 
   const filtered = docs
+    .filter((d) => libs.some((library) => library.id === d.lib))
     .filter((d) =>
       docFilter === 'deleted'
         ? d.status === '已删除'
@@ -138,7 +140,8 @@ export function DocsTab() {
       </div>
 
       <p className="table-note">
-        {filtered.length} 份文档 · 删除后在回收站保留 30 天。研究与阅读为查看者权限。上传与解析状态为交互演示。
+        {filtered.length} 份文档 · 删除后在回收站保留 30
+        天。查看者仅可检索和查看文档。上传与解析状态为交互演示。
       </p>
     </>
   )

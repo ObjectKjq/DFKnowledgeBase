@@ -8,6 +8,7 @@ import { Icon } from '@/components/Icon'
 
 import { AccountTab } from './AccountTab'
 import { DocsTab } from './DocsTab'
+import { LibrariesTab } from './LibrariesTab'
 import { McpTab } from './McpTab'
 import { MenusTab } from './MenusTab'
 import { ModelsTab } from './ModelsTab'
@@ -17,6 +18,7 @@ import { UsersTab } from './UsersTab'
 
 const TABS: Record<string, () => ReactElement> = {
   docs: DocsTab,
+  libraries: LibrariesTab,
   mcp: McpTab,
   models: ModelsTab,
   users: UsersTab,

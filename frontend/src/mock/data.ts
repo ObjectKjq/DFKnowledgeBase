@@ -3,17 +3,7 @@
  * 中的 defaults / modes / suggestionSets 等常量。当前无真实后端接口，界面由这批模拟数据驱动。
  */
 
-export type LibType = 'personal' | 'shared'
-
 export type DocStatus = '排队' | '解析中' | '索引中' | '可用' | '失败' | '已删除'
-
-export interface Lib {
-  id: string
-  name: string
-  role: string
-  type: LibType
-  description?: string
-}
 
 export interface Doc {
   id: string
@@ -98,12 +88,6 @@ export interface Session {
 }
 
 export const STORE_KEY = 'zhixu-kb-front-v1'
-
-export const DEFAULT_LIBS: Lib[] = [
-  { id: 'personal', name: '我的知识库', role: '所有者', type: 'personal' },
-  { id: 'design', name: '产品与设计', role: '所有者', type: 'shared' },
-  { id: 'research', name: '研究与阅读', role: '查看者', type: 'shared' },
-]
 
 export const DEFAULT_DOCS: Doc[] = [
   {
@@ -261,7 +245,7 @@ export const MCP_TOOLS = ['search', 'search_images', 'ask', 'list_knowledge_base
 
 /** 检索模式：[模式名, 说明]。 */
 export const MODES: [string, string][] = [
-  ['直接检索', '关键字 + 语义，融合查找'],
+  ['混合检索', '关键字 + 语义，融合查找'],
   ['精确检索', '按术语、编号和字面精确匹配'],
   ['模糊检索', '凭模糊记忆，按语义寻找'],
   ['引导检索', '先澄清需求，再帮你找到'],

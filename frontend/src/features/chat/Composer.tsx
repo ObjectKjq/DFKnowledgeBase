@@ -1,3 +1,4 @@
+import { useLibraries } from '@/features/knowledge/useLibraries'
 import { useEffect, useRef, useState } from 'react'
 
 import { MODES } from '@/mock/data'
@@ -26,7 +27,7 @@ function chatModelOptions(chatName: string, chatType: string) {
 
 function Popover() {
   const popover = useKb((s) => s.popover)
-  const libs = useKb((s) => s.libs)
+  const { libs } = useLibraries()
   const current = useKb((s) => s.current)
   const modelConfig = useKb((s) => s.modelConfig)
   const setScope = useKb((s) => s.setScope)
@@ -134,7 +135,11 @@ function Popover() {
 
       {popover === 'add' && (
         <>
-          <button type="button" className="menu-option" onClick={() => useKb.getState().openUpload()}>
+          <button
+            type="button"
+            className="menu-option"
+            onClick={() => useKb.getState().openUpload()}
+          >
             <Icon name="upload" />
             <span>
               上传资料
@@ -198,7 +203,7 @@ export function Composer() {
   const draft = useKb((s) => s.draft)
   const busy = useKb((s) => s.busy)
   const attachment = useKb((s) => s.attachment)
-  const libs = useKb((s) => s.libs)
+  const { libs } = useLibraries()
   const popover = useKb((s) => s.popover)
   const setDraft = useKb((s) => s.setDraft)
   const sendQuery = useKb((s) => s.sendQuery)
