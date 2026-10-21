@@ -63,6 +63,22 @@ public interface DocMapper extends BaseMapper<DocDO> {
     }
 
     /**
+     * 查询有权范围内处于指定状态的文档，供检索限定可用文档
+     *
+     * @param knowledgeBaseIds 知识库编号范围，不得为空
+     * @param status 文档状态，枚举 {@link DocStatusEnum}
+     * @return 文档列表
+     */
+    default List<DocDO> selectListByKnowledgeBaseIdsAndStatus(Collection<Long> knowledgeBaseIds, Integer status) {
+        if (CollUtil.isEmpty(knowledgeBaseIds)) {
+            return List.of();
+        }
+        return selectList(new LambdaQueryWrapper<DocDO>()
+                .in(DocDO::getKnowledgeBaseId, knowledgeBaseIds)
+                .eq(DocDO::getStatus, status));
+    }
+
+    /**
      * 查询删除时间早于指定时间的软删除文档（超期彻底删除用）
      *
      * @param status 文档状态（已删除），枚举 {@link DocStatusEnum}

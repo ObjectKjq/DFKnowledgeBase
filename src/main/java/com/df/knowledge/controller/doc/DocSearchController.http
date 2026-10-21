@@ -1,0 +1,13 @@
+### 混合检索（不指定范围时检索全部有权知识库）
+POST {{baseUrl}}/knowledge/search/search
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "query": "知识检索如何工作",
+  "knowledgeBaseIds": [1]
+}
+
+### 按命中分块预览原文
+GET {{baseUrl}}/knowledge/search/preview?chunkId=1
+Authorization: Bearer {{token}}

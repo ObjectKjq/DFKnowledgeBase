@@ -4,9 +4,14 @@ import cn.hutool.core.util.StrUtil;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.Conflicts;
 import co.elastic.clients.elasticsearch._types.Refresh;
+import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.Retriever;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.core.DeleteByQueryResponse;
+import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
 import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.dal.dataobject.doc.DocChunkDO;
 import com.df.knowledge.enums.ErrorCodeConstants;
@@ -17,9 +22,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 /**
  * 自管 Elasticsearch 分块索引 Service 实现类
@@ -80,6 +87,40 @@ public class DocChunkIndexServiceImpl implements DocChunkIndexService {
         } catch (IOException | RuntimeException ex) {
             log.warn("[deleteByDocId][文档({})索引删除失败]", docId, ex);
             throw indexFailure(ex.getMessage());
+        }
+    }
+
+    @Override
+    public List<Long> searchHybrid(String query, float[] vector, Collection<Long> knowledgeBaseIds,
+                                   Collection<Long> docIds, int limit) {
+        if (knowledgeBaseIds.isEmpty() || docIds.isEmpty()) {
+            return List.of();
+        }
+        Query knowledgeBaseFilter = Query.of(q -> q.terms(t -> t.field("kb_id")
+                .terms(v -> v.value(knowledgeBaseIds.stream().map(id -> FieldValue.of(id.toString())).toList()))));
+        Query docFilter = Query.of(q -> q.terms(t -> t.field("doc_id")
+                .terms(v -> v.value(docIds.stream().map(id -> FieldValue.of(id.toString())).toList()))));
+        List<Float> queryVector = IntStream.range(0, vector.length).mapToObj(i -> vector[i]).toList();
+        Retriever retriever = Retriever.of(r -> r.rrf(rrf -> rrf
+                .filter(List.of(knowledgeBaseFilter, docFilter))
+                .retrievers(entry -> entry.retriever(child -> child.standard(standard -> standard
+                        .query(q -> q.match(match -> match.field("text").query(query).analyzer("ik_smart"))))))
+                .retrievers(entry -> entry.retriever(child -> child.knn(knn -> knn
+                        .field("vector").queryVector(queryVector).k(50).numCandidates(100))))
+                .rankWindowSize(50)));
+        SearchRequest request = SearchRequest.of(s -> s.index(indexName).size(limit)
+                .source(source -> source.fetch(false)).retriever(retriever));
+        try {
+            SearchResponse<Void> response = elasticsearchClient.search(request, Void.class);
+            if (response.timedOut() || (response.shards() != null && response.shards().failed().intValue() > 0)) {
+                throw new ServiceException(ErrorCodeConstants.DOC_SEARCH_FAILED);
+            }
+            return response.hits().hits().stream().map(hit -> Long.valueOf(hit.id())).toList();
+        } catch (ServiceException ex) {
+            throw ex;
+        } catch (IOException | RuntimeException ex) {
+            log.warn("[searchHybrid][分块混合检索失败]", ex);
+            throw new ServiceException(ErrorCodeConstants.DOC_SEARCH_FAILED);
         }
     }
 

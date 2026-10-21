@@ -52,4 +52,6 @@ public interface ErrorCodeConstants {
     ErrorCode DOC_PARSE_FAILED = new ErrorCodeImpl(1_001_003_009, "文档解析失败");
     ErrorCode DOC_EMBEDDING_FAILED = new ErrorCodeImpl(1_001_003_010, "文档向量化失败");
     ErrorCode DOC_INDEX_FAILED = new ErrorCodeImpl(1_001_003_011, "文档索引处理失败");
+    ErrorCode DOC_SEARCH_QUERY_EMPTY = new ErrorCodeImpl(1_001_003_012, "检索内容不能为空");
+    ErrorCode DOC_SEARCH_FAILED = new ErrorCodeImpl(1_001_003_013, "文档检索失败");
 }
