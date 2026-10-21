@@ -1,0 +1,40 @@
+### 创建会话
+POST {{baseUrl}}/knowledge/conversation/create
+Content-Type: application/json
+satoken: {{token}}
+
+{
+  "title": "如何让知识检索更可信？",
+  "knowledgeBaseIds": [1, 2]
+}
+
+### 查询当前用户的会话列表
+GET {{baseUrl}}/knowledge/conversation/list
+satoken: {{token}}
+
+### 恢复会话与消息流
+GET {{baseUrl}}/knowledge/conversation/get?id=1
+satoken: {{token}}
+
+### 写入用户消息
+POST {{baseUrl}}/knowledge/conversation/message/create
+Content-Type: application/json
+satoken: {{token}}
+
+{
+  "conversationId": 1,
+  "type": "user",
+  "content": {
+    "text": "知识检索如何工作",
+    "mode": "混合检索",
+    "scope": "全部知识库"
+  }
+}
+
+### 按时间正序读取消息
+GET {{baseUrl}}/knowledge/conversation/message/list?conversationId=1
+satoken: {{token}}
+
+### 删除会话及其消息
+DELETE {{baseUrl}}/knowledge/conversation/delete?id=1
+satoken: {{token}}

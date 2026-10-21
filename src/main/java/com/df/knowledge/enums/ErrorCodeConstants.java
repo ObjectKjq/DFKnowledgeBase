@@ -7,7 +7,7 @@ import com.df.knowledge.common.ErrorCodeImpl;
  * 业务错误码常量
  *
  * 编码为四段十位制 {@code 1-001-001-002}（类型-系统-模块-序号）：第一段固定 1（业务级异常），
- * 第二段固定 001，第三段按业务模块认领（001 用户功能：认证/用户/角色/菜单，002 知识库模块，003 文档模块），
+ * 第二段固定 001，第三段按业务模块认领（001 用户功能：认证/用户/角色/菜单，002 知识库模块，003 文档模块，004 会话模块），
  * 第四段为模块内序号
  */
 public interface ErrorCodeConstants {
@@ -54,4 +54,7 @@ public interface ErrorCodeConstants {
     ErrorCode DOC_INDEX_FAILED = new ErrorCodeImpl(1_001_003_011, "文档索引处理失败");
     ErrorCode DOC_SEARCH_QUERY_EMPTY = new ErrorCodeImpl(1_001_003_012, "检索内容不能为空");
     ErrorCode DOC_SEARCH_FAILED = new ErrorCodeImpl(1_001_003_013, "文档检索失败");
+
+    // ========== 会话模块 1-001-004-0xx ==========
+    ErrorCode CONVERSATION_NOT_FOUND = new ErrorCodeImpl(1_001_004_001, "会话不存在");
 }
