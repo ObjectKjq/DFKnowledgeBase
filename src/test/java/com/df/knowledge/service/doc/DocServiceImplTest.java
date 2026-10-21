@@ -52,6 +52,9 @@ class DocServiceImplTest {
     private DocChunkMapper docChunkMapper;
 
     @Mock
+    private DocChunkIndexService docChunkIndexService;
+
+    @Mock
     private DocFileService docFileService;
 
     @Mock
@@ -232,7 +235,7 @@ class DocServiceImplTest {
     void testDeleteDoc_success() {
         // 准备参数：删除可用文档
         DocDO doc = buildDoc(5L, 1L, DocStatusEnum.AVAILABLE);
-        when(docMapper.selectById(5L)).thenReturn(doc);
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
 
         // 调用
         docService.deleteDoc(10L, 5L);
@@ -244,17 +247,33 @@ class DocServiceImplTest {
         assertEquals(DocStatusEnum.DELETED.getCode(), updated.getStatus());
         assertEquals(DocStatusEnum.AVAILABLE.getCode(), updated.getPrevStatus());
         assertNotNull(updated.getDeleteTime());
+        verify(docChunkIndexService).deleteByDocId(5L);
     }
 
     @Test
     void testDeleteDoc_alreadyDeleted() {
         // 准备参数：已删除文档不可重复删除
         DocDO doc = buildDoc(5L, 1L, DocStatusEnum.DELETED);
-        when(docMapper.selectById(5L)).thenReturn(doc);
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
 
         // 调用并断言
         ServiceException exception = assertThrows(ServiceException.class, () -> docService.deleteDoc(10L, 5L));
         assertEquals(ErrorCodeConstants.DOC_DELETE_NOT_ALLOWED.getCode(), exception.getErrorCode().getCode());
+        verify(docMapper, never()).updateById(any(DocDO.class));
+    }
+
+    @Test
+    void testDeleteDoc_indexCleanupFailsKeepsDocument() {
+        // 准备参数：ES 清理失败，数据库文档不能被当作已删除
+        DocDO doc = buildDoc(5L, 1L, DocStatusEnum.AVAILABLE);
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
+        doThrow(new ServiceException(ErrorCodeConstants.DOC_INDEX_FAILED))
+                .when(docChunkIndexService).deleteByDocId(5L);
+
+        // 调用并断言：操作失败后保留原状态，用户可以重试删除
+        ServiceException exception = assertThrows(ServiceException.class, () -> docService.deleteDoc(10L, 5L));
+        assertEquals(ErrorCodeConstants.DOC_INDEX_FAILED.getCode(), exception.getErrorCode().getCode());
+        assertEquals(DocStatusEnum.AVAILABLE.getCode(), doc.getStatus());
         verify(docMapper, never()).updateById(any(DocDO.class));
     }
 
@@ -273,10 +292,10 @@ class DocServiceImplTest {
         ArgumentCaptor<DocDO> captor = ArgumentCaptor.forClass(DocDO.class);
         verify(docMapper).updateById(captor.capture());
         DocDO updated = captor.getValue();
-        assertEquals(DocStatusEnum.AVAILABLE.getCode(), updated.getStatus());
+        assertEquals(DocStatusEnum.INDEXING.getCode(), updated.getStatus());
         assertNull(updated.getPrevStatus());
         assertNull(updated.getDeleteTime());
-        verify(docIngestService, never()).submit(anyLong());
+        verify(docIngestService).submit(5L);
     }
 
     @Test
@@ -325,6 +344,8 @@ class DocServiceImplTest {
         // 准备参数：超过保留期的软删除文档
         DocDO doc = buildDoc(5L, 1L, DocStatusEnum.DELETED);
         doc.setFilePath("./data/docs/1/abc.pdf");
+        doc.setDeleteTime(LocalDateTime.now().minusDays(31));
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
         when(docMapper.selectListByStatusAndDeleteTimeBefore(any(), any(LocalDateTime.class))).thenReturn(List.of(doc));
 
         // 调用
@@ -333,7 +354,40 @@ class DocServiceImplTest {
         // 断言：移除记录与存储文件
         verify(docMapper).deleteById(5L);
         verify(docChunkMapper).deleteByDocId(5L);
+        verify(docChunkIndexService).deleteByDocId(5L);
         verify(docFileService).delete("./data/docs/1/abc.pdf");
+    }
+
+    @Test
+    void testPurgeExpiredDeletedDocs_restoredAfterScanSkipped() {
+        // 准备参数：扫描时已过期，加锁复核时文档已被恢复
+        DocDO scanned = buildDoc(5L, 1L, DocStatusEnum.DELETED);
+        scanned.setDeleteTime(LocalDateTime.now().minusDays(31));
+        when(docMapper.selectListByStatusAndDeleteTimeBefore(any(), any(LocalDateTime.class))).thenReturn(List.of(scanned));
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(buildDoc(5L, 1L, DocStatusEnum.INDEXING));
+
+        // 调用
+        docService.purgeExpiredDeletedDocs();
+
+        // 断言：不清理刚恢复的索引、分块及原文件
+        verifyNoInteractions(docChunkIndexService, docChunkMapper, docFileService);
+        verify(docMapper, never()).deleteById(any(Long.class));
+    }
+
+    @Test
+    void testPurgeExpiredDeletedDocs_indexFailureRetainsSource() {
+        // 准备参数：索引删除故障，保留源数据以便定时任务重试
+        DocDO doc = buildDoc(5L, 1L, DocStatusEnum.DELETED);
+        doc.setDeleteTime(LocalDateTime.now().minusDays(31));
+        when(docMapper.selectListByStatusAndDeleteTimeBefore(any(), any(LocalDateTime.class))).thenReturn(List.of(doc));
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
+        doThrow(new ServiceException(ErrorCodeConstants.DOC_INDEX_FAILED)).when(docChunkIndexService).deleteByDocId(5L);
+
+        // 调用并断言
+        ServiceException exception = assertThrows(ServiceException.class, docService::purgeExpiredDeletedDocs);
+        assertEquals(ErrorCodeConstants.DOC_INDEX_FAILED.getCode(), exception.getErrorCode().getCode());
+        verifyNoInteractions(docChunkMapper, docFileService);
+        verify(docMapper, never()).deleteById(any(Long.class));
     }
 
     /**

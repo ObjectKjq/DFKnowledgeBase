@@ -50,4 +50,6 @@ public interface ErrorCodeConstants {
     ErrorCode DOC_RESTORE_EXPIRED = new ErrorCodeImpl(1_001_003_007, "文档删除超过 30 天，无法恢复");
     ErrorCode DOC_FILE_STORE_FAILED = new ErrorCodeImpl(1_001_003_008, "文件存储失败");
     ErrorCode DOC_PARSE_FAILED = new ErrorCodeImpl(1_001_003_009, "文档解析失败");
+    ErrorCode DOC_EMBEDDING_FAILED = new ErrorCodeImpl(1_001_003_010, "文档向量化失败");
+    ErrorCode DOC_INDEX_FAILED = new ErrorCodeImpl(1_001_003_011, "文档索引处理失败");
 }

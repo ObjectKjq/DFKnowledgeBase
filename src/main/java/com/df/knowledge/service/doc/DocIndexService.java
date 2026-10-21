@@ -3,7 +3,7 @@ package com.df.knowledge.service.doc;
 /**
  * 文档索引 Service 接口
  *
- * 入库管线的索引阶段：向量化并写入分块索引（PRD FR-3），实现由入库管线后续交付补充
+ * 入库管线的索引阶段：向量化并写入分块索引，全部成功后迁移到可用（PRD FR-3）
  */
 public interface DocIndexService {
 

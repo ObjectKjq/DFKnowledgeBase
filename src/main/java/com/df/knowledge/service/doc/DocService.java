@@ -57,7 +57,7 @@ public interface DocService {
     void deleteDoc(Long userId, Long id);
 
     /**
-     * 恢复文档（恢复到删除前状态，删除前仍在入库流程中的文档重新入队）
+     * 恢复文档（原先可用的文档先重建索引；入库进行中的文档重新入队）
      *
      * @param userId 操作者用户编号
      * @param id 文档编号

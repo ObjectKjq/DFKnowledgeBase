@@ -9,6 +9,7 @@ import com.df.knowledge.dal.mysql.doc.DocMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
 import com.df.knowledge.enums.doc.DocConstants;
 import com.df.knowledge.enums.doc.DocFormatEnum;
+import com.df.knowledge.enums.doc.DocStatusEnum;
 import dev.langchain4j.data.document.parser.apache.poi.ApachePoiDocumentParser;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -64,6 +65,10 @@ public class DocParseServiceImpl implements DocParseService {
         DocDO doc = docMapper.selectByIdForUpdate(docId);
         if (doc == null) {
             throw new ServiceException(ErrorCodeConstants.DOC_NOT_FOUND);
+        }
+        // 旧任务等待行锁期间可能已完成索引，不能再替换 ES 正在引用的分块主键
+        if (!DocStatusEnum.PARSING.getCode().equals(doc.getStatus())) {
+            return;
         }
         DocFormatEnum format = Arrays.stream(DocFormatEnum.values())
                 .filter(value -> value.getCode().equals(doc.getFormat())).findFirst()

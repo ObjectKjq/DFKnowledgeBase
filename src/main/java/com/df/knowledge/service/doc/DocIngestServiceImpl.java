@@ -6,7 +6,6 @@ import com.df.knowledge.dal.mysql.doc.DocMapper;
 import com.df.knowledge.enums.doc.DocStatusEnum;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
@@ -31,7 +30,7 @@ public class DocIngestServiceImpl implements DocIngestService {
     @Resource
     private DocParseService docParseService;
 
-    @Autowired(required = false)
+    @Resource
     private DocIndexService docIndexService;
 
     @Resource
@@ -70,20 +69,13 @@ public class DocIngestServiceImpl implements DocIngestService {
             log.warn("[processDoc][文档({})状态已变化，跳过索引]", docId);
             return;
         }
-        // 索引段由后续交付补充；没有实现时停留在索引中，不能提前标记为可用
-        if (docIndexService == null) {
-            return;
-        }
         try {
             docIndexService.index(docId);
         } catch (Exception ex) {
             markFailed(docId, doc, DocStatusEnum.INDEXING.getCode(), ex);
             return;
         }
-        // 4. 迁移到可用，参与检索与问答
-        if (docMapper.updateStatus(docId, DocStatusEnum.INDEXING.getCode(), DocStatusEnum.AVAILABLE.getCode(), null) == 0) {
-            log.warn("[processDoc][文档({})状态已变化，入库结束]", docId);
-        }
+        // 4. 索引服务在同一文档行锁内完成「索引中 → 可用」，本层不重复发布状态
     }
 
     @Override

@@ -1,0 +1,37 @@
+@esUrl = http://localhost:9200
+@indexName = knowledge_doc_chunk
+
+### 由部署者执行：ES 9.x 与 ik 分词器为前置条件；已存在的索引不会被覆盖
+PUT {{esUrl}}/{{indexName}}
+Content-Type: application/json
+
+{
+  "settings": {
+    "number_of_shards": 1,
+    "number_of_replicas": 0
+  },
+  "mappings": {
+    "dynamic": "strict",
+    "properties": {
+      "kb_id": { "type": "keyword" },
+      "doc_id": { "type": "keyword" },
+      "chunk_id": { "type": "keyword" },
+      "chunk_index": { "type": "integer" },
+      "text": {
+        "type": "text",
+        "analyzer": "ik_max_word",
+        "search_analyzer": "ik_smart"
+      },
+      "start_offset": { "type": "integer" },
+      "end_offset": { "type": "integer" },
+      "page_number": { "type": "integer" },
+      "vector": {
+        "type": "dense_vector",
+        "dims": 512,
+        "index": true,
+        "similarity": "cosine",
+        "index_options": { "type": "hnsw" }
+      }
+    }
+  }
+}

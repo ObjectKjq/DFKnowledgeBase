@@ -49,15 +49,13 @@ class DocIngestServiceImplTest {
         when(docMapper.selectById(5L)).thenReturn(doc);
         when(docMapper.updateStatus(5L, DocStatusEnum.QUEUED.getCode(), DocStatusEnum.PARSING.getCode(), null)).thenReturn(1);
         when(docMapper.updateStatus(5L, DocStatusEnum.PARSING.getCode(), DocStatusEnum.INDEXING.getCode(), null)).thenReturn(1);
-        when(docMapper.updateStatus(5L, DocStatusEnum.INDEXING.getCode(), DocStatusEnum.AVAILABLE.getCode(), null)).thenReturn(1);
 
         // 调用
         docIngestService.processDoc(5L);
 
-        // 断言：排队 → 解析中 → 索引中 → 可用，解析与索引阶段各执行一次
+        // 断言：排队 → 解析中 → 索引中，交接给索引服务发布可用状态
         verify(docMapper).updateStatus(5L, DocStatusEnum.QUEUED.getCode(), DocStatusEnum.PARSING.getCode(), null);
         verify(docMapper).updateStatus(5L, DocStatusEnum.PARSING.getCode(), DocStatusEnum.INDEXING.getCode(), null);
-        verify(docMapper).updateStatus(5L, DocStatusEnum.INDEXING.getCode(), DocStatusEnum.AVAILABLE.getCode(), null);
         verify(docParseService).parse(5L);
         verify(docIndexService).index(5L);
     }
@@ -99,17 +97,15 @@ class DocIngestServiceImplTest {
         DocDO doc = buildDoc(5L, DocStatusEnum.PARSING, null);
         when(docMapper.selectById(5L)).thenReturn(doc);
         when(docMapper.updateStatus(5L, DocStatusEnum.PARSING.getCode(), DocStatusEnum.INDEXING.getCode(), null)).thenReturn(1);
-        when(docMapper.updateStatus(5L, DocStatusEnum.INDEXING.getCode(), DocStatusEnum.AVAILABLE.getCode(), null)).thenReturn(1);
 
         // 调用
         docIngestService.processDoc(5L);
 
-        // 断言：解析与索引都执行，只发生 解析中 → 索引中 → 可用 两个迁移
+        // 断言：解析与索引都执行，本层只迁移到索引中，可用状态由索引服务发布
         verify(docParseService).parse(5L);
         verify(docIndexService).index(5L);
         verify(docMapper, never()).updateStatus(5L, DocStatusEnum.PARSING.getCode(), DocStatusEnum.PARSING.getCode(), null);
         verify(docMapper).updateStatus(5L, DocStatusEnum.PARSING.getCode(), DocStatusEnum.INDEXING.getCode(), null);
-        verify(docMapper).updateStatus(5L, DocStatusEnum.INDEXING.getCode(), DocStatusEnum.AVAILABLE.getCode(), null);
     }
 
     @Test
@@ -117,15 +113,13 @@ class DocIngestServiceImplTest {
         // 准备参数：重启后停留在索引中的文档，解析已完成，只续跑索引
         DocDO doc = buildDoc(5L, DocStatusEnum.INDEXING, null);
         when(docMapper.selectById(5L)).thenReturn(doc);
-        when(docMapper.updateStatus(5L, DocStatusEnum.INDEXING.getCode(), DocStatusEnum.AVAILABLE.getCode(), null)).thenReturn(1);
 
         // 调用
         docIngestService.processDoc(5L);
 
-        // 断言：不重复解析，只发生 索引中 → 可用 一个迁移
+        // 断言：不重复解析，交由索引服务续跑并发布可用状态
         verify(docParseService, never()).parse(anyLong());
         verify(docIndexService).index(5L);
-        verify(docMapper).updateStatus(5L, DocStatusEnum.INDEXING.getCode(), DocStatusEnum.AVAILABLE.getCode(), null);
     }
 
     @Test
@@ -190,13 +184,14 @@ class DocIngestServiceImplTest {
         // 准备参数：重启后停留在入库进行中的文档
         DocDO queued = buildDoc(5L, DocStatusEnum.QUEUED, null);
         DocDO parsing = buildDoc(6L, DocStatusEnum.PARSING, null);
-        when(docMapper.selectListByStatuses(DocStatusEnum.IN_FLIGHT_STATUS_CODES)).thenReturn(List.of(queued, parsing));
+        DocDO indexing = buildDoc(7L, DocStatusEnum.INDEXING, null);
+        when(docMapper.selectListByStatuses(DocStatusEnum.IN_FLIGHT_STATUS_CODES)).thenReturn(List.of(queued, parsing, indexing));
 
         // 调用
         docIngestService.recoverInterruptedDocs();
 
         // 断言：重新入队（提交到入库线程池）
-        verify(docIngestExecutor, times(2)).execute(any());
+        verify(docIngestExecutor, times(3)).execute(any());
     }
 
     /**

@@ -22,6 +22,10 @@ knowledge:
   doc:
     # 文档落盘根目录，存储路径 = 根目录/知识库编号/随机文件名.扩展名
     storage-path: ./data/docs
+  elasticsearch:
+    # 索引须先由部署者执行 es/ 中的 DSL 创建，应用不会自动创建或修改 mapping
+    url: ${ES_URL:http://localhost:9200}
+    index-name: ${ES_INDEX:knowledge_doc_chunk}
 
 --- ################### MyBatis-Plus ###################
 mybatis-plus:

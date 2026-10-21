@@ -29,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -60,6 +61,10 @@ class DocParseServiceImplTest {
     private DocChunkMapper docChunkMapper;
     @Mock
     private DocFileService docFileService;
+    @Mock
+    private DocEmbeddingService docEmbeddingService;
+    @Mock
+    private DocChunkIndexService docChunkIndexService;
     @InjectMocks
     private DocParseServiceImpl docParseService;
 
@@ -282,8 +287,27 @@ class DocParseServiceImplTest {
         assertEquals(ErrorCodeConstants.DOC_NOT_FOUND.getCode(), exception.getErrorCode().getCode());
     }
 
+    @ParameterizedTest
+    @EnumSource(value = DocStatusEnum.class, names = {"INDEXING", "AVAILABLE", "DELETED"})
+    void testParse_staleTaskDoesNotReplaceChunks(DocStatusEnum status) throws Exception {
+        // 准备参数：旧解析任务等待行锁期间，另一任务已完成解析、索引或删除
+        DocDO doc = prepareDoc("txt", "不应再次解析".getBytes(StandardCharsets.UTF_8));
+        doc.setStatus(status.getCode());
+        DocChunkDO existing = new DocChunkDO().setDocId(5L).setChunkIndex(0).setText("已建立索引的分块");
+        existing.setId(700L);
+        storedChunks.add(existing);
+
+        // 调用
+        docParseService.parse(5L);
+
+        // 断言：保持原分块主键及内容，避免 ES 的分块编号与 MySQL 失配
+        assertEquals(List.of(existing), docParseService.getDocChunks(5L));
+        assertEquals(700L, docParseService.getDocChunks(5L).getFirst().getId());
+        verifyNoInteractions(docFileService);
+    }
+
     @Test
-    void testProcessDoc_failureIsolationAndRetryUntilIndexing() throws Exception {
+    void testProcessDoc_failureIsolationAndRetryUntilAvailable() throws Exception {
         // 准备参数：真实解析服务与入库状态机，数据库与存储为外部桩
         DocDO failed = prepareDoc("txt", "\n".getBytes(StandardCharsets.UTF_8));
         failed.setStatus(DocStatusEnum.QUEUED.getCode());
@@ -312,16 +336,30 @@ class DocParseServiceImplTest {
         DocIngestServiceImpl ingest = new DocIngestServiceImpl();
         ReflectionTestUtils.setField(ingest, "docMapper", docMapper);
         ReflectionTestUtils.setField(ingest, "docParseService", docParseService);
+        DocIndexServiceImpl index = new DocIndexServiceImpl();
+        ReflectionTestUtils.setField(index, "docMapper", docMapper);
+        ReflectionTestUtils.setField(index, "docChunkMapper", docChunkMapper);
+        ReflectionTestUtils.setField(index, "docEmbeddingService", docEmbeddingService);
+        ReflectionTestUtils.setField(index, "docChunkIndexService", docChunkIndexService);
+        ReflectionTestUtils.setField(ingest, "docIndexService", index);
+        when(docEmbeddingService.embedAll(any())).thenAnswer(invocation -> {
+            List<String> texts = invocation.getArgument(0);
+            return texts.stream().map(text -> {
+                float[] vector = new float[512];
+                vector[0] = 1;
+                return vector;
+            }).toList();
+        });
 
-        // 调用：单文档失败后仍处理另一文档，索引实现由后续交付补充
+        // 调用：单文档失败后仍处理另一文档，真实解析与索引编排贯通
         ingest.processDoc(5L);
         ingest.processDoc(6L);
 
-        // 断言：失败原因可读，其他文档已完成解析并停留在索引中
+        // 断言：失败原因可读，其他文档已完成完整入库流程
         assertEquals(DocStatusEnum.FAILED.getCode(), failed.getStatus());
         String firstReason = failed.getFailReason();
         assertTrue(firstReason.contains("未提取到文本"));
-        assertEquals(DocStatusEnum.INDEXING.getCode(), healthy.getStatus());
+        assertEquals(DocStatusEnum.AVAILABLE.getCode(), healthy.getStatus());
         assertEquals("正常文档", docParseService.getDocChunks(6L).getFirst().getText());
 
         // 调用：模拟用户重试回排队，再走完整解析流程
@@ -330,8 +368,8 @@ class DocParseServiceImplTest {
         failed.setStatus(DocStatusEnum.QUEUED.getCode());
         ingest.processDoc(5L);
 
-        // 断言：重新解析成功，保留首次失败原因，未建索引不标记可用
-        assertEquals(DocStatusEnum.INDEXING.getCode(), failed.getStatus());
+        // 断言：重试完成解析与索引，保留首次失败原因
+        assertEquals(DocStatusEnum.AVAILABLE.getCode(), failed.getStatus());
         assertEquals(firstReason, failed.getFailReason());
         assertEquals("修复后内容", docParseService.getDocChunks(5L).getFirst().getText());
     }
@@ -380,6 +418,7 @@ class DocParseServiceImplTest {
         doc.setFileName("资料." + extension);
         doc.setFilePath("stored." + extension);
         doc.setFormat(DocFormatEnum.resolveByExtension(extension).getCode());
+        doc.setStatus(DocStatusEnum.PARSING.getCode());
         when(docMapper.selectById(5L)).thenReturn(doc);
         when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
         when(docFileService.open(doc.getFilePath())).thenAnswer(invocation -> new ByteArrayInputStream(bytes));

@@ -30,9 +30,24 @@
         <sa-token.version>1.44.0</sa-token.version>
         <langchain4j.version>1.22.0-beta32</langchain4j.version>
         <pdfbox.version>3.0.7</pdfbox.version>
+        <elasticsearch-java.version>9.4.0</elasticsearch-java.version>
+        <!-- 与 ES 9.4 REST5 客户端的依赖基线一致，避免被 Boot 的旧版覆盖 -->
+        <httpclient5.version>5.6.1</httpclient5.version>
+        <httpcore5.version>5.4</httpcore5.version>
     </properties>
 
     <dependencies>
+        <!-- 向量化固定内置中文 ONNX 模型，ES 索引由本工程管理（ADR-0006/0008） -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-embeddings-bge-small-zh-v15</artifactId>
+            <version>${langchain4j.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>co.elastic.clients</groupId>
+            <artifactId>elasticsearch-java</artifactId>
+            <version>${elasticsearch-java.version}</version>
+        </dependency>
         <!-- 文档解析：Word/Excel 统一走 LangChain4j，PDF/PPT 使用底层解析器保留页码 -->
         <dependency>
             <groupId>dev.langchain4j</groupId>

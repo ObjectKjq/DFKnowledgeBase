@@ -42,6 +42,9 @@ public class DocServiceImpl implements DocService {
     private DocChunkMapper docChunkMapper;
 
     @Resource
+    private DocChunkIndexService docChunkIndexService;
+
+    @Resource
     private DocFileService docFileService;
 
     @Resource
@@ -123,13 +126,18 @@ public class DocServiceImpl implements DocService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteDoc(Long userId, Long id) {
         // 1. 文档存在 + 内容写入权限（PRD §8.1：删除文档需编辑者及以上）
-        DocDO doc = validateDocExists(id);
+        DocDO doc = docMapper.selectByIdForUpdate(id);
+        if (doc == null) {
+            throw new ServiceException(ErrorCodeConstants.DOC_NOT_FOUND);
+        }
         knowledgeBasePermissionService.checkContentWritePermission(userId, doc.getKnowledgeBaseId());
         // 2. 仅未删除的文档可删除（PRD §8.2：已删除的允许操作是恢复/彻底删除）
         if (DocStatusEnum.DELETED.getCode().equals(doc.getStatus())) {
             throw new ServiceException(ErrorCodeConstants.DOC_DELETE_NOT_ALLOWED);
         }
-        // 3. 软删除：记录删除前状态与删除时间，30 天内可恢复
+        // 3. 与索引共用行锁，先同步清理 ES；清理失败时保留文档原状态供重试
+        docChunkIndexService.deleteByDocId(id);
+        // 4. 软删除：记录删除前状态与删除时间，30 天内可恢复
         doc.setPrevStatus(doc.getStatus());
         doc.setStatus(DocStatusEnum.DELETED.getCode());
         doc.setDeleteTime(LocalDateTime.now());
@@ -150,8 +158,9 @@ public class DocServiceImpl implements DocService {
                 || doc.getDeleteTime().plusDays(DocConstants.SOFT_DELETE_RETENTION_DAYS).isBefore(LocalDateTime.now())) {
             throw new ServiceException(ErrorCodeConstants.DOC_RESTORE_EXPIRED);
         }
-        // 4. 恢复到删除前状态
-        doc.setStatus(doc.getPrevStatus());
+        // 4. 原先可用的文档向量已经清理，先重建索引，不能直接恢复为可用
+        doc.setStatus(DocStatusEnum.AVAILABLE.getCode().equals(doc.getPrevStatus())
+                ? DocStatusEnum.INDEXING.getCode() : doc.getPrevStatus());
         doc.setPrevStatus(null);
         doc.setDeleteTime(null);
         docMapper.updateById(doc);
@@ -167,11 +176,18 @@ public class DocServiceImpl implements DocService {
         // 1. 找出超过保留期（30 天）的软删除文档（PRD §8.2：超期自动彻底删除）
         LocalDateTime deadline = LocalDateTime.now().minusDays(DocConstants.SOFT_DELETE_RETENTION_DAYS);
         List<DocDO> docs = docMapper.selectListByStatusAndDeleteTimeBefore(DocStatusEnum.DELETED.getCode(), deadline);
-        // 2. 彻底删除：移除记录与存储文件
+        // 2. 逐文档加锁复核，避免扫描后已恢复的文档被误清理
         docs.forEach(doc -> {
-            docMapper.deleteById(doc.getId());
-            docChunkMapper.deleteByDocId(doc.getId());
-            docFileService.delete(doc.getFilePath());
+            DocDO current = docMapper.selectByIdForUpdate(doc.getId());
+            if (current == null || !DocStatusEnum.DELETED.getCode().equals(current.getStatus())
+                    || current.getDeleteTime() == null || !current.getDeleteTime().isBefore(deadline)) {
+                return;
+            }
+            // ES 删除失败则抛异常回滚，保留文档、分块和原文件以便再次清理
+            docChunkIndexService.deleteByDocId(current.getId());
+            docMapper.deleteById(current.getId());
+            docChunkMapper.deleteByDocId(current.getId());
+            docFileService.delete(current.getFilePath());
         });
         if (!docs.isEmpty()) {
             log.info("[purgeExpiredDeletedDocs][彻底删除超期文档({}个)]", docs.size());

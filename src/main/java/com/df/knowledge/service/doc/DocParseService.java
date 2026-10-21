@@ -12,7 +12,7 @@ import java.util.List;
 public interface DocParseService {
 
     /**
-     * 解析文档并落库分块
+     * 解析「解析中」的文档并落库分块，状态已变化的旧任务直接跳过
      *
      * @param docId 文档编号
      */
