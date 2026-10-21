@@ -1,0 +1,9 @@
+### RAG 检索
+POST {{baseUrl}}/knowledge/rag/ask
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "conversationId": 1,
+  "question": "如何让知识检索更可信？"
+}

@@ -18,6 +18,15 @@ public interface DocSearchService {
     List<DocChunkResult> search(Long userId, String query, List<Long> selectedKnowledgeBaseIds);
 
     /**
+     * 检查当前用户所选范围内是否存在可检索文档
+     *
+     * @param userId 用户编号
+     * @param selectedKnowledgeBaseIds 选择的知识库范围
+     * @return 是否存在已完成索引且可用的文档
+     */
+    boolean hasAvailableDocuments(Long userId, List<Long> selectedKnowledgeBaseIds);
+
+    /**
      * 按分块编号读取原文与定位信息
      *
      * @param userId 用户编号

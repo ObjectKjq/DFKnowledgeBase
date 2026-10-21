@@ -57,4 +57,5 @@ public interface ErrorCodeConstants {
 
     // ========== 会话模块 1-001-004-0xx ==========
     ErrorCode CONVERSATION_NOT_FOUND = new ErrorCodeImpl(1_001_004_001, "会话不存在");
+    ErrorCode RAG_MODEL_UNAVAILABLE = new ErrorCodeImpl(1_001_004_002, "对话模型不可用，请联系管理员检查模型配置后重试");
 }

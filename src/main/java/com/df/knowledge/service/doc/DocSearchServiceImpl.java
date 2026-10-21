@@ -100,6 +100,15 @@ public class DocSearchServiceImpl implements DocSearchService {
     }
 
     @Override
+    public boolean hasAvailableDocuments(Long userId, List<Long> selectedKnowledgeBaseIds) {
+        List<Long> accessible = permissionService.getAccessibleKnowledgeBaseIds(userId);
+        List<Long> scope = selectedKnowledgeBaseIds == null || selectedKnowledgeBaseIds.isEmpty()
+                ? accessible : accessible.stream().filter(selectedKnowledgeBaseIds::contains).toList();
+        return !docMapper.selectListByKnowledgeBaseIdsAndStatus(scope,
+                DocStatusEnum.AVAILABLE.getCode()).isEmpty();
+    }
+
+    @Override
     public DocChunkResult getPreview(Long userId, Long chunkId) {
         DocChunkDO chunk = docChunkMapper.selectById(chunkId);
         DocDO doc = chunk == null ? null : docMapper.selectById(chunk.getDocId());
