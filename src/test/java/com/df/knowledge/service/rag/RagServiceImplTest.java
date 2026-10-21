@@ -3,6 +3,7 @@ package com.df.knowledge.service.rag;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.df.knowledge.common.exception.ServiceException;
+import com.df.knowledge.common.ErrorCode;
 import com.df.knowledge.controller.rag.vo.RagAskReqVO;
 import com.df.knowledge.controller.conversation.vo.MessageCreateReqVO;
 import com.df.knowledge.dal.dataobject.conversation.ConversationDO;
@@ -14,6 +15,8 @@ import com.df.knowledge.service.doc.DocSearchService;
 import com.df.knowledge.service.knowledge.KnowledgeBasePermissionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -22,6 +25,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -30,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -57,6 +63,110 @@ class RagServiceImplTest {
 
     @InjectMocks
     private RagServiceImpl ragService;
+
+    @Test
+    void testStream_deliversDeltasBeforeReturningCompleteCitations() {
+        // 准备参数
+        mockConversation(11L, List.of(2L));
+        when(docSearchService.search(7L, "问题", List.of(2L)))
+                .thenReturn(List.of(chunk(101L, 5L, "证据", 1, 0)));
+        List<String> deltas = new ArrayList<>();
+        List<List<RagCitation>> citationEvents = new ArrayList<>();
+        doAnswer(invocation -> {
+            Consumer<String> consumer = invocation.getArgument(1);
+            consumer.accept("可信答案。[");
+            assertTrue(citationEvents.isEmpty());
+            consumer.accept("1]");
+            assertEquals(101L, citationEvents.getFirst().getFirst().getChunkId());
+            consumer.accept("[1]");
+            return new RagGenerationPort.GenerationResult(true, "可信答案。[1][1]", List.of(1, 1));
+        }).when(generationPort).stream(any(), any());
+
+        // 调用
+        RagAnswerResult result = ragService.stream(7L, request(11L, "问题"), deltas::add, citationEvents::add);
+
+        // 断言
+        assertEquals("可信答案。[1][1]", result.getAnswer());
+        assertEquals(101L, result.getCitations().getFirst().getChunkId());
+        assertEquals(List.of("可信答案。[", "1]", "[1]"), deltas);
+        assertEquals(1, citationEvents.size());
+    }
+
+    @Test
+    void testStream_interruptedGenerationDoesNotPersistLateAnswer() {
+        // 准备参数：模拟生成端口在取消后仍返回完整结果
+        mockConversation(11L, List.of(2L));
+        when(docSearchService.search(7L, "问题", List.of(2L)))
+                .thenReturn(List.of(chunk(101L, 5L, "证据", 1, 0)));
+        doAnswer(invocation -> {
+            Thread.currentThread().interrupt();
+            return new RagGenerationPort.GenerationResult(true, "迟到的答案。[1]", List.of(1));
+        }).when(generationPort).stream(any(), any());
+
+        // 调用并断言
+        try {
+            ServiceException error = assertThrows(ServiceException.class,
+                    () -> ragService.stream(7L, request(11L, "问题"), delta -> { }, citations -> { }));
+            assertEquals(ErrorCodeConstants.RAG_GENERATION_TIMEOUT.getCode(), error.getErrorCode().getCode());
+            ArgumentCaptor<MessageCreateReqVO> message = ArgumentCaptor.forClass(MessageCreateReqVO.class);
+            verify(conversationService).createMessage(eq(7L), message.capture());
+            assertEquals("user", message.getValue().getType());
+        } finally {
+            Thread.interrupted();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("generationErrors")
+    void testStream_failureKeepsQuestionAndDoesNotSavePartialAnswer(ErrorCode errorCode) {
+        // 准备参数
+        mockConversation(11L, List.of(2L));
+        when(docSearchService.search(7L, "问题", List.of(2L)))
+                .thenReturn(List.of(chunk(101L, 5L, "证据", 1, 0)));
+        doAnswer(invocation -> {
+            Consumer<String> delta = invocation.getArgument(1);
+            delta.accept("部分答案");
+            throw new ServiceException(errorCode);
+        }).when(generationPort).stream(any(), any());
+        List<String> deltas = new ArrayList<>();
+
+        // 调用
+        ServiceException error = assertThrows(ServiceException.class,
+                () -> ragService.stream(7L, request(11L, "问题"), deltas::add, citations -> { }));
+
+        // 断言：只持久化问题，重试不会继承未完成的答案
+        assertEquals(errorCode.getCode(), error.getErrorCode().getCode());
+        assertEquals(List.of("部分答案"), deltas);
+        ArgumentCaptor<MessageCreateReqVO> message = ArgumentCaptor.forClass(MessageCreateReqVO.class);
+        verify(conversationService).createMessage(eq(7L), message.capture());
+        assertEquals("user", message.getValue().getType());
+        assertEquals("问题", message.getValue().getContent().path("text").asText());
+    }
+
+    private static List<ErrorCode> generationErrors() {
+        return List.of(ErrorCodeConstants.RAG_MODEL_UNAVAILABLE, ErrorCodeConstants.RAG_GENERATION_TIMEOUT);
+    }
+
+    @Test
+    void testStream_invalidCitationsReturnRefusalAsFinalResult() {
+        // 准备参数
+        mockConversation(11L, List.of(2L));
+        when(docSearchService.search(7L, "问题", List.of(2L)))
+                .thenReturn(List.of(chunk(101L, 5L, "证据", 1, 0)));
+        doAnswer(invocation -> {
+            Consumer<String> delta = invocation.getArgument(1);
+            delta.accept("无法验证。[9]");
+            return new RagGenerationPort.GenerationResult(true, "无法验证。[9]", List.of(9));
+        }).when(generationPort).stream(any(), any());
+
+        // 调用
+        RagAnswerResult result = ragService.stream(7L, request(11L, "问题"), delta -> { }, citations -> { });
+
+        // 断言
+        assertFalse(result.getAnswered());
+        assertTrue(result.getCitations().isEmpty());
+        assertTrue(result.getAnswer().contains("未找到足够依据"));
+    }
 
     @Test
     void testAsk_mapsCitationsAndPersistsMessageFlow() {

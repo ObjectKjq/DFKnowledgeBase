@@ -31,6 +31,8 @@ knowledge:
     base-url: ${CHAT_MODEL_BASE_URL:}
     api-key: ${CHAT_MODEL_API_KEY:}
     model: ${CHAT_MODEL_NAME:}
+    # 整次流式问答的超时（毫秒），到期发送 error 事件并保留问题供重试
+    stream-timeout-ms: 65000
 
 --- ################### MyBatis-Plus ###################
 mybatis-plus:

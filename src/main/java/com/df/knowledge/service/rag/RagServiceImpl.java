@@ -24,10 +24,12 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.function.Consumer;
 
 import static com.df.knowledge.enums.ErrorCodeConstants.DOC_SEARCH_QUERY_EMPTY;
 import static com.df.knowledge.enums.ErrorCodeConstants.DOC_NOT_FOUND;
 import static com.df.knowledge.enums.ErrorCodeConstants.RAG_MODEL_UNAVAILABLE;
+import static com.df.knowledge.enums.ErrorCodeConstants.RAG_GENERATION_TIMEOUT;
 
 /**
  * RAG 检索 Service 实现类
@@ -68,6 +70,17 @@ public class RagServiceImpl implements RagService {
 
     @Override
     public RagAnswerResult ask(Long userId, RagAskReqVO reqVO) {
+        return answer(userId, reqVO, null, null);
+    }
+
+    @Override
+    public RagAnswerResult stream(Long userId, RagAskReqVO reqVO, Consumer<String> onDelta,
+                                  Consumer<List<RagCitation>> onCitations) {
+        return answer(userId, reqVO, onDelta, onCitations);
+    }
+
+    private RagAnswerResult answer(Long userId, RagAskReqVO reqVO, Consumer<String> onDelta,
+                                   Consumer<List<RagCitation>> onCitations) {
         if (StrUtil.isBlank(reqVO.getQuestion())) {
             throw new ServiceException(DOC_SEARCH_QUERY_EMPTY);
         }
@@ -94,8 +107,34 @@ public class RagServiceImpl implements RagService {
 
         RagGenerationPort.GenerationResult generated;
         try {
-            generated = generationPort.generate(new RagGenerationPort.GenerationRequest(
-                    question, history, toEvidence(chunks)));
+            RagGenerationPort.GenerationRequest request = new RagGenerationPort.GenerationRequest(
+                    question, history, toEvidence(chunks));
+            if (onDelta == null) {
+                generated = generationPort.generate(request);
+            } else {
+                StringBuilder partial = new StringBuilder();
+                Set<Integer> sentNumbers = new LinkedHashSet<>();
+                generated = generationPort.stream(request, delta -> {
+                    onDelta.accept(delta);
+                    partial.append(delta);
+                    Matcher matcher = INLINE_CITATION_PATTERN.matcher(partial);
+                    boolean changed = false;
+                    while (matcher.find()) {
+                        // 超长或越界编号不作为有效引用发送，由最终校验决定是否拒答
+                        try {
+                            int number = Integer.parseInt(matcher.group(1));
+                            if (number >= 1 && number <= chunks.size()) {
+                                changed |= sentNumbers.add(number);
+                            }
+                        } catch (NumberFormatException ignored) {
+                            // 最终引用校验会拒绝超长编号
+                        }
+                    }
+                    if (changed) {
+                        onCitations.accept(mapCitations(chunks, List.copyOf(sentNumbers)));
+                    }
+                });
+            }
         } catch (ServiceException ex) {
             throw ex;
         } catch (RuntimeException ex) {
@@ -254,6 +293,10 @@ public class RagServiceImpl implements RagService {
 
     private void saveResultMessage(Long userId, Long conversationId, String type,
                                    String question, RagAnswerResult result) {
+        // 流已超时或客户端断开时，不将迟到的生成结果写入会话
+        if (Thread.currentThread().isInterrupted()) {
+            throw new ServiceException(RAG_GENERATION_TIMEOUT);
+        }
         ObjectNode content = objectMapper.valueToTree(result);
         content.put("question", question);
         saveMessage(userId, conversationId, type, content);
