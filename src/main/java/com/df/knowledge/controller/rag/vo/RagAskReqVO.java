@@ -7,6 +7,8 @@ import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * RAG 检索 Request VO
  */
@@ -23,4 +25,7 @@ public class RagAskReqVO {
     @Size(max = 2000, message = "问题长度不能超过 2000")
     @Schema(description = "问题", example = "如何让知识检索更可信？")
     private String question;
+
+    @Schema(description = "本次提问的知识库范围；不传沿用会话初始范围，空列表表示全部有权知识库")
+    private List<@NotNull @Positive Long> knowledgeBaseIds;
 }

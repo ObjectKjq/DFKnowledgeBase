@@ -1,3 +1,7 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { deleteConversation } from '@/api/conversationController'
+import { useConversations, conversationsKey } from '@/features/chat/conversations'
+import { useChat } from '@/stores/chat'
 import { useLibraries } from '@/features/knowledge/useLibraries'
 import { useNavigate } from 'react-router-dom'
 
@@ -8,23 +12,15 @@ import { useKb } from '@/stores/knowledge'
 
 import { Icon } from './Icon'
 
-const DEMO_HISTORY: [string, string][] = [
-  ['demo-rag', '如何让知识检索更可信？'],
-  ['demo-design', '关于渐进式披露的设计原则'],
-  ['demo-image', '找一张极简设计的参考图'],
-]
-
 /** 左侧主导航（复刻原型 `.sidebar`）。 */
 export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
   const { libs, isPending, isError, refetch } = useLibraries()
-  const sessions = useKb((s) => s.sessions)
   const menus = useAuthStore((s) => s.menus)
-  const scope = useKb((s) => s.current.scope)
-  const currentId = useKb((s) => s.current.id)
-  const setScope = useKb((s) => s.setScope)
-  const openHistory = useKb((s) => s.openHistory)
-  const newChat = useKb((s) => s.newChat)
+  const scope = useChat((s) => s.scope)
+  const currentId = useChat((s) => s.conversationId)
+  const setScope = useChat((s) => s.setScope)
+  const newChat = useChat((s) => s.newChat)
   const openModal = useKb((s) => s.openModal)
 
   const goScope = (id?: string) => {
@@ -33,10 +29,20 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
     onClose()
   }
 
-  const histItems: [string, string][] = [
-    ...sessions.slice(0, 5).map((s) => [s.id, s.title] as [string, string]),
-    ...DEMO_HISTORY.filter((d) => !sessions.some((s) => s.id === d[0] || s.title === d[1])),
-  ].slice(0, 5)
+  const history = useConversations()
+  const busy = useChat((s) => s.busy)
+  const selectConversation = useChat((s) => s.selectConversation)
+  const confirmThen = useKb((s) => s.confirmThen)
+  const token = useAuthStore((s) => s.token)
+  const client = useQueryClient()
+  const deletion = useMutation({
+    mutationFn: (id: number) => deleteConversation({ id }),
+    onSuccess: (_, id) => {
+      if (useChat.getState().conversationId === id) newChat()
+      client.removeQueries({ queryKey: ['chat-conversation', token, id] })
+      void client.invalidateQueries({ queryKey: conversationsKey(token) })
+    },
+  })
 
   const personalLibs = libs.filter((l) => l.type === 'personal')
   const sharedLibs = libs.filter((l) => l.type === 'shared')
@@ -62,6 +68,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
 
       <button
         className="new-search"
+        disabled={busy}
         onClick={() => {
           newChat()
           navigate('/')
@@ -120,20 +127,44 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
           <Icon name="refresh" />
         </div>
         <nav aria-label="最近会话">
-          {histItems.map(([id, title]) => (
-            <button
-              key={id}
-              className={`history-item ${currentId === id ? 'active' : ''}`}
-              title={title}
-              onClick={() => {
-                openHistory(id)
-                navigate('/')
-                onClose()
-              }}
-            >
-              {title}
-            </button>
+          {history.data?.map((conversation) => (
+            <div className="history-row" key={conversation.id}>
+              <button
+                className={`history-item ${currentId === conversation.id ? 'active' : ''}`}
+                title={conversation.title}
+                disabled={busy || deletion.isPending}
+                onClick={() => {
+                  selectConversation(conversation.id!)
+                  navigate('/')
+                  onClose()
+                }}
+              >
+                {conversation.title}
+              </button>
+              <button
+                className="icon-btn"
+                aria-label={`删除会话：${conversation.title}`}
+                disabled={busy || deletion.isPending}
+                onClick={() =>
+                  confirmThen(
+                    '删除会话',
+                    `确认删除「${conversation.title}」及全部消息？此操作不可恢复。`,
+                    '确认删除',
+                    () => deletion.mutate(conversation.id!),
+                  )
+                }
+              >
+                <Icon name="close" />
+              </button>
+            </div>
           ))}
+          {history.isPending && <p className="table-note">正在加载会话…</p>}
+          {history.isError && (
+            <button className="history-item" onClick={() => void history.refetch()}>
+              会话加载失败，重试
+            </button>
+          )}
+          {history.isSuccess && !history.data.length && <p className="table-note">暂无会话</p>}
         </nav>
 
         {/* 功能入口由登录返回的菜单树驱动，无权的菜单不渲染。 */}

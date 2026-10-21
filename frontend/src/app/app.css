@@ -164,3 +164,17 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* 流式正文保留模型换行，历史会话独立提供删除入口。 */
+.chat-plain-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.history-row {
+  display: flex;
+  align-items: center;
+}
+.history-row .history-item {
+  flex: 1;
+  min-width: 0;
+}

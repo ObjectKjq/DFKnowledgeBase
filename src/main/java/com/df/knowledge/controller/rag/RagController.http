@@ -5,11 +5,13 @@ Authorization: Bearer {{token}}
 
 {
   "conversationId": 1,
-  "question": "如何让知识检索更可信？"
+  "question": "如何让知识检索更可信？",
+  "knowledgeBaseIds": []
 }
 
 ### 流式 RAG 检索（delta / citations / done，失败为 error 后关闭）
 # 所有 data 使用 CommonResult；done.data 为完整答案与引用，需替换暂定增量内容。
+# knowledgeBaseIds 仅控制本次提问；空列表表示全部有权知识库，不传沿用会话初始范围。
 # error 后保留原问题，使用相同 conversationId 和 question 可重试。
 POST {{baseUrl}}/knowledge/rag/ask-stream
 Content-Type: application/json
@@ -18,5 +20,6 @@ Authorization: Bearer {{token}}
 
 {
   "conversationId": 1,
-  "question": "如何让知识检索更可信？"
+  "question": "如何让知识检索更可信？",
+  "knowledgeBaseIds": []
 }

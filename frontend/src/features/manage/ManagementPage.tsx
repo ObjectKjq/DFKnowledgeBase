@@ -2,6 +2,7 @@ import { useEffect, type ReactElement } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 
 import { hasMenuPath, useAuthStore } from '@/stores/auth'
+import { useChat } from '@/stores/chat'
 import { useKb } from '@/stores/knowledge'
 
 import { Icon } from '@/components/Icon'
@@ -31,7 +32,7 @@ const TABS: Record<string, () => ReactElement> = {
 export function ManagementPage() {
   const { tab } = useParams()
   const navigate = useNavigate()
-  const closePreview = useKb((s) => s.closePreview)
+  const closePreview = useChat((s) => s.closePreview)
   const closePopover = useKb((s) => s.closePopover)
   const menus = useAuthStore((s) => s.menus)
 

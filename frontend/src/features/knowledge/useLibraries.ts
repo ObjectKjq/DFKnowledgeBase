@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
 import { useAuthStore } from '@/stores/auth'
-import { useKb } from '@/stores/knowledge'
+import { useChat } from '@/stores/chat'
 
 import { fetchLibraries, librariesKey } from './libraries'
 
@@ -10,7 +10,7 @@ import { fetchLibraries, librariesKey } from './libraries'
 export function useLibraries() {
   const userId = useAuthStore((s) => s.user?.id)
   const token = useAuthStore((s) => s.token)
-  const scope = useKb((s) => s.current.scope)
+  const scope = useChat((s) => s.scope)
   const query = useQuery({
     queryKey: librariesKey(userId, token),
     queryFn: () => fetchLibraries(userId!),
@@ -20,7 +20,7 @@ export function useLibraries() {
   useEffect(() => {
     if (!query.data) return
     const next = scope.filter((id) => query.data.some((library) => library.id === id))
-    if (next.length !== scope.length) useKb.getState().setScope(next)
+    if (next.length !== scope.length) useChat.getState().setScope(next)
   }, [query.data, scope])
   return { ...query, libs: query.isError ? [] : (query.data ?? []) }
 }

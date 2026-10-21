@@ -1,42 +1,30 @@
-import { useLibraries } from '@/features/knowledge/useLibraries'
+import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 
-import { HERO_ART, SUGGESTION_SETS } from '@/mock/data'
+import { getDocPage } from '@/api/docController'
+import { Icon } from '@/components/Icon'
+import { useLibraries } from '@/features/knowledge/useLibraries'
 import { libName } from '@/mock/logic'
+import { useAuthStore } from '@/stores/auth'
+import { useChat } from '@/stores/chat'
 import { useKb } from '@/stores/knowledge'
 
-import { Icon } from '@/components/Icon'
+import { sendQuestion } from './chatActions'
+import { HERO_ART } from './homeArt'
 
-/** 首屏空态（复刻原型 homeHTML）。 */
+/** 首页入口与最近可用文档，点击问题直接执行真实检索。 */
 export function Home() {
-  const docs = useKb((s) => s.docs)
-  const { libs } = useLibraries()
-  const suggestionIndex = useKb((s) => s.suggestionIndex)
-  const shuffleSuggestions = useKb((s) => s.shuffleSuggestions)
-  const openUpload = useKb((s) => s.openUpload)
-  const showPreview = useKb((s) => s.showPreview)
   const navigate = useNavigate()
-
-  const recent = docs
-    .filter((d) => d.status === '可用' && libs.some((library) => library.id === d.lib))
-    .slice(0, 3)
-  const suggestions = SUGGESTION_SETS[suggestionIndex % 2]
-
-  const startImageSearch = () => {
-    const s = useKb.getState()
-    if (!s.current.skills.includes('图片搜索')) s.toggleSkill('图片搜索')
-    s.setDraft('')
-    document.getElementById('query')?.focus()
-    s.toastMsg('已开启图片搜索：输入描述，或从「＋」选择图片')
-  }
-
-  const suggest = (q: string, mode: string, image: boolean) => {
-    const s = useKb.getState()
-    s.setMode(mode)
-    if (image && !s.current.skills.includes('图片搜索')) s.toggleSkill('图片搜索')
-    void s.sendQuery(q)
-  }
-
+  const token = useAuthStore((s) => s.token)
+  const { libs } = useLibraries()
+  const openUpload = useKb((s) => s.openUpload)
+  const setMode = useChat((s) => s.setMode)
+  const query = useQuery({
+    queryKey: ['manage-documents', token, 'recent'],
+    queryFn: async () =>
+      (await getDocPage({ reqVO: { pageNum: 1, pageSize: 3, status: 4 } })).data?.list ?? [],
+    enabled: !!token,
+  })
   return (
     <div className="home">
       <div className="hero">
@@ -46,9 +34,9 @@ export function Home() {
           今天想找<span>什么？</span>
         </h1>
         <p className="hero-description">
-          让散落的资料，有序安放。
+          让散落的文档，有序安放。
           <br />
-          从一次搜索开始，与积累的知识重新相遇。
+          从一次检索开始，与积累的知识重新相遇。
         </p>
       </div>
       <div className="quick-actions">
@@ -57,85 +45,92 @@ export function Home() {
             <Icon name="upload" />
           </span>
           <Icon name="arrow" className="arrow" />
-          <h2>上传你的资料</h2>
+          <h2>上传文档</h2>
           <p>
-            文档、笔记与灵感
+            上传并建立索引，
             <br />
-            在这里，慢慢积累。
+            让知识随时可寻。
           </p>
         </button>
-        <button className="quick-card" onClick={startImageSearch}>
+        <button
+          className="quick-card"
+          onClick={() => {
+            setMode('RAG 检索')
+            document.getElementById('query')?.focus()
+          }}
+        >
           <span className="quick-icon">
-            <Icon name="image" />
+            <Icon name="spark" />
           </span>
           <Icon name="arrow" className="arrow" />
-          <h2>试试图片搜索</h2>
+          <h2>向知识提问</h2>
           <p>
-            一段描述，或一张图片
+            基于有权访问的文档，
             <br />
-            找回记忆中的画面。
+            生成可核对引用的答案。
           </p>
         </button>
-        <button className="quick-card" onClick={() => navigate('/settings/mcp')}>
+        <button className="quick-card" onClick={() => navigate('/settings/libraries')}>
           <span className="quick-icon">
-            <Icon name="plug" />
+            <Icon name="book" />
           </span>
           <Icon name="arrow" className="arrow" />
-          <h2>连接 AI 智能体</h2>
+          <h2>管理知识库</h2>
           <p>
-            将你的知识带入
+            整理文档和成员，
             <br />
-            Codex、Trae 和更多工具。
+            维护自己的知识积累。
           </p>
         </button>
       </div>
       <div className="suggestions">
-        <div className="micro-heading">
-          <span>从一个好问题开始</span>
-          <button className="icon-btn" onClick={shuffleSuggestions} aria-label="换一组问题">
-            <Icon name="refresh" />
-          </button>
-        </div>
+        <div className="micro-heading">从一个问题开始</div>
         <div className="suggestion-list">
-          {suggestions.map((q, i) => {
-            const image = q.includes('图片') || q.includes('参考图')
-            return (
-              <button
-                className="suggestion"
-                key={q}
-                onClick={() => suggest(q, i === 1 ? 'RAG 检索' : '混合检索', image)}
-              >
-                <Icon name={i === 2 ? 'image' : i === 1 ? 'spark' : 'search'} />
-                {q}
-              </button>
-            )
-          })}
+          {['如何让知识检索更可信？', '总结文档中的主要观点'].map((question) => (
+            <button
+              className="suggestion"
+              key={question}
+              onClick={() => {
+                setMode('RAG 检索')
+                void sendQuestion(question)
+              }}
+            >
+              <Icon name="spark" />
+              {question}
+            </button>
+          ))}
         </div>
       </div>
       <div className="recent-docs">
         <div className="micro-heading">
-          <span>
-            最近加入<span style={{ color: '#aab19f' }}> · 随时可寻</span>
-          </span>
+          <span>最近可用文档</span>
           <button className="text-btn" onClick={() => navigate('/settings/docs')}>
             查看全部
             <Icon name="arrow" />
           </button>
         </div>
         <div className="recent-doc-list">
-          {recent.map((d) => (
-            <button className="recent-doc" key={d.id} onClick={() => showPreview(d.id)}>
-              <span className={`file-icon ${d.ext}`}>
-                <Icon name={d.ext === 'png' ? 'image' : 'file'} />
+          {query.data?.map((doc) => (
+            <button className="recent-doc" key={doc.id} onClick={() => navigate('/settings/docs')}>
+              <span className="file-icon">
+                <Icon name="file" />
               </span>
               <div>
-                <strong>{d.title}</strong>
+                <strong>{doc.title || doc.fileName}</strong>
                 <small>
-                  {libName(libs, d.lib)} · {d.date.slice(5).replace('-', '月')}日
+                  {libName(libs, String(doc.knowledgeBaseId))} · {doc.createTime?.slice(0, 10)}
                 </small>
               </div>
             </button>
           ))}
+          {query.isError && (
+            <button className="text-btn" onClick={() => void query.refetch()}>
+              最近文档加载失败，重试
+            </button>
+          )}
+          {query.isSuccess && !query.data.length && (
+            <p className="table-note">暂无可用文档，请先上传并等待索引完成。</p>
+          )}
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 
 import { TAB_CONFIGS } from '@/features/manage/tabs'
 import { useAuthStore } from '@/stores/auth'
-import { useKb } from '@/stores/knowledge'
+import { useConversation } from '@/features/chat/conversations'
 
 import { Icon } from './Icon'
 
@@ -10,7 +10,8 @@ import { Icon } from './Icon'
 export function AppTopbar({ onToggleSidebar }: { onToggleSidebar: () => void }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const title = useKb((s) => s.current.title)
+  const { data } = useConversation()
+  const title = data?.title ?? '新检索'
   const user = useAuthStore((s) => s.user)
 
   const isSettings = location.pathname.startsWith('/settings')
@@ -34,9 +35,9 @@ export function AppTopbar({ onToggleSidebar }: { onToggleSidebar: () => void }) 
         <span>{currentLabel}</span>
       </div>
       <div className="top-right">
-        <span className="local-badge" title="界面交互原型。示例数据与响应在浏览器本地模拟。">
+        <span className="local-badge" title="检索和问答基于当前用户有权访问的知识库。">
           <span className="dot" />
-          本地知识 · 交互原型
+          本地知识
         </span>
         <button
           className="avatar"

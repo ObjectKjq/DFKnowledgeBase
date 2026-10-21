@@ -39,21 +39,31 @@ function redirectToLogin() {
   window.location.assign('/login')
 }
 
+/** 普通响应与 SSE 事件共用错误码处理；内联错误可关闭全局提示。 */
+export function assertResultSuccess(body: Partial<CommonResult>, silent = false): void {
+  if (typeof body.code !== 'number' || body.code === SUCCESS_CODE) return
+  if (body.code === UNAUTHORIZED_CODE) {
+    redirectToLogin()
+    throw new Error(body.msg || '登录已过期，请重新登录')
+  }
+  const msg = body.msg || `请求失败（code=${body.code}）`
+  if (!silent) errorNotifier?.(msg)
+  throw new Error(msg)
+}
+
 http.interceptors.response.use(
-  (response) => {
+  async (response) => {
+    if (
+      response.config.responseType === 'stream' &&
+      !String(response.headers['content-type']).includes('text/event-stream')
+    ) {
+      const body = (await new Response(response.data).json()) as Partial<CommonResult>
+      assertResultSuccess(body, (response.config as RequestConfig).silent)
+      throw new Error('服务器未返回问答流，请重试')
+    }
     const body = response.data as Partial<CommonResult> | undefined
     // 统一按后端 `{code,msg,data}` 契约判定成败：非成功码提示并 reject。
-    if (body && typeof body.code === 'number' && body.code !== SUCCESS_CODE) {
-      if (body.code === UNAUTHORIZED_CODE) {
-        redirectToLogin()
-        return Promise.reject(new Error(body.msg || '登录已过期，请重新登录'))
-      }
-      const msg = body.msg || `请求失败（code=${body.code}）`
-      if (!(response.config as RequestConfig).silent) {
-        errorNotifier?.(msg)
-      }
-      return Promise.reject(new Error(msg))
-    }
+    if (body) assertResultSuccess(body, (response.config as RequestConfig).silent)
     return response
   },
   (error: AxiosError<CommonResult>) => {

@@ -42,6 +42,18 @@ declare namespace API {
     data?: boolean
   }
 
+  type CommonResultConversationDetailRespVO = {
+    code?: number
+    msg?: string
+    data?: ConversationDetailRespVO
+  }
+
+  type CommonResultDocChunkRespVO = {
+    code?: number
+    msg?: string
+    data?: DocChunkRespVO
+  }
+
   type CommonResultDocRespVO = {
     code?: number
     msg?: string
@@ -52,6 +64,18 @@ declare namespace API {
     code?: number
     msg?: string
     data?: KnowledgeBaseRespVO
+  }
+
+  type CommonResultListConversationRespVO = {
+    code?: number
+    msg?: string
+    data?: ConversationRespVO[]
+  }
+
+  type CommonResultListDocChunkRespVO = {
+    code?: number
+    msg?: string
+    data?: DocChunkRespVO[]
   }
 
   type CommonResultListKnowledgeBaseMemberRespVO = {
@@ -70,6 +94,12 @@ declare namespace API {
     code?: number
     msg?: string
     data?: MenuRespVO[]
+  }
+
+  type CommonResultListMessageRespVO = {
+    code?: number
+    msg?: string
+    data?: MessageRespVO[]
   }
 
   type CommonResultListRoleSimpleRespVO = {
@@ -114,6 +144,12 @@ declare namespace API {
     data?: PageResultUserRespVO
   }
 
+  type CommonResultRagAnswerRespVO = {
+    code?: number
+    msg?: string
+    data?: RagAnswerRespVO
+  }
+
   type CommonResultRoleRespVO = {
     code?: number
     msg?: string
@@ -124,6 +160,46 @@ declare namespace API {
     code?: number
     msg?: string
     data?: UserRespVO
+  }
+
+  type ConversationCreateReqVO = {
+    /** 会话标题 */
+    title: string
+    /** 发起会话时的知识库编号范围，不传或为空表示全部有权知识库 */
+    knowledgeBaseIds?: number[]
+  }
+
+  type ConversationDetailRespVO = {
+    /** 会话编号 */
+    id?: number
+    /** 会话标题 */
+    title?: string
+    /** 发起会话时的知识库编号范围，空列表表示全部有权知识库 */
+    knowledgeBaseIds?: number[]
+    /** 创建时间 */
+    createTime?: string
+    /** 更新时间 */
+    updateTime?: string
+    /** 按时间正序排列的消息流 */
+    messages?: MessageRespVO[]
+  }
+
+  type ConversationRespVO = {
+    /** 会话编号 */
+    id?: number
+    /** 会话标题 */
+    title?: string
+    /** 发起会话时的知识库编号范围，空列表表示全部有权知识库 */
+    knowledgeBaseIds?: number[]
+    /** 创建时间 */
+    createTime?: string
+    /** 更新时间 */
+    updateTime?: string
+  }
+
+  type deleteConversationParams = {
+    /** 会话编号 */
+    id: number
   }
 
   type deleteDocParams = {
@@ -149,6 +225,29 @@ declare namespace API {
   type deleteUserParams = {
     /** 用户编号 */
     id: number
+  }
+
+  type DocChunkRespVO = {
+    /** 知识库编号 */
+    knowledgeBaseId?: number
+    /** 知识库名称 */
+    knowledgeBaseName?: string
+    /** 文档编号 */
+    docId?: number
+    /** 文档标题 */
+    docTitle?: string
+    /** 分块编号，可用于原文预览 */
+    chunkId?: number
+    /** 文档内块序号，从 0 开始 */
+    chunkIndex?: number
+    /** 原文页码，从 1 开始；无分页结构时为空 */
+    pageNumber?: number
+    /** 原文字符起点，含 */
+    startOffset?: number
+    /** 原文字符终点，不含 */
+    endOffset?: number
+    /** 命中分块原文 */
+    text?: string
   }
 
   type DocPageReqVO = {
@@ -189,6 +288,18 @@ declare namespace API {
     updateTime?: string
   }
 
+  type DocSearchReqVO = {
+    /** 检索文本 */
+    query: string
+    /** 知识库编号范围，不传或为空表示全部有权知识库 */
+    knowledgeBaseIds?: number[]
+  }
+
+  type getConversationParams = {
+    /** 会话编号 */
+    id: number
+  }
+
   type getDocPageParams = {
     reqVO: DocPageReqVO
   }
@@ -215,6 +326,16 @@ declare namespace API {
   type getMenuParams = {
     /** 菜单编号 */
     id: number
+  }
+
+  type getMessageListParams = {
+    /** 会话编号 */
+    conversationId: number
+  }
+
+  type getPreviewParams = {
+    /** 分块编号 */
+    chunkId: number
   }
 
   type getRoleMenuIdListParams = {
@@ -385,6 +506,28 @@ declare namespace API {
     children?: any
   }
 
+  type MessageCreateReqVO = {
+    /** 会话编号 */
+    conversationId: number
+    /** 消息类型 */
+    type: 'user' | 'results' | 'answer' | 'guide' | 'empty' | 'note'
+    /** 结构化消息内容，可保存文本、结果卡片与引用 */
+    content: JsonNode
+  }
+
+  type MessageRespVO = {
+    /** 消息编号 */
+    id?: number
+    /** 会话编号 */
+    conversationId?: number
+    /** 消息类型 */
+    type?: string
+    /** 结构化消息内容 */
+    content?: JsonNode
+    /** 创建时间 */
+    createTime?: string
+  }
+
   type PageResultDocRespVO = {
     total?: number
     list?: DocRespVO[]
@@ -403,6 +546,49 @@ declare namespace API {
   type PageResultUserRespVO = {
     total?: number
     list?: UserRespVO[]
+  }
+
+  type RagAnswerRespVO = {
+    /** 是否已基于充分依据作答 */
+    answered?: boolean
+    /** 答案或拒答说明 */
+    answer?: string
+    /** 拒答后的下一步建议 */
+    suggestions?: string[]
+    /** 分块级引用 */
+    citations?: RagCitationRespVO[]
+  }
+
+  type RagAskReqVO = {
+    /** 会话编号 */
+    conversationId: number
+    /** 问题 */
+    question: string
+    /** 本次提问的知识库范围；不传沿用会话初始范围，空列表表示全部有权知识库 */
+    knowledgeBaseIds?: number[]
+  }
+
+  type RagCitationRespVO = {
+    /** 答案中的引用编号 */
+    number?: number
+    /** 知识库编号 */
+    knowledgeBaseId?: number
+    /** 知识库名称 */
+    knowledgeBaseName?: string
+    /** 文档编号 */
+    docId?: number
+    /** 文档标题 */
+    docTitle?: string
+    /** 分块编号 */
+    chunkId?: number
+    /** 分块序号 */
+    chunkIndex?: number
+    /** 页码；非 PDF/PPT 文档为空 */
+    pageNumber?: number
+    /** 原文起始字符偏移 */
+    startOffset?: number
+    /** 原文结束字符偏移 */
+    endOffset?: number
   }
 
   type removeMemberParams = {
@@ -481,6 +667,10 @@ declare namespace API {
     id?: number
     /** 角色名称 */
     name?: string
+  }
+
+  type SseEmitter = {
+    timeout?: number
   }
 
   type uploadDocParams = {

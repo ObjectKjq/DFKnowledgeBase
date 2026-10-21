@@ -86,7 +86,9 @@ public class RagServiceImpl implements RagService {
         }
         String question = reqVO.getQuestion().trim();
         ConversationDO conversation = conversationService.getConversation(userId, reqVO.getConversationId());
-        List<Long> scope = resolveCurrentScope(userId, conversation.getKnowledgeBaseIds());
+        List<Long> requestedScope = reqVO.getKnowledgeBaseIds() == null
+                ? conversation.getKnowledgeBaseIds() : reqVO.getKnowledgeBaseIds();
+        List<Long> scope = resolveCurrentScope(userId, requestedScope);
         List<RagGenerationPort.ChatMessage> history = loadHistory(userId, conversation.getId(), Set.copyOf(scope));
 
         // 问题先持久化：后续检索或模型失败时，用户仍可在会话中重试

@@ -38,15 +38,12 @@ export function AccountTab() {
       </div>
 
       <div className="settings-card">
-        <h3>关于这个原型</h3>
-        <p>
-          依据 PRD v0.3 第 6
-          章「界面与交互」制作。检索、模型回答、解析与凭证均为演示。上传文件不发送到服务器；关闭页面后仅保留文件元信息。图片查询预览不写入本地存储。
-        </p>
+        <h3>关于本应用</h3>
+        <p>文档上传、检索、会话和 RAG 问答由服务器处理。MCP 接入与模型管理页仍保留演示配置。</p>
         <div className="settings-pair">
           <span>
             交互数据
-            <small>重置后恢复初始示例资料与会话。</small>
+            <small>仅重置 MCP 与模型管理的本地演示配置，不影响服务器文档和会话。</small>
           </span>
           <button className="btn danger small" onClick={resetDemo}>
             重置演示
