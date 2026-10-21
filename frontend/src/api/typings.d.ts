@@ -42,6 +42,12 @@ declare namespace API {
     data?: boolean
   }
 
+  type CommonResultDocRespVO = {
+    code?: number
+    msg?: string
+    data?: DocRespVO
+  }
+
   type CommonResultKnowledgeBaseRespVO = {
     code?: number
     msg?: string
@@ -84,6 +90,12 @@ declare namespace API {
     data?: MenuRespVO
   }
 
+  type CommonResultPageResultDocRespVO = {
+    code?: number
+    msg?: string
+    data?: PageResultDocRespVO
+  }
+
   type CommonResultPageResultKnowledgeBaseRespVO = {
     code?: number
     msg?: string
@@ -114,6 +126,11 @@ declare namespace API {
     data?: UserRespVO
   }
 
+  type deleteDocParams = {
+    /** 文档编号 */
+    id: number
+  }
+
   type deleteKnowledgeBaseParams = {
     /** 知识库编号 */
     id: number
@@ -131,6 +148,53 @@ declare namespace API {
 
   type deleteUserParams = {
     /** 用户编号 */
+    id: number
+  }
+
+  type DocPageReqVO = {
+    /** 页码，从 1 开始 */
+    pageNum?: number
+    /** 每页条数 */
+    pageSize?: number
+    /** 知识库编号（不传查全部有权知识库） */
+    knowledgeBaseId?: number
+    /** 文档标题（模糊匹配） */
+    title?: string
+    /** 文档状态（1 排队 2 解析中 3 索引中 4 可用 5 失败 6 已删除） */
+    status?: number
+  }
+
+  type DocRespVO = {
+    /** 文档编号 */
+    id?: number
+    /** 知识库编号 */
+    knowledgeBaseId?: number
+    /** 文档标题 */
+    title?: string
+    /** 上传时的原始文件名 */
+    fileName?: string
+    /** 文档格式（1 PDF 2 Word 3 PPT 4 Excel 5 TXT 6 Markdown） */
+    format?: number
+    /** 文件大小（字节） */
+    fileSize?: number
+    /** 文档状态（1 排队 2 解析中 3 索引中 4 可用 5 失败 6 已删除） */
+    status?: number
+    /** 失败原因（保留首次失败原因） */
+    failReason?: string
+    /** 删除时间（软删除 30 天保留期起算点） */
+    deleteTime?: string
+    /** 上传时间 */
+    createTime?: string
+    /** 最近状态变更时间 */
+    updateTime?: string
+  }
+
+  type getDocPageParams = {
+    reqVO: DocPageReqVO
+  }
+
+  type getDocParams = {
+    /** 文档编号 */
     id: number
   }
 
@@ -321,6 +385,11 @@ declare namespace API {
     children?: any
   }
 
+  type PageResultDocRespVO = {
+    total?: number
+    list?: DocRespVO[]
+  }
+
   type PageResultKnowledgeBaseRespVO = {
     total?: number
     list?: KnowledgeBaseRespVO[]
@@ -340,6 +409,16 @@ declare namespace API {
     /** 知识库编号 */
     knowledgeBaseId: number
     /** 成员编号 */
+    id: number
+  }
+
+  type restoreDocParams = {
+    /** 文档编号 */
+    id: number
+  }
+
+  type retryDocParams = {
+    /** 文档编号 */
     id: number
   }
 
@@ -402,6 +481,11 @@ declare namespace API {
     id?: number
     /** 角色名称 */
     name?: string
+  }
+
+  type uploadDocParams = {
+    /** 知识库编号 */
+    knowledgeBaseId: number
   }
 
   type UserPageReqVO = {

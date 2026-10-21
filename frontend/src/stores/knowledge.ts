@@ -14,11 +14,11 @@ import {
   STORE_KEY,
   type Credential,
   type Doc,
-  type DocStatus,
   type Message,
   type ModelConfig,
   type Session,
 } from '@/mock/data'
+import { documentUploadError } from '@/features/documents/documents'
 import { getLibraries } from '@/features/knowledge/libraries'
 import { configText, isTrustQuery, libName, retrieve, uuid } from '@/mock/logic'
 
@@ -28,11 +28,6 @@ export interface Attachment {
   name: string
   image?: boolean
   dataUrl?: string
-}
-
-export interface PendingFile {
-  name: string
-  size: number
 }
 
 export interface GuideState {
@@ -86,12 +81,10 @@ interface KbState {
   toast: { msg: string; error: boolean } | null
 
   // 管理页
-  docFilter: string
-  docSearch: string
   lastConfigClient: string
 
   // 上传
-  pendingUpload: PendingFile[]
+  pendingUpload: File[]
   uploadTarget: string
   uploadStarted: boolean
   oneTimeToken: string | null
@@ -135,22 +128,14 @@ interface KbState {
   openModal: (m: ModalState, confirm?: () => void) => void
   closeModal: () => void
 
-  setDocFilter: (v: string) => void
-  setDocSearch: (v: string) => void
-
-  deleteDoc: (id: string) => void
-  restoreDoc: (id: string) => void
-  purgeDoc: (id: string) => void
-  retryDoc: (id: string) => Promise<void>
-
   createCredential: (name: string, days: number) => void
   revokeCredential: (id: string) => void
 
   openUpload: () => void
-  addPendingFiles: (files: { name: string; size: number }[]) => void
+  addPendingFiles: (files: File[]) => void
   removePending: (index: number) => void
   setUploadTarget: (id: string) => void
-  startUpload: () => Promise<void>
+  setUploadStarted: (started: boolean) => void
 
   saveModelConfig: (
     kind: keyof ModelConfig,
@@ -188,8 +173,6 @@ export const useKb = create<KbState>()(
       modalConfirm: null,
       toast: null,
 
-      docFilter: 'all',
-      docSearch: '',
       lastConfigClient: 'Codex',
 
       pendingUpload: [],
@@ -630,67 +613,10 @@ export const useKb = create<KbState>()(
       openModal: (m, confirm) => set({ modal: m, modalConfirm: confirm ?? null }),
       closeModal: () => {
         if (get().uploadStarted) {
-          get().toastMsg('正在演示入库，请稍候')
+          get().toastMsg('正在上传文档，请稍候')
           return
         }
         set({ modal: null, modalConfirm: null, oneTimeToken: null, pendingUpload: [] })
-      },
-
-      setDocFilter: (v) => set({ docFilter: v }),
-      setDocSearch: (v) => set({ docSearch: v }),
-
-      deleteDoc: (id) => {
-        const d = get().docs.find((x) => x.id === id)
-        if (!d) return
-        get().confirmThen(
-          '删除文档',
-          `「${d.title}」将移至回收站，30 天内可恢复。`,
-          '确认删除',
-          () => {
-            set({
-              docs: get().docs.map((x) =>
-                x.id === id
-                  ? {
-                      ...x,
-                      previousStatus: x.status,
-                      status: '已删除' as DocStatus,
-                      deletedAt: '2026-10-16',
-                    }
-                  : x,
-              ),
-            })
-            get().toastMsg('已移至回收站')
-          },
-        )
-      },
-      restoreDoc: (id) => {
-        set({
-          docs: get().docs.map((x) =>
-            x.id === id ? { ...x, status: (x.previousStatus || '可用') as DocStatus } : x,
-          ),
-        })
-        get().toastMsg('文档已恢复')
-      },
-      purgeDoc: (id) => {
-        get().confirmThen(
-          '彻底删除文档',
-          '这将从原型本地存储中移除此文件记录，无法恢复。',
-          '确认删除',
-          () => {
-            set({ docs: get().docs.filter((x) => x.id !== id) })
-            get().toastMsg('已彻底删除')
-          },
-        )
-      },
-      retryDoc: async (id) => {
-        const d = get().docs.find((x) => x.id === id)
-        if (!d || d.status !== '失败') return
-        for (const status of ['排队', '解析中', '索引中', '可用'] as DocStatus[]) {
-          if (get().docs.find((x) => x.id === id)?.status === '已删除') return
-          set({ docs: get().docs.map((x) => (x.id === id ? { ...x, status } : x)) })
-          await sleep(500)
-        }
-        get().toastMsg('已完成模拟重试。实际文件解析结果取决于后端服务。')
       },
 
       createCredential: (name, days) => {
@@ -743,55 +669,32 @@ export const useKb = create<KbState>()(
         })
       },
       addPendingFiles: (files) => {
+        if (get().uploadStarted) return
         const pending = [...get().pendingUpload]
-        for (const f of files) {
-          if (!pending.some((p) => p.name === f.name && p.size === f.size)) pending.push(f)
+        const errors: string[] = []
+        for (const file of files) {
+          const error = documentUploadError(file)
+          if (error) {
+            errors.push(error)
+            continue
+          }
+          if (
+            !pending.some(
+              (item) =>
+                item.name === file.name &&
+                item.size === file.size &&
+                item.lastModified === file.lastModified,
+            )
+          )
+            pending.push(file)
         }
         set({ pendingUpload: pending })
+        if (errors.length) get().toastMsg(errors.join('；'), true)
       },
       removePending: (index) =>
         set({ pendingUpload: get().pendingUpload.filter((_, i) => i !== index) }),
       setUploadTarget: (id) => set({ uploadTarget: id }),
-      startUpload: async () => {
-        const { pendingUpload, uploadTarget, uploadStarted } = get()
-        if (!pendingUpload.length || uploadStarted) return
-        const targetLib = getLibraries().find((l) => l.id === uploadTarget)
-        if (!targetLib || targetLib.role === '查看者') {
-          get().toastMsg('当前知识库没有上传权限', true)
-          return
-        }
-        set({ uploadStarted: true })
-        const fresh: Doc[] = pendingUpload.map((f) => ({
-          id: uuid(),
-          title: f.name.replace(/\.[^.]+$/, ''),
-          ext: (f.name.split('.').pop() || '').toLowerCase(),
-          lib: uploadTarget,
-          status: '排队' as DocStatus,
-          date: '2026-10-16',
-          size:
-            f.size > 1048576
-              ? (f.size / 1048576).toFixed(1) + ' MB'
-              : Math.max(1, Math.round(f.size / 1024)) + ' KB',
-          page: 1,
-          pages: 1,
-          section: '上传文件 · 原型演示',
-          tags: f.name,
-          text: '',
-          context: '文件已在浏览器中完成模拟入库。当前原型不解析实际文件正文。',
-          after: '可体验状态流转、删除、恢复与列表筛选。真实内容检索需要接入解析、索引和模型服务。',
-        }))
-        set({ docs: [...get().docs, ...fresh] })
-        for (const state of ['解析中', '索引中', '可用'] as DocStatus[]) {
-          await sleep(700)
-          set({
-            docs: get().docs.map((d) =>
-              fresh.some((f) => f.id === d.id) ? { ...d, status: state } : d,
-            ),
-          })
-        }
-        set({ uploadStarted: false, modal: null, pendingUpload: [] })
-        get().toastMsg(`${pendingUpload.length} 份资料已完成模拟入库；未解析实际正文`)
-      },
+      setUploadStarted: (started) => set({ uploadStarted: started }),
 
       saveModelConfig: (kind, cfg) => {
         set({ modelConfig: { ...get().modelConfig, [kind]: cfg } })

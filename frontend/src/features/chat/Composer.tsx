@@ -7,8 +7,6 @@ import { useKb } from '@/stores/knowledge'
 
 import { Icon } from '@/components/Icon'
 
-const ACCEPT = /\.(pdf|docx?|pptx?|xlsx?|txt|md|jpe?g|png|webp|bmp)$/i
-
 const SKILLS: [string, string][] = [
   ['联网搜索', '单独展示网络补充，不计入本地引用'],
   ['图片搜索', '图内文字、以文搜图与以图搜图'],
@@ -143,7 +141,7 @@ function Popover() {
             <Icon name="upload" />
             <span>
               上传资料
-              <span className="description">PDF、Office、笔记与图片</span>
+              <span className="description">PDF、Office、TXT 与 Markdown</span>
             </span>
           </button>
           <button
@@ -259,8 +257,7 @@ export function Composer() {
             }
             if (!file) return
             useKb.getState().openUpload()
-            const files = [...e.dataTransfer.files].filter((f) => ACCEPT.test(f.name))
-            useKb.getState().addPendingFiles(files.map((f) => ({ name: f.name, size: f.size })))
+            useKb.getState().addPendingFiles([...e.dataTransfer.files])
           }}
         >
           <div className="chips" id="chips">

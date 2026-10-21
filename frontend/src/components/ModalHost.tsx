@@ -1,13 +1,10 @@
+import { UploadModal } from '@/features/documents/UploadModal'
 import { CreateLibraryModal } from '@/features/knowledge/CreateLibraryModal'
-import { useLibraries } from '@/features/knowledge/useLibraries'
 import { useState, type FormEvent, type ReactNode } from 'react'
 
-import { formatSize } from '@/mock/logic'
 import { useKb } from '@/stores/knowledge'
 
 import { Icon } from './Icon'
-
-const ACCEPT = /\.(pdf|docx?|pptx?|xlsx?|txt|md|jpe?g|png|webp|bmp)$/i
 
 /** 弹窗外壳：默认用 store 的关闭动作，功能页的表单弹窗可传自己的 `onClose`。 */
 export function ModalShell({
@@ -43,111 +40,6 @@ export function ModalShell({
         {children}
       </section>
     </div>
-  )
-}
-
-/** 上传入库弹窗。 */
-function UploadModal() {
-  const { libs } = useLibraries()
-  const pending = useKb((s) => s.pendingUpload)
-  const target = useKb((s) => s.uploadTarget)
-  const started = useKb((s) => s.uploadStarted)
-  const setTarget = useKb((s) => s.setUploadTarget)
-  const removePending = useKb((s) => s.removePending)
-  const addFiles = useKb((s) => s.addPendingFiles)
-  const startUpload = useKb((s) => s.startUpload)
-  const closeModal = useKb((s) => s.closeModal)
-  const toastMsg = useKb((s) => s.toastMsg)
-  const [dragging, setDragging] = useState(false)
-
-  const collect = (files: File[]) => {
-    const valid = files.filter((f) => ACCEPT.test(f.name))
-    if (valid.length !== files.length)
-      toastMsg('已跳过不支持的格式。请上传文档、笔记或常见图片。', true)
-    addFiles(valid.map((f) => ({ name: f.name, size: f.size })))
-  }
-
-  return (
-    <ModalShell
-      title="留住每一份灵感"
-      description="将文档、笔记或图片收进知识库。此处演示上传与解析流程，文件不会发送到服务器。"
-    >
-      <label className="field">
-        保存到
-        <select value={target} disabled={started} onChange={(e) => setTarget(e.target.value)}>
-          {libs
-            .filter((l) => l.role !== '查看者')
-            .map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
-              </option>
-            ))}
-        </select>
-      </label>
-
-      <button
-        type="button"
-        className={`dropzone ${dragging ? 'dragging' : ''}`}
-        onClick={() => document.getElementById('upload-input')?.click()}
-        onDragOver={(e) => {
-          e.preventDefault()
-          setDragging(true)
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault()
-          setDragging(false)
-          collect([...e.dataTransfer.files])
-        }}
-      >
-        <Icon name="upload" />
-        <strong>点击选择，或把文件轻放在这里</strong>
-        <small>
-          PDF、Word、PPT、Excel、TXT、Markdown 与图片
-          <br />
-          支持多文件选择
-        </small>
-      </button>
-
-      <div>
-        {pending.map((f, i) => (
-          <div className="upload-row" key={`${f.name}-${f.size}`}>
-            <Icon name="file" />
-            <span>{f.name}</span>
-            <small>{formatSize(f.size)}</small>
-            <button
-              className="icon-btn"
-              onClick={() => removePending(i)}
-              aria-label={`移除${f.name}`}
-            >
-              <Icon name="close" />
-            </button>
-          </div>
-        ))}
-      </div>
-
-      {started && (
-        <div>
-          <div className="upload-progress">
-            <div />
-          </div>
-          <p className="table-note">正在处理示例任务</p>
-        </div>
-      )}
-
-      <div className="form-actions">
-        <button className="btn ghost" onClick={closeModal} disabled={started}>
-          稍后再说
-        </button>
-        <button
-          className="btn primary"
-          onClick={() => void startUpload()}
-          disabled={!pending.length || started}
-        >
-          开始入库{pending.length ? ` · ${pending.length}` : ''}
-        </button>
-      </div>
-    </ModalShell>
   )
 }
 

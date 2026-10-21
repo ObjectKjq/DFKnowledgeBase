@@ -59,18 +59,6 @@ export function AppLayout() {
       <input
         type="file"
         className="hidden"
-        id="upload-input"
-        multiple
-        accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.md,.jpg,.jpeg,.png,.webp,.bmp"
-        onChange={(e) => {
-          const files = [...(e.target.files ?? [])].map((f) => ({ name: f.name, size: f.size }))
-          useKb.getState().addPendingFiles(files)
-          e.target.value = ''
-        }}
-      />
-      <input
-        type="file"
-        className="hidden"
         id="image-input"
         accept="image/png,image/jpeg,image/webp,image/bmp"
         onChange={(e) => {

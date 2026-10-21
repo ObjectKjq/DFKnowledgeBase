@@ -1,0 +1,100 @@
+// @ts-ignore
+/* eslint-disable */
+import request from '@/lib/http'
+
+/** 删除文档 软删除，30 天内可恢复到删除前状态 DELETE /knowledge/doc/delete */
+export async function deleteDoc(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.deleteDocParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.CommonResultBoolean>('/knowledge/doc/delete', {
+    method: 'DELETE',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  })
+}
+
+/** 获取文档详情 失败文档附失败原因；非成员的请求按知识库不存在拒绝 GET /knowledge/doc/get */
+export async function getDoc(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getDocParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.CommonResultDocRespVO>('/knowledge/doc/get', {
+    method: 'GET',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  })
+}
+
+/** 分页查询文档 仅返回当前用户有权访问的知识库范围内的文档，可按知识库、标题、状态收窄 GET /knowledge/doc/page */
+export async function getDocPage(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.getDocPageParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.CommonResultPageResultDocRespVO>('/knowledge/doc/page', {
+    method: 'GET',
+    params: {
+      ...params,
+      reqVO: undefined,
+      ...params['reqVO'],
+    },
+    ...(options || {}),
+  })
+}
+
+/** 恢复文档 恢复到删除前状态，仅 30 天保留期内可恢复 POST /knowledge/doc/restore */
+export async function restoreDoc(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.restoreDocParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.CommonResultBoolean>('/knowledge/doc/restore', {
+    method: 'POST',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  })
+}
+
+/** 重试入库 失败文档回到「排队」重新执行；重复失败保留首次原因 POST /knowledge/doc/retry */
+export async function retryDoc(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.retryDocParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.CommonResultBoolean>('/knowledge/doc/retry', {
+    method: 'POST',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  })
+}
+
+/** 上传文档 支持 PDF/Word/PPT/Excel/TXT/Markdown，单文件上限 50 MB；上传成功进入「排队」 POST /knowledge/doc/upload */
+export async function uploadDoc(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.uploadDocParams,
+  body: {},
+  options?: { [key: string]: any },
+) {
+  return request<API.CommonResultLong>('/knowledge/doc/upload', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    params: {
+      ...params,
+    },
+    data: body,
+    ...(options || {}),
+  })
+}
