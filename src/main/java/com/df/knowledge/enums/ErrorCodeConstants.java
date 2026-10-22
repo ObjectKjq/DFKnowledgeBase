@@ -7,7 +7,7 @@ import com.df.knowledge.common.ErrorCodeImpl;
  * 业务错误码常量
  *
  * 编码为四段十位制 {@code 1-001-001-002}（类型-系统-模块-序号）：第一段固定 1（业务级异常），
- * 第二段固定 001，第三段按业务模块认领（001 用户功能：认证/用户/角色/菜单，002 知识库模块，003 文档模块，004 会话模块），
+ * 第二段固定 001，第三段按业务模块认领（001 用户功能：认证/用户/角色/菜单，002 知识库模块，003 文档模块，004 会话模块，005 文件模块），
  * 第四段为模块内序号
  */
 public interface ErrorCodeConstants {
@@ -43,12 +43,10 @@ public interface ErrorCodeConstants {
     // ========== 文档模块 1-001-003-0xx ==========
     ErrorCode DOC_NOT_FOUND = new ErrorCodeImpl(1_001_003_001, "文档不存在");
     ErrorCode DOC_FORMAT_NOT_SUPPORTED = new ErrorCodeImpl(1_001_003_002, "不支持的文件格式，仅支持 PDF、Word、PPT、Excel、TXT、Markdown");
-    ErrorCode DOC_FILE_TOO_LARGE = new ErrorCodeImpl(1_001_003_003, "文件大小超过 50 MB 上限");
     ErrorCode DOC_RETRY_NOT_ALLOWED = new ErrorCodeImpl(1_001_003_004, "仅失败的文档支持重试");
     ErrorCode DOC_DELETE_NOT_ALLOWED = new ErrorCodeImpl(1_001_003_005, "文档已删除，无法重复删除");
     ErrorCode DOC_RESTORE_NOT_ALLOWED = new ErrorCodeImpl(1_001_003_006, "仅已删除的文档支持恢复");
     ErrorCode DOC_RESTORE_EXPIRED = new ErrorCodeImpl(1_001_003_007, "文档删除超过 30 天，无法恢复");
-    ErrorCode DOC_FILE_STORE_FAILED = new ErrorCodeImpl(1_001_003_008, "文件存储失败");
     ErrorCode DOC_PARSE_FAILED = new ErrorCodeImpl(1_001_003_009, "文档解析失败");
     ErrorCode DOC_EMBEDDING_FAILED = new ErrorCodeImpl(1_001_003_010, "文档向量化失败");
     ErrorCode DOC_INDEX_FAILED = new ErrorCodeImpl(1_001_003_011, "文档索引处理失败");
@@ -59,4 +57,11 @@ public interface ErrorCodeConstants {
     ErrorCode CONVERSATION_NOT_FOUND = new ErrorCodeImpl(1_001_004_001, "会话不存在");
     ErrorCode RAG_MODEL_UNAVAILABLE = new ErrorCodeImpl(1_001_004_002, "对话模型不可用，请联系管理员检查模型配置后重试");
     ErrorCode RAG_GENERATION_TIMEOUT = new ErrorCodeImpl(1_001_004_003, "答案生成超时，请重试");
+
+    // ========== 文件模块 1-001-005-0xx ==========
+    ErrorCode FILE_NOT_FOUND = new ErrorCodeImpl(1_001_005_001, "文件不存在");
+    ErrorCode FILE_IS_EMPTY = new ErrorCodeImpl(1_001_005_002, "文件为空");
+    ErrorCode FILE_TYPE_NOT_ALLOWED = new ErrorCodeImpl(1_001_005_003, "不支持的文件类型");
+    ErrorCode FILE_TOO_LARGE = new ErrorCodeImpl(1_001_005_004, "文件大小超过 50 MB 上限");
+    ErrorCode FILE_STORE_FAILED = new ErrorCodeImpl(1_001_005_005, "文件存储失败");
 }

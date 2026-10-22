@@ -3,14 +3,16 @@ package com.df.knowledge.service.doc;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.df.knowledge.common.PageResult;
 import com.df.knowledge.common.exception.ServiceException;
+import com.df.knowledge.controller.doc.vo.DocCreateReqVO;
 import com.df.knowledge.controller.doc.vo.DocPageReqVO;
 import com.df.knowledge.dal.dataobject.doc.DocDO;
+import com.df.knowledge.dal.dataobject.file.FileDO;
 import com.df.knowledge.dal.mysql.doc.DocMapper;
 import com.df.knowledge.dal.mysql.doc.DocChunkMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
-import com.df.knowledge.enums.doc.DocConstants;
 import com.df.knowledge.enums.doc.DocFormatEnum;
 import com.df.knowledge.enums.doc.DocStatusEnum;
+import com.df.knowledge.service.file.FileService;
 import com.df.knowledge.service.knowledge.KnowledgeBasePermissionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -18,8 +20,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -33,7 +33,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -55,7 +54,7 @@ class DocServiceImplTest {
     private DocChunkIndexService docChunkIndexService;
 
     @Mock
-    private DocFileService docFileService;
+    private FileService fileService;
 
     @Mock
     private DocIngestService docIngestService;
@@ -67,10 +66,10 @@ class DocServiceImplTest {
     private DocServiceImpl docService;
 
     @Test
-    void testUploadDoc_success() {
-        // 准备参数：编辑者上传 PDF 文件
-        MultipartFile file = new MockMultipartFile("file", "期末复习笔记.pdf", "application/pdf", new byte[]{1, 2, 3});
-        when(docFileService.store(1L, "pdf", file)).thenReturn("./data/docs/1/abc.pdf");
+    void testCreateDoc_success() {
+        // 准备参数：编辑者创建文档（文件已通过文件上传接口落库）
+        DocCreateReqVO reqVO = buildCreateReqVO();
+        when(fileService.getFile(1L)).thenReturn(buildFile(1L, "期末复习笔记.pdf"));
         // mock 插入回填自增主键
         doAnswer(invocation -> {
             DocDO doc = invocation.getArgument(0);
@@ -79,9 +78,9 @@ class DocServiceImplTest {
         }).when(docMapper).insert(any(DocDO.class));
 
         // 调用
-        Long docId = docService.uploadDoc(10L, 1L, file);
+        Long docId = docService.createDoc(10L, reqVO);
 
-        // 断言：落盘后插入文档（状态排队）并提交入库任务
+        // 断言：插入文档（状态排队）保存文件引用并提交入库任务
         assertEquals(5L, docId.longValue());
         ArgumentCaptor<DocDO> captor = ArgumentCaptor.forClass(DocDO.class);
         verify(docMapper).insert(captor.capture());
@@ -91,49 +90,47 @@ class DocServiceImplTest {
         assertEquals("期末复习笔记.pdf", inserted.getFileName());
         assertEquals(DocFormatEnum.PDF.getCode(), inserted.getFormat());
         assertEquals(3L, inserted.getFileSize().longValue());
-        assertEquals("./data/docs/1/abc.pdf", inserted.getFilePath());
+        assertEquals(1L, inserted.getFileId().longValue());
+        assertEquals("/api/system/file/download?id=1", inserted.getFileUrl());
         assertEquals(DocStatusEnum.QUEUED.getCode(), inserted.getStatus());
         verify(docIngestService).submit(5L);
     }
 
     @Test
-    void testUploadDoc_formatNotSupported() {
+    void testCreateDoc_fileNotFound() {
+        // 准备参数：文件引用不存在
+        DocCreateReqVO reqVO = buildCreateReqVO();
+        when(fileService.getFile(1L)).thenReturn(null);
+
+        // 调用并断言
+        ServiceException exception = assertThrows(ServiceException.class, () -> docService.createDoc(10L, reqVO));
+        assertEquals(ErrorCodeConstants.FILE_NOT_FOUND.getCode(), exception.getErrorCode().getCode());
+        verifyNoInteractions(docMapper, docIngestService);
+    }
+
+    @Test
+    void testCreateDoc_formatNotSupported() {
         // 准备参数：白名单外的格式
-        MultipartFile file = new MockMultipartFile("file", "病毒.exe", "application/octet-stream", new byte[]{1});
+        DocCreateReqVO reqVO = buildCreateReqVO();
+        when(fileService.getFile(1L)).thenReturn(buildFile(1L, "病毒.exe"));
 
-        // 调用并断言：上传前拦截并列明支持格式
-        ServiceException exception = assertThrows(ServiceException.class,
-                () -> docService.uploadDoc(10L, 1L, file));
+        // 调用并断言：创建前拦截并列明支持格式
+        ServiceException exception = assertThrows(ServiceException.class, () -> docService.createDoc(10L, reqVO));
         assertEquals(ErrorCodeConstants.DOC_FORMAT_NOT_SUPPORTED.getCode(), exception.getErrorCode().getCode());
-        verifyNoInteractions(docFileService, docMapper, docIngestService);
+        verifyNoInteractions(docMapper, docIngestService);
     }
 
     @Test
-    void testUploadDoc_fileTooLarge() {
-        // 准备参数：超过 50 MB 的文件
-        MultipartFile file = mock(MultipartFile.class);
-        when(file.getOriginalFilename()).thenReturn("大文件.pdf");
-        when(file.getSize()).thenReturn(DocConstants.MAX_FILE_SIZE + 1);
-
-        // 调用并断言：超过大小上限被拦截
-        ServiceException exception = assertThrows(ServiceException.class,
-                () -> docService.uploadDoc(10L, 1L, file));
-        assertEquals(ErrorCodeConstants.DOC_FILE_TOO_LARGE.getCode(), exception.getErrorCode().getCode());
-        verifyNoInteractions(docFileService, docMapper, docIngestService);
-    }
-
-    @Test
-    void testUploadDoc_viewerNoPermission() {
-        // 准备参数：查看者上传被权限判定拒绝
-        MultipartFile file = new MockMultipartFile("file", "笔记.txt", "text/plain", new byte[]{1});
+    void testCreateDoc_viewerNoPermission() {
+        // 准备参数：查看者创建被权限判定拒绝
+        DocCreateReqVO reqVO = buildCreateReqVO();
         doThrow(new ServiceException(ErrorCodeConstants.KB_NO_PERMISSION))
                 .when(knowledgeBasePermissionService).checkContentWritePermission(20L, 1L);
 
         // 调用并断言
-        ServiceException exception = assertThrows(ServiceException.class,
-                () -> docService.uploadDoc(20L, 1L, file));
+        ServiceException exception = assertThrows(ServiceException.class, () -> docService.createDoc(20L, reqVO));
         assertEquals(ErrorCodeConstants.KB_NO_PERMISSION.getCode(), exception.getErrorCode().getCode());
-        verifyNoInteractions(docFileService, docMapper, docIngestService);
+        verifyNoInteractions(fileService, docMapper, docIngestService);
     }
 
     @Test
@@ -343,7 +340,6 @@ class DocServiceImplTest {
     void testPurgeExpiredDeletedDocs_success() {
         // 准备参数：超过保留期的软删除文档
         DocDO doc = buildDoc(5L, 1L, DocStatusEnum.DELETED);
-        doc.setFilePath("./data/docs/1/abc.pdf");
         doc.setDeleteTime(LocalDateTime.now().minusDays(31));
         when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
         when(docMapper.selectListByStatusAndDeleteTimeBefore(any(), any(LocalDateTime.class))).thenReturn(List.of(doc));
@@ -351,11 +347,11 @@ class DocServiceImplTest {
         // 调用
         docService.purgeExpiredDeletedDocs();
 
-        // 断言：移除记录与存储文件
+        // 断言：移除记录与文件引用（文件逻辑删除）
         verify(docMapper).deleteById(5L);
         verify(docChunkMapper).deleteByDocId(5L);
         verify(docChunkIndexService).deleteByDocId(5L);
-        verify(docFileService).delete("./data/docs/1/abc.pdf");
+        verify(fileService).delete(1L);
     }
 
     @Test
@@ -370,7 +366,7 @@ class DocServiceImplTest {
         docService.purgeExpiredDeletedDocs();
 
         // 断言：不清理刚恢复的索引、分块及原文件
-        verifyNoInteractions(docChunkIndexService, docChunkMapper, docFileService);
+        verifyNoInteractions(docChunkIndexService, docChunkMapper, fileService);
         verify(docMapper, never()).deleteById(any(Long.class));
     }
 
@@ -386,8 +382,31 @@ class DocServiceImplTest {
         // 调用并断言
         ServiceException exception = assertThrows(ServiceException.class, docService::purgeExpiredDeletedDocs);
         assertEquals(ErrorCodeConstants.DOC_INDEX_FAILED.getCode(), exception.getErrorCode().getCode());
-        verifyNoInteractions(docChunkMapper, docFileService);
+        verifyNoInteractions(docChunkMapper, fileService);
         verify(docMapper, never()).deleteById(any(Long.class));
+    }
+
+    /**
+     * 构造创建文档 Request VO
+     */
+    private static DocCreateReqVO buildCreateReqVO() {
+        DocCreateReqVO reqVO = new DocCreateReqVO();
+        reqVO.setKnowledgeBaseId(1L);
+        reqVO.setFileId(1L);
+        reqVO.setFileUrl("/api/system/file/download?id=1");
+        return reqVO;
+    }
+
+    /**
+     * 构造文件 DO
+     */
+    private static FileDO buildFile(Long id, String name) {
+        FileDO file = new FileDO();
+        file.setId(id);
+        file.setName(name);
+        file.setType("application/pdf");
+        file.setSize(3L);
+        return file;
     }
 
     /**
@@ -401,7 +420,8 @@ class DocServiceImplTest {
         doc.setFileName("期末复习笔记.pdf");
         doc.setFormat(DocFormatEnum.PDF.getCode());
         doc.setFileSize(1024L);
-        doc.setFilePath("./data/docs/1/abc.pdf");
+        doc.setFileId(1L);
+        doc.setFileUrl("/api/system/file/download?id=1");
         doc.setStatus(status.getCode());
         return doc;
     }

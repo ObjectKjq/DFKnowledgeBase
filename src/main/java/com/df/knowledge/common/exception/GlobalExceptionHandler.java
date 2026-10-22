@@ -90,7 +90,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * 上传文件超过 multipart 上限（与业务上限 50 MB 对齐；文案与业务错误码 DOC_FILE_TOO_LARGE 一致，common 层不引用业务错误码）
+     * 上传文件超过 multipart 上限（与业务上限 50 MB 对齐；文案与业务错误码 FILE_TOO_LARGE 一致，common 层不引用业务错误码）
      */
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public CommonResult<?> handleMaxUploadSizeExceededException(MaxUploadSizeExceededException ex) {

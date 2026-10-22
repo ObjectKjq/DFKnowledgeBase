@@ -4,6 +4,7 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import com.df.knowledge.common.CommonResult;
 import com.df.knowledge.common.PageResult;
+import com.df.knowledge.controller.doc.vo.DocCreateReqVO;
 import com.df.knowledge.controller.doc.vo.DocPageReqVO;
 import com.df.knowledge.controller.doc.vo.DocRespVO;
 import com.df.knowledge.dal.dataobject.doc.DocDO;
@@ -17,10 +18,10 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 import static com.df.knowledge.common.CommonResult.success;
 
@@ -38,12 +39,10 @@ public class DocController {
     @Resource
     private DocService docService;
 
-    @PostMapping("/upload")
-    @Operation(summary = "上传文档", description = "支持 PDF/Word/PPT/Excel/TXT/Markdown，单文件上限 50 MB；上传成功进入「排队」")
-    @Parameter(name = "knowledgeBaseId", description = "知识库编号", required = true, example = "1")
-    public CommonResult<Long> uploadDoc(@RequestParam("knowledgeBaseId") Long knowledgeBaseId,
-                                        @RequestParam("file") MultipartFile file) {
-        return success(docService.uploadDoc(StpUtil.getLoginIdAsLong(), knowledgeBaseId, file));
+    @PostMapping("/create")
+    @Operation(summary = "创建文档", description = "两步式上传：先调文件上传接口拿文件编号与下载链接，再保存文档；格式白名单 PDF/Word/PPT/Excel/TXT/Markdown，创建成功进入「排队」")
+    public CommonResult<Long> createDoc(@Valid @RequestBody DocCreateReqVO reqVO) {
+        return success(docService.createDoc(StpUtil.getLoginIdAsLong(), reqVO));
     }
 
     @GetMapping("/page")

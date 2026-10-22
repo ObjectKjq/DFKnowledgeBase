@@ -126,6 +126,40 @@ CREATE TABLE `system_login_log` (
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '登录日志表';
 
 -- ----------------------------
+-- 文件表（通用文件元数据，文件本体存 system_file_content，ADR-0009）
+-- ----------------------------
+DROP TABLE IF EXISTS `system_file`;
+CREATE TABLE `system_file` (
+    `id`          bigint       NOT NULL AUTO_INCREMENT COMMENT '文件ID',
+    `name`        varchar(255) NOT NULL COMMENT '上传时的原始文件名',
+    `type`        varchar(128) NOT NULL COMMENT '文件 MIME 类型（Content-Type）',
+    `size`        bigint       NOT NULL COMMENT '文件大小（字节）',
+    `creator`     varchar(64)  NULL DEFAULT '' COMMENT '创建者',
+    `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updater`     varchar(64)  NULL DEFAULT '' COMMENT '更新者',
+    `update_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted`     bit(1)       NOT NULL DEFAULT b'0' COMMENT '是否删除',
+    PRIMARY KEY (`id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '文件表';
+
+-- ----------------------------
+-- 文件内容表（与文件表 1:1，content 用 LONGBLOB，部署 MySQL 需 max_allowed_packet ≥ 64MB）
+-- ----------------------------
+DROP TABLE IF EXISTS `system_file_content`;
+CREATE TABLE `system_file_content` (
+    `id`          bigint       NOT NULL AUTO_INCREMENT COMMENT '文件内容ID',
+    `file_id`     bigint       NOT NULL COMMENT '文件ID（关联 system_file 表）',
+    `content`     longblob     NOT NULL COMMENT '文件内容（二进制）',
+    `creator`     varchar(64)  NULL DEFAULT '' COMMENT '创建者',
+    `create_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    `updater`     varchar(64)  NULL DEFAULT '' COMMENT '更新者',
+    `update_time` datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    `deleted`     bit(1)       NOT NULL DEFAULT b'0' COMMENT '是否删除',
+    PRIMARY KEY (`id`) USING BTREE,
+    UNIQUE KEY `uk_file_id` (`file_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '文件内容表';
+
+-- ----------------------------
 -- 知识库表
 -- ----------------------------
 DROP TABLE IF EXISTS `knowledge_base`;
@@ -179,7 +213,9 @@ CREATE TABLE `knowledge_doc` (
     `file_name`         varchar(255) NOT NULL COMMENT '上传时的原始文件名',
     `format`            tinyint      NOT NULL COMMENT '文档格式（1 PDF 2 Word 3 PPT 4 Excel 5 TXT 6 Markdown）',
     `file_size`         bigint       NOT NULL COMMENT '文件大小（字节）',
-    `file_path`         varchar(500) NOT NULL COMMENT '文件存储路径',
+    `file_id`           bigint       NULL DEFAULT NULL COMMENT '文件ID（关联 system_file 表，过渡期存量文档为空）',
+    `file_url`          varchar(255) NULL DEFAULT NULL COMMENT '文件下载链接（上传接口返回的 url，过渡期存量文档为空）',
+    `file_path`         varchar(500) NULL DEFAULT NULL COMMENT '过渡字段：存量磁盘文件路径，迁移入库后置空，随双读逻辑一并移除',
     `status`            tinyint      NOT NULL COMMENT '文档状态（1 排队 2 解析中 3 索引中 4 可用 5 失败 6 已删除）',
     `fail_reason`       varchar(500) NULL DEFAULT NULL COMMENT '失败原因（保留首次失败原因）',
     `prev_status`       tinyint      NULL DEFAULT NULL COMMENT '删除前状态（软删除恢复到删除前状态用）',

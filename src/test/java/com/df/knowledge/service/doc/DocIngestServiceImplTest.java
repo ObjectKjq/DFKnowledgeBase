@@ -203,7 +203,8 @@ class DocIngestServiceImplTest {
         doc.setKnowledgeBaseId(1L);
         doc.setTitle("期末复习笔记.pdf");
         doc.setFileName("期末复习笔记.pdf");
-        doc.setFilePath("./data/docs/1/abc.pdf");
+        doc.setFileId(1L);
+        doc.setFileUrl("/api/system/file/download?id=1");
         doc.setStatus(status.getCode());
         doc.setFailReason(failReason);
         return doc;

@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRef, useState } from 'react'
 
-import { uploadDoc } from '@/api/docController'
+import { createDoc } from '@/api/docController'
+import { uploadFile } from '@/api/fileController'
 import { Icon } from '@/components/Icon'
 import { ModalShell } from '@/components/ModalHost'
 import { useLibraries } from '@/features/knowledge/useLibraries'
@@ -33,8 +34,18 @@ export function UploadModal() {
         files.map((file) => {
           const data = new FormData()
           data.append('file', file)
-          // 覆盖生成请求的 JSON 默认值，由浏览器补齐 multipart boundary。
-          return uploadDoc({ knowledgeBaseId }, data, { headers: { 'Content-Type': undefined } })
+          // openapi2ts 把 file 生成成了 query 参数，这里占位跳过；文件放 FormData 的 file 部分，
+          // 覆盖生成请求的 JSON Content-Type，由浏览器补齐 multipart boundary。
+          return uploadFile(
+            { file: undefined },
+            data,
+            { headers: { 'Content-Type': undefined } },
+          ).then((result) => {
+            // 两步式上传：先传文件拿引用，再保存文档（ADR-0009）。
+            const uploaded = result.data
+            if (!uploaded?.id || !uploaded.url) throw new Error('文件上传响应缺少文件引用')
+            return createDoc({ knowledgeBaseId, fileId: uploaded.id, fileUrl: uploaded.url })
+          })
         }),
       ),
     onMutate: () => useKb.getState().setUploadStarted(true),

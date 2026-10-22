@@ -4,7 +4,7 @@
 
 ## 技术基线
 
-JDK 21 / Spring Boot 3.4.5 / MyBatis-Plus 3.5.10.1 / Hutool 5.8 / Lombok / springdoc + knife4j。版本唯一出处是根 `pom.xml`。
+JDK 21 / Spring Boot 4.1.1 / MyBatis-Plus 3.5.17 / Hutool 5.8 / Lombok / springdoc + knife4j。版本唯一出处是根 `pom.xml`。
 
 Lombok 行为由根 `lombok.config` 控制：setter 链式返回 this（`chain=true`）、`@ToString/@EqualsAndHashCode` 默认 callSuper。链式构造 `new Xxx().setA(...).setB(...)` 是常态。
 

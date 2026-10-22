@@ -1,14 +1,13 @@
-### 上传文档（multipart/form-data，格式白名单与 50 MB 上限）
-POST {{baseUrl}}/knowledge/doc/upload?knowledgeBaseId=1
+### 创建文档（两步式：先调 /system/file/upload 拿文件编号与下载链接，再保存文档）
+POST {{baseUrl}}/knowledge/doc/create
 Authorization: Bearer {{token}}
-Content-Type: multipart/form-data; boundary=WebAppBoundary
+Content-Type: application/json
 
---WebAppBoundary
-Content-Disposition: form-data; name="file"; filename="期末复习笔记.pdf"
-Content-Type: application/pdf
-
-< ./期末复习笔记.pdf
---WebAppBoundary--
+{
+  "knowledgeBaseId": 1,
+  "fileId": 1,
+  "fileUrl": "/api/system/file/download?id=1"
+}
 
 ### 分页查询文档（可按知识库、标题、状态收窄）
 GET {{baseUrl}}/knowledge/doc/page?pageNum=1&pageSize=10&knowledgeBaseId=1&status=4

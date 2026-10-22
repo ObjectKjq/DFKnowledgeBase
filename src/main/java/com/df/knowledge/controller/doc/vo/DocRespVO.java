@@ -30,6 +30,9 @@ public class DocRespVO {
     @Schema(description = "文件大小（字节）", example = "102400")
     private Long fileSize;
 
+    @Schema(description = "文件下载链接", example = "/api/system/file/download?id=1")
+    private String fileUrl;
+
     @Schema(description = "文档状态（1 排队 2 解析中 3 索引中 4 可用 5 失败 6 已删除）", example = "1")
     private Integer status;
 

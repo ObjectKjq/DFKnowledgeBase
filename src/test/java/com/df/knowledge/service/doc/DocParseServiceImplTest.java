@@ -11,6 +11,7 @@ import com.df.knowledge.dal.mysql.doc.DocMapper;
 import com.df.knowledge.enums.doc.DocFormatEnum;
 import com.df.knowledge.enums.doc.DocStatusEnum;
 import com.df.knowledge.enums.ErrorCodeConstants;
+import com.df.knowledge.service.file.FileService;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -38,7 +39,6 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -49,7 +49,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * {@link DocParseServiceImpl} 的服务层测试，仅数据库与文档存储使用桩
+ * {@link DocParseServiceImpl} 的服务层测试，仅数据库与文件存储使用桩
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -60,7 +60,7 @@ class DocParseServiceImplTest {
     @Mock
     private DocChunkMapper docChunkMapper;
     @Mock
-    private DocFileService docFileService;
+    private FileService fileService;
     @Mock
     private DocEmbeddingService docEmbeddingService;
     @Mock
@@ -303,7 +303,7 @@ class DocParseServiceImplTest {
         // 断言：保持原分块主键及内容，避免 ES 的分块编号与 MySQL 失配
         assertEquals(List.of(existing), docParseService.getDocChunks(5L));
         assertEquals(700L, docParseService.getDocChunks(5L).getFirst().getId());
-        verifyNoInteractions(docFileService);
+        verifyNoInteractions(fileService);
     }
 
     @Test
@@ -313,13 +313,13 @@ class DocParseServiceImplTest {
         failed.setStatus(DocStatusEnum.QUEUED.getCode());
         DocDO healthy = new DocDO();
         healthy.setId(6L);
-        healthy.setFilePath("healthy.txt");
+        healthy.setFileId(600L);
+        healthy.setFileUrl("/api/system/file/download?id=600");
         healthy.setFormat(DocFormatEnum.TXT.getCode());
         healthy.setStatus(DocStatusEnum.QUEUED.getCode());
         when(docMapper.selectById(6L)).thenReturn(healthy);
         when(docMapper.selectByIdForUpdate(6L)).thenReturn(healthy);
-        when(docFileService.open("healthy.txt")).thenAnswer(invocation ->
-                new ByteArrayInputStream("正常文档".getBytes(StandardCharsets.UTF_8)));
+        when(fileService.getContent(600L)).thenReturn("正常文档".getBytes(StandardCharsets.UTF_8));
         for (DocDO doc : List.of(failed, healthy)) {
             when(docMapper.updateStatus(eq(doc.getId()), anyInt(), anyInt(), nullable(String.class)))
                     .thenAnswer(invocation -> {
@@ -363,8 +363,7 @@ class DocParseServiceImplTest {
         assertEquals("正常文档", docParseService.getDocChunks(6L).getFirst().getText());
 
         // 调用：模拟用户重试回排队，再走完整解析流程
-        when(docFileService.open(failed.getFilePath())).thenAnswer(invocation ->
-                new ByteArrayInputStream("修复后内容".getBytes(StandardCharsets.UTF_8)));
+        when(fileService.getContent(500L)).thenReturn("修复后内容".getBytes(StandardCharsets.UTF_8));
         failed.setStatus(DocStatusEnum.QUEUED.getCode());
         ingest.processDoc(5L);
 
@@ -416,12 +415,13 @@ class DocParseServiceImplTest {
         DocDO doc = new DocDO();
         doc.setId(5L);
         doc.setFileName("资料." + extension);
-        doc.setFilePath("stored." + extension);
+        doc.setFileId(500L);
+        doc.setFileUrl("/api/system/file/download?id=500");
         doc.setFormat(DocFormatEnum.resolveByExtension(extension).getCode());
         doc.setStatus(DocStatusEnum.PARSING.getCode());
         when(docMapper.selectById(5L)).thenReturn(doc);
         when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
-        when(docFileService.open(doc.getFilePath())).thenAnswer(invocation -> new ByteArrayInputStream(bytes));
+        when(fileService.getContent(500L)).thenReturn(bytes);
         return doc;
     }
 

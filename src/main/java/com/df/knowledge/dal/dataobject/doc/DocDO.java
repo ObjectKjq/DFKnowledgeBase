@@ -44,7 +44,17 @@ public class DocDO extends BaseDO {
     private Long fileSize;
 
     /**
-     * 文件存储路径
+     * 文件编号，关联 {@link com.df.knowledge.dal.dataobject.file.FileDO#getId()}
+     */
+    private Long fileId;
+
+    /**
+     * 文件下载链接（上传接口返回的 url）
+     */
+    private String fileUrl;
+
+    /**
+     * 过渡字段：存量磁盘文件路径，迁移入库后置空，随双读逻辑一并移除
      */
     private String filePath;
 

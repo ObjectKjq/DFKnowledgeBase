@@ -92,6 +92,18 @@ public interface DocMapper extends BaseMapper<DocDO> {
     }
 
     /**
+     * 查询仍指向磁盘存量文件的文档（file_id 为空且 file_path 非空，存量迁移用）
+     *
+     * @return 文档列表
+     */
+    default List<DocDO> selectListByLegacyFile() {
+        return selectList(new LambdaQueryWrapper<DocDO>()
+                .isNull(DocDO::getFileId)
+                .isNotNull(DocDO::getFilePath)
+                .ne(DocDO::getFilePath, ""));
+    }
+
+    /**
      * 状态迁移（CAS）：仅当当前状态为 fromStatus 时迁移到 toStatus，避免与用户操作并发时把已删除文档拉回流程
      *
      * @param id 文档编号
@@ -106,5 +118,21 @@ public interface DocMapper extends BaseMapper<DocDO> {
                 .eq(DocDO::getStatus, fromStatus)
                 .set(DocDO::getStatus, toStatus)
                 .set(StrUtil.isNotBlank(failReason), DocDO::getFailReason, failReason));
+    }
+
+    /**
+     * 改写文件引用（存量磁盘文件迁移入库后落 file_id / file_url 并清空过渡字段 file_path）
+     *
+     * @param id 文档编号
+     * @param fileId 文件编号
+     * @param fileUrl 文件下载链接
+     * @return 更新条数
+     */
+    default int updateFileRef(Long id, Long fileId, String fileUrl) {
+        return update(null, new LambdaUpdateWrapper<DocDO>()
+                .eq(DocDO::getId, id)
+                .set(DocDO::getFileId, fileId)
+                .set(DocDO::getFileUrl, fileUrl)
+                .set(DocDO::getFilePath, null));
     }
 }

@@ -5,11 +5,11 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- 版本基线对齐 ruoyi-vue-pro 模板（JDK 21 / Spring Boot 3.4.5） -->
+    <!-- JDK 21 / Spring Boot 4.1.1 -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.5</version>
+        <version>4.1.1</version>
         <relativePath/>
     </parent>
 
@@ -22,18 +22,13 @@
     <properties>
         <java.version>21</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- 依赖版本对齐 ruoyi-vue-pro 模板 BOM -->
-        <mybatis-plus.version>3.5.10.1</mybatis-plus.version>
+        <mybatis-plus.version>3.5.17</mybatis-plus.version>
         <hutool.version>5.8.35</hutool.version>
-        <springdoc.version>2.8.3</springdoc.version>
+        <springdoc.version>3.0.3</springdoc.version>
         <knife4j.version>4.6.0</knife4j.version>
-        <sa-token.version>1.44.0</sa-token.version>
+        <sa-token.version>1.46.0</sa-token.version>
         <langchain4j.version>1.22.0-beta32</langchain4j.version>
         <pdfbox.version>3.0.7</pdfbox.version>
-        <elasticsearch-java.version>9.4.0</elasticsearch-java.version>
-        <!-- 与 ES 9.4 REST5 客户端的依赖基线一致，避免被 Boot 的旧版覆盖 -->
-        <httpclient5.version>5.6.1</httpclient5.version>
-        <httpcore5.version>5.4</httpcore5.version>
     </properties>
 
     <dependencies>
@@ -44,9 +39,8 @@
             <version>${langchain4j.version}</version>
         </dependency>
         <dependency>
-            <groupId>co.elastic.clients</groupId>
-            <artifactId>elasticsearch-java</artifactId>
-            <version>${elasticsearch-java.version}</version>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
         </dependency>
         <!-- 文档解析：Word/Excel 统一走 LangChain4j，PDF/PPT 使用底层解析器保留页码 -->
         <dependency>
@@ -72,7 +66,11 @@
         <!-- Web -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-jackson2</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -82,7 +80,7 @@
         <!-- 数据库 -->
         <dependency>
             <groupId>com.baomidou</groupId>
-            <artifactId>mybatis-plus-spring-boot3-starter</artifactId>
+            <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
             <version>${mybatis-plus.version}</version>
         </dependency>
         <!-- 自 3.5.9 起，分页等依赖 JSqlParser 的 inner interceptor 移入独立模块，需单独引入 -->
@@ -100,7 +98,7 @@
         <!-- 认证授权（sa-token）与密码加密 -->
         <dependency>
             <groupId>cn.dev33</groupId>
-            <artifactId>sa-token-spring-boot3-starter</artifactId>
+            <artifactId>sa-token-spring-boot4-starter</artifactId>
             <version>${sa-token.version}</version>
         </dependency>
         <dependency>

@@ -1,4 +1,4 @@
-/** 文档格式与限制对齐后端 DocFormatEnum / DocConstants。 */
+/** 文档格式与限制对齐后端 DocFormatEnum / FileConstants。 */
 const DOCUMENT_EXTENSIONS = [
   '.pdf',
   '.doc',

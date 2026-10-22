@@ -10,6 +10,7 @@ import com.df.knowledge.enums.ErrorCodeConstants;
 import com.df.knowledge.enums.doc.DocConstants;
 import com.df.knowledge.enums.doc.DocFormatEnum;
 import com.df.knowledge.enums.doc.DocStatusEnum;
+import com.df.knowledge.service.file.FileService;
 import dev.langchain4j.data.document.parser.apache.poi.ApachePoiDocumentParser;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -28,9 +29,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -56,7 +60,7 @@ public class DocParseServiceImpl implements DocParseService {
     private DocChunkMapper docChunkMapper;
 
     @Resource
-    private DocFileService docFileService;
+    private FileService fileService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -74,7 +78,7 @@ public class DocParseServiceImpl implements DocParseService {
                 .filter(value -> value.getCode().equals(doc.getFormat())).findFirst()
                 .orElseThrow(() -> new ServiceException(ErrorCodeConstants.DOC_FORMAT_NOT_SUPPORTED));
         List<DocChunkDO> chunks = new ArrayList<>();
-        try (InputStream input = docFileService.open(doc.getFilePath())) {
+        try (InputStream input = openDocContent(doc)) {
             boolean paged = format == DocFormatEnum.PDF || format == DocFormatEnum.PPT;
             List<String> pages = readPages(input, format);
             int offset = 0;
@@ -85,6 +89,9 @@ public class DocParseServiceImpl implements DocParseService {
             }
         } catch (InvalidPasswordException | EncryptedDocumentException ex) {
             throw new ServiceException(ErrorCodeConstants.DOC_PARSE_FAILED, "文档解析失败：文档已加密或密码错误");
+        } catch (ServiceException ex) {
+            // 业务错误（如文件缺失）原样上抛，保留专属错误码
+            throw ex;
         } catch (IOException | RuntimeException ex) {
             log.warn("[parse][文档({})文本抽取失败]", docId, ex);
             throw new ServiceException(ErrorCodeConstants.DOC_PARSE_FAILED,
@@ -101,6 +108,24 @@ public class DocParseServiceImpl implements DocParseService {
     @Override
     public List<DocChunkDO> getDocChunks(Long docId) {
         return docChunkMapper.selectListByDocId(docId);
+    }
+
+    /**
+     * 打开文档内容：新文件读文件库（ADR-0009），存量磁盘文件过渡期直接读盘（双读，迁移完成后移除）
+     *
+     * @param doc 文档
+     * @return 文档输入流
+     * @throws IOException 文件无法读取
+     */
+    private InputStream openDocContent(DocDO doc) throws IOException {
+        if (doc.getFileId() != null) {
+            byte[] content = fileService.getContent(doc.getFileId());
+            if (content == null) {
+                throw new ServiceException(ErrorCodeConstants.FILE_NOT_FOUND);
+            }
+            return new ByteArrayInputStream(content);
+        }
+        return Files.newInputStream(Path.of(doc.getFilePath()));
     }
 
     /**

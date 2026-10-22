@@ -60,6 +60,12 @@ declare namespace API {
     data?: DocRespVO
   }
 
+  type CommonResultFileRespVO = {
+    code?: number
+    msg?: string
+    data?: FileRespVO
+  }
+
   type CommonResultKnowledgeBaseRespVO = {
     code?: number
     msg?: string
@@ -207,6 +213,11 @@ declare namespace API {
     id: number
   }
 
+  type deleteFileParams = {
+    /** 文件编号 */
+    id: number
+  }
+
   type deleteKnowledgeBaseParams = {
     /** 知识库编号 */
     id: number
@@ -250,6 +261,15 @@ declare namespace API {
     text?: string
   }
 
+  type DocCreateReqVO = {
+    /** 知识库编号 */
+    knowledgeBaseId: number
+    /** 文件编号（上传接口返回） */
+    fileId: number
+    /** 文件下载链接（上传接口返回） */
+    fileUrl: string
+  }
+
   type DocPageReqVO = {
     /** 页码，从 1 开始 */
     pageNum?: number
@@ -276,6 +296,8 @@ declare namespace API {
     format?: number
     /** 文件大小（字节） */
     fileSize?: number
+    /** 文件下载链接 */
+    fileUrl?: string
     /** 文档状态（1 排队 2 解析中 3 索引中 4 可用 5 失败 6 已删除） */
     status?: number
     /** 失败原因（保留首次失败原因） */
@@ -293,6 +315,24 @@ declare namespace API {
     query: string
     /** 知识库编号范围，不传或为空表示全部有权知识库 */
     knowledgeBaseIds?: number[]
+  }
+
+  type downloadFileParams = {
+    /** 文件编号 */
+    id: number
+  }
+
+  type FileRespVO = {
+    /** 文件编号 */
+    id?: number
+    /** 文件下载链接（相对路径） */
+    url?: string
+    /** 上传时的原始文件名 */
+    name?: string
+    /** 文件大小（字节） */
+    size?: number
+    /** 文件 MIME 类型 */
+    type?: string
   }
 
   type getConversationParams = {
@@ -361,7 +401,7 @@ declare namespace API {
     id: number
   }
 
-  type JsonNode = true
+  type JsonNode = Record<string, any>
 
   type KnowledgeBaseMemberInviteReqVO = {
     /** 知识库编号 */
@@ -503,7 +543,7 @@ declare namespace API {
     /** 是否可见 */
     visible?: boolean
     /** 子菜单 */
-    children?: any
+    children?: MenuVO[]
   }
 
   type MessageCreateReqVO = {
@@ -673,9 +713,9 @@ declare namespace API {
     timeout?: number
   }
 
-  type uploadDocParams = {
-    /** 知识库编号 */
-    knowledgeBaseId: number
+  type uploadFileParams = {
+    /** 上传文件 */
+    file: any
   }
 
   type UserPageReqVO = {

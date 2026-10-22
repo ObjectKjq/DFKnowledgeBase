@@ -6,6 +6,7 @@ import * as userController from './userController'
 import * as roleController from './roleController'
 import * as menuController from './menuController'
 import * as knowledgeBaseMemberController from './knowledgeBaseMemberController'
+import * as fileController from './fileController'
 import * as authController from './authController'
 import * as docSearchController from './docSearchController'
 import * as ragController from './ragController'
@@ -17,6 +18,7 @@ export default {
   roleController,
   menuController,
   knowledgeBaseMemberController,
+  fileController,
   authController,
   docSearchController,
   ragController,

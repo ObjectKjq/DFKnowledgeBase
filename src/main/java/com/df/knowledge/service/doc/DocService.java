@@ -1,26 +1,25 @@
 package com.df.knowledge.service.doc;
 
 import com.df.knowledge.common.PageResult;
+import com.df.knowledge.controller.doc.vo.DocCreateReqVO;
 import com.df.knowledge.controller.doc.vo.DocPageReqVO;
 import com.df.knowledge.dal.dataobject.doc.DocDO;
-import org.springframework.web.multipart.MultipartFile;
 
 /**
  * 文档 Service 接口
  *
- * 文档生命周期操作（PRD §8.2）：上传、分页/详情、重试、软删除与恢复、超期彻底删除
+ * 文档生命周期操作（PRD §8.2）：创建、分页/详情、重试、软删除与恢复、超期彻底删除
  */
 public interface DocService {
 
     /**
-     * 上传文档（格式白名单与 50 MB 上限校验，落盘后进入「排队」）
+     * 创建文档（两步式上传：先传文件拿引用再保存，格式白名单校验后进入「排队」，ADR-0009）
      *
      * @param userId 上传者用户编号
-     * @param knowledgeBaseId 知识库编号
-     * @param file 上传文件
+     * @param reqVO 创建信息（知识库编号与文件引用）
      * @return 文档编号
      */
-    Long uploadDoc(Long userId, Long knowledgeBaseId, MultipartFile file);
+    Long createDoc(Long userId, DocCreateReqVO reqVO);
 
     /**
      * 分页查询文档（仅返回用户有权访问的知识库范围内的文档）
@@ -65,7 +64,7 @@ public interface DocService {
     void restoreDoc(Long userId, Long id);
 
     /**
-     * 彻底删除超过保留期的软删除文档（移除记录与存储文件，PRD §8.2）
+     * 彻底删除超过保留期的软删除文档（移除记录与文件引用，PRD §8.2）
      */
     void purgeExpiredDeletedDocs();
 }

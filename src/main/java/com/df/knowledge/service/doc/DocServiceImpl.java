@@ -2,24 +2,27 @@ package com.df.knowledge.service.doc;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.df.knowledge.common.PageResult;
 import com.df.knowledge.common.exception.ServiceException;
+import com.df.knowledge.controller.doc.vo.DocCreateReqVO;
 import com.df.knowledge.controller.doc.vo.DocPageReqVO;
 import com.df.knowledge.dal.dataobject.doc.DocDO;
+import com.df.knowledge.dal.dataobject.file.FileDO;
 import com.df.knowledge.dal.mysql.doc.DocMapper;
 import com.df.knowledge.dal.mysql.doc.DocChunkMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
 import com.df.knowledge.enums.doc.DocConstants;
 import com.df.knowledge.enums.doc.DocFormatEnum;
 import com.df.knowledge.enums.doc.DocStatusEnum;
+import com.df.knowledge.service.file.FileService;
 import com.df.knowledge.service.knowledge.KnowledgeBasePermissionService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,7 +31,7 @@ import java.util.List;
  * 文档 Service 实现类
  *
  * 状态迁移唯一依据 PRD §8.2 文档生命周期；内容权限由 {@link KnowledgeBasePermissionService} 判定（PRD §8.1）。
- * 上传、重试、恢复不加事务包裹：入库任务在写入提交后才异步执行，事务包裹会让任务读不到最新状态
+ * 创建、重试、恢复不加事务包裹：入库任务在写入提交后才异步执行，事务包裹会让任务读不到最新状态
  */
 @Service
 @Validated
@@ -45,7 +48,7 @@ public class DocServiceImpl implements DocService {
     private DocChunkIndexService docChunkIndexService;
 
     @Resource
-    private DocFileService docFileService;
+    private FileService fileService;
 
     @Resource
     private DocIngestService docIngestService;
@@ -54,33 +57,32 @@ public class DocServiceImpl implements DocService {
     private KnowledgeBasePermissionService knowledgeBasePermissionService;
 
     @Override
-    public Long uploadDoc(Long userId, Long knowledgeBaseId, MultipartFile file) {
+    public Long createDoc(Long userId, DocCreateReqVO reqVO) {
         // 1. 权限判定：查看者与非成员不可上传（PRD §8.1 权限矩阵）
-        knowledgeBasePermissionService.checkContentWritePermission(userId, knowledgeBaseId);
-        // 2. 校验格式白名单：PDF/Word/PPT/Excel/TXT/Markdown（PRD FR-3）
-        String fileName = file.getOriginalFilename();
-        String extension = FileUtil.extName(fileName == null ? "" : fileName).toLowerCase();
+        knowledgeBasePermissionService.checkContentWritePermission(userId, reqVO.getKnowledgeBaseId());
+        // 2. 文件必须已上传（两步式：文件引用来自文件上传接口，ADR-0009）
+        FileDO file = fileService.getFile(reqVO.getFileId());
+        if (file == null) {
+            throw new ServiceException(ErrorCodeConstants.FILE_NOT_FOUND);
+        }
+        // 3. 校验格式白名单：PDF/Word/PPT/Excel/TXT/Markdown（PRD FR-3），大小与文件类型在上传时已校验
+        String extension = FileUtil.extName(file.getName()).toLowerCase();
         DocFormatEnum format = DocFormatEnum.resolveByExtension(extension);
         if (format == null) {
             throw new ServiceException(ErrorCodeConstants.DOC_FORMAT_NOT_SUPPORTED);
         }
-        // 3. 校验单文件大小上限 50 MB（PRD FR-3）
-        if (file.getSize() > DocConstants.MAX_FILE_SIZE) {
-            throw new ServiceException(ErrorCodeConstants.DOC_FILE_TOO_LARGE);
-        }
-        // 4. 落盘（文档存储端口）
-        String filePath = docFileService.store(knowledgeBaseId, extension, file);
-        // 5. 插入文档（初始状态：排队）
+        // 4. 插入文档（初始状态：排队），保存文件引用
         DocDO doc = new DocDO();
-        doc.setKnowledgeBaseId(knowledgeBaseId);
-        doc.setTitle(fileName);
-        doc.setFileName(fileName);
+        doc.setKnowledgeBaseId(reqVO.getKnowledgeBaseId());
+        doc.setTitle(file.getName());
+        doc.setFileName(file.getName());
         doc.setFormat(format.getCode());
         doc.setFileSize(file.getSize());
-        doc.setFilePath(filePath);
+        doc.setFileId(file.getId());
+        doc.setFileUrl(reqVO.getFileUrl());
         doc.setStatus(DocStatusEnum.QUEUED.getCode());
         docMapper.insert(doc);
-        // 6. 提交入库任务（异步执行骨架，ADR-0007）
+        // 5. 提交入库任务（异步执行骨架，ADR-0007）
         docIngestService.submit(doc.getId());
         return doc.getId();
     }
@@ -187,7 +189,12 @@ public class DocServiceImpl implements DocService {
             docChunkIndexService.deleteByDocId(current.getId());
             docMapper.deleteById(current.getId());
             docChunkMapper.deleteByDocId(current.getId());
-            docFileService.delete(current.getFilePath());
+            // 删除文件：新文档删文件记录（逻辑删除，ADR-0009）；存量文档过渡期删磁盘文件
+            if (current.getFileId() != null) {
+                fileService.delete(current.getFileId());
+            } else if (StrUtil.isNotBlank(current.getFilePath())) {
+                FileUtil.del(current.getFilePath());
+            }
         });
         if (!docs.isEmpty()) {
             log.info("[purgeExpiredDeletedDocs][彻底删除超期文档({}个)]", docs.size());
