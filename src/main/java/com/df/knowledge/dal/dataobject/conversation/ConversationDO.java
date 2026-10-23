@@ -34,4 +34,8 @@ public class ConversationDO extends BaseDO {
      */
     @TableField(value = "retrieval_scope", typeHandler = JacksonTypeHandler.class)
     private List<Long> knowledgeBaseIds;
+
+    /** 当前会话检索状态，存量会话由 SQL015 补混合模式 */
+    @TableField(typeHandler = JacksonTypeHandler.class)
+    private com.df.knowledge.service.conversation.RetrievalState state;
 }

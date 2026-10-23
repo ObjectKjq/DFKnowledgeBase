@@ -66,6 +66,13 @@ public class ConversationController {
         return success(response);
     }
 
+    @org.springframework.web.bind.annotation.PutMapping("/state/update")
+    @Operation(summary = "修改会话当前选择", description = "保存范围、过滤、模式、模型和所选上下文；只影响后续消息")
+    public CommonResult<Boolean> updateState(@Valid @RequestBody com.df.knowledge.controller.conversation.vo.ConversationStateReqVO request) {
+        conversationService.updateState(StpUtil.getLoginIdAsLong(), request.getId(), request.getState());
+        return success(true);
+    }
+
     @DeleteMapping("/delete")
     @Operation(summary = "删除会话", description = "删除当前用户的会话及其全部消息")
     @Parameter(name = "id", description = "会话编号", required = true, example = "1")

@@ -70,34 +70,70 @@ public class RagServiceImpl implements RagService {
 
     @Override
     public RagAnswerResult ask(Long userId, RagAskReqVO reqVO) {
-        return answer(userId, reqVO, null, null);
+        return answer(userId, reqVO, null, null, false);
     }
 
     @Override
     public RagAnswerResult stream(Long userId, RagAskReqVO reqVO, Consumer<String> onDelta,
                                   Consumer<List<RagCitation>> onCitations) {
-        return answer(userId, reqVO, onDelta, onCitations);
+        return answer(userId, reqVO, onDelta, onCitations, false);
+    }
+
+    @Override
+    public RagAnswerResult askReadOnly(Long userId, RagAskReqVO reqVO) {
+        return answer(userId, reqVO, null, null, true);
     }
 
     private RagAnswerResult answer(Long userId, RagAskReqVO reqVO, Consumer<String> onDelta,
-                                   Consumer<List<RagCitation>> onCitations) {
+                                   Consumer<List<RagCitation>> onCitations, boolean readOnly) {
         if (StrUtil.isBlank(reqVO.getQuestion())) {
             throw new ServiceException(DOC_SEARCH_QUERY_EMPTY);
         }
         String question = reqVO.getQuestion().trim();
-        ConversationDO conversation = conversationService.getConversation(userId, reqVO.getConversationId());
-        List<Long> requestedScope = reqVO.getKnowledgeBaseIds() == null
-                ? conversation.getKnowledgeBaseIds() : reqVO.getKnowledgeBaseIds();
-        List<Long> scope = resolveCurrentScope(userId, requestedScope);
-        List<RagGenerationPort.ChatMessage> history = loadHistory(userId, conversation.getId(), Set.copyOf(scope));
-
-        // 问题先持久化：后续检索或模型失败时，用户仍可在会话中重试
-        saveUserMessage(userId, conversation.getId(), question, scope);
+        ConversationDO conversation = readOnly ? new ConversationDO() : conversationService.getConversation(userId, reqVO.getConversationId());
+        var state = conversation.getState() == null ? new com.df.knowledge.service.conversation.RetrievalState()
+                .setKnowledgeBaseIds(conversation.getKnowledgeBaseIds() == null ? List.of() : conversation.getKnowledgeBaseIds())
+                : conversation.getState();
+        if (reqVO.getKnowledgeBaseIds() != null) state.setKnowledgeBaseIds(reqVO.getKnowledgeBaseIds());
+        if (reqVO.getSelectedChunkIds() != null) state.setSelectedChunkIds(reqVO.getSelectedChunkIds());
+        if (reqVO.getModelId() != null) state.setModelId(reqVO.getModelId());
+        if (reqVO.getFormats() != null) state.setFormats(reqVO.getFormats());
+        if (reqVO.getUploadedFrom() != null) state.setUploadedFrom(reqVO.getUploadedFrom());
+        if (reqVO.getUploadedTo() != null) state.setUploadedTo(reqVO.getUploadedTo());
+        state.setMode("RAG");
+        List<Long> scope = resolveCurrentScope(userId, state.getKnowledgeBaseIds());
+        // 持久化当前有效范围，成员移除不能把失权范围重新写回会话。
+        if (!readOnly) conversationService.updateState(userId, conversation.getId(),
+                state.setKnowledgeBaseIds(scope));
+        List<Long> selected = state.getSelectedChunkIds() == null ? List.of() : state.getSelectedChunkIds();
+        List<RagGenerationPort.ChatMessage> history = readOnly || !selected.isEmpty() ? List.of()
+                : loadHistory(userId, conversation.getId(), Set.copyOf(scope));
+        // 问题先持久化：模型失败时仍可重试，状态快照不随后续选择改变。
+        if (!readOnly) saveUserMessage(userId, conversation.getId(), question, scope, state);
         if (scope.isEmpty()) {
             return refuse(userId, conversation.getId(), question, EMPTY_SCOPE, EMPTY_SCOPE_SUGGESTIONS);
         }
 
-        List<DocChunkResult> chunks = docSearchService.search(userId, question, scope);
+        List<DocChunkResult> chunks;
+        if (!selected.isEmpty()) {
+            chunks = new ArrayList<>();
+            for (Long id : new LinkedHashSet<>(selected)) {
+                try {
+                    var chunk = docSearchService.getPreview(userId, id);
+                    if (!scope.contains(chunk.getKnowledgeBaseId()) || !matchesSelection(chunk, state))
+                        return refuse(userId, conversation.getId(), question, "所选上下文当前不可用，请调整或清空后重试。", List.of("调整所选上下文", "清空所选上下文"));
+                    chunks.add(chunk);
+                } catch (ServiceException ex) {
+                    if (ex.getErrorCode().getCode() != DOC_NOT_FOUND.getCode()) throw ex;
+                    return refuse(userId, conversation.getId(), question, "所选上下文当前不可用，请调整或清空后重试。", List.of("调整所选上下文", "清空所选上下文"));
+                }
+            }
+        } else {
+            var search = new com.df.knowledge.controller.doc.vo.DocSearchReqVO().setQuery(question)
+                    .setKnowledgeBaseIds(scope).setFormats(state.getFormats())
+                    .setUploadedFrom(state.getUploadedFrom()).setUploadedTo(state.getUploadedTo());
+            chunks = docSearchService.search(userId, search).getList();
+        }
         if (chunks.isEmpty()) {
             if (!docSearchService.hasAvailableDocuments(userId, scope)) {
                 return refuse(userId, conversation.getId(), question,
@@ -107,10 +143,11 @@ public class RagServiceImpl implements RagService {
                     INSUFFICIENT_EVIDENCE, INSUFFICIENT_SUGGESTIONS);
         }
 
+        final List<DocChunkResult> evidenceChunks = List.copyOf(chunks);
         RagGenerationPort.GenerationResult generated;
         try {
             RagGenerationPort.GenerationRequest request = new RagGenerationPort.GenerationRequest(
-                    question, history, toEvidence(chunks));
+                    question, history, toEvidence(evidenceChunks), state.getModelId());
             if (onDelta == null) {
                 generated = generationPort.generate(request);
             } else {
@@ -125,7 +162,7 @@ public class RagServiceImpl implements RagService {
                         // 超长或越界编号不作为有效引用发送，由最终校验决定是否拒答
                         try {
                             int number = Integer.parseInt(matcher.group(1));
-                            if (number >= 1 && number <= chunks.size()) {
+                            if (number >= 1 && number <= evidenceChunks.size()) {
                                 changed |= sentNumbers.add(number);
                             }
                         } catch (NumberFormatException ignored) {
@@ -133,7 +170,7 @@ public class RagServiceImpl implements RagService {
                         }
                     }
                     if (changed) {
-                        onCitations.accept(mapCitations(chunks, List.copyOf(sentNumbers)));
+                        onCitations.accept(mapCitations(evidenceChunks, List.copyOf(sentNumbers)));
                     }
                 });
             }
@@ -148,7 +185,11 @@ public class RagServiceImpl implements RagService {
                     INSUFFICIENT_EVIDENCE, INSUFFICIENT_SUGGESTIONS);
         }
 
-        List<RagCitation> citations = mapCitations(chunks, generated.citationNumbers());
+        if (generated.citationNumbers() == null || generated.citationNumbers().stream()
+                .anyMatch(n -> n == null || n < 1 || n > evidenceChunks.size()) || !stillAuthorized(userId, evidenceChunks, scope)) {
+            return refuse(userId, conversation.getId(), question, INSUFFICIENT_EVIDENCE, INSUFFICIENT_SUGGESTIONS);
+        }
+        List<RagCitation> citations = mapCitations(evidenceChunks, generated.citationNumbers());
         if (!hasValidInlineCitations(generated.answer(), citations)) {
             return refuse(userId, conversation.getId(), question,
                     INSUFFICIENT_EVIDENCE, INSUFFICIENT_SUGGESTIONS);
@@ -157,6 +198,28 @@ public class RagServiceImpl implements RagService {
                 .setSuggestions(List.of()).setCitations(citations);
         saveResultMessage(userId, conversation.getId(), "answer", question, result);
         return result;
+    }
+
+    private boolean matchesSelection(DocChunkResult chunk, com.df.knowledge.service.conversation.RetrievalState state) {
+        return (state.getFormats() == null || state.getFormats().isEmpty() || state.getFormats().contains(chunk.getFormat()))
+                && (state.getUploadedFrom() == null || chunk.getUploadTime() != null && !chunk.getUploadTime().isBefore(state.getUploadedFrom()))
+                && (state.getUploadedTo() == null || chunk.getUploadTime() != null && !chunk.getUploadTime().isAfter(state.getUploadedTo()));
+    }
+
+    private boolean stillAuthorized(Long userId, List<DocChunkResult> chunks, List<Long> scope) {
+        Set<Long> current = Set.copyOf(resolveCurrentScope(userId, scope));
+        for (DocChunkResult chunk : chunks) {
+            if (!current.contains(chunk.getKnowledgeBaseId())) return false;
+            try {
+                var preview = docSearchService.getPreview(userId, chunk.getChunkId());
+                if (preview == null || !java.util.Objects.equals(preview.getDocId(), chunk.getDocId())
+                        || !java.util.Objects.equals(preview.getText(), chunk.getText())) return false;
+            } catch (ServiceException ex) {
+                if (ex.getErrorCode().getCode() == DOC_NOT_FOUND.getCode()) return false;
+                throw ex;
+            }
+        }
+        return true;
     }
 
     private List<Long> resolveCurrentScope(Long userId, List<Long> recordedScope) {
@@ -285,10 +348,12 @@ public class RagServiceImpl implements RagService {
         return result;
     }
 
-    private void saveUserMessage(Long userId, Long conversationId, String question, List<Long> scope) {
+    private void saveUserMessage(Long userId, Long conversationId, String question, List<Long> scope,
+                                 com.df.knowledge.service.conversation.RetrievalState state) {
         ObjectNode content = objectMapper.createObjectNode();
         content.put("text", question);
-        content.put("mode", "RAG 检索");
+        content.put("mode", "RAG");
+        content.set("state", objectMapper.valueToTree(state));
         content.set("knowledgeBaseIds", objectMapper.valueToTree(scope));
         saveMessage(userId, conversationId, "user", content);
     }
@@ -305,6 +370,7 @@ public class RagServiceImpl implements RagService {
     }
 
     private void saveMessage(Long userId, Long conversationId, String type, JsonNode content) {
+        if (conversationId == null) return;
         MessageCreateReqVO message = new MessageCreateReqVO();
         message.setConversationId(conversationId);
         message.setType(type);

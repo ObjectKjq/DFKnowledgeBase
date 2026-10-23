@@ -38,6 +38,7 @@ class DocSearchServiceImplTest {
     @Mock private DocChunkMapper docChunkMapper;
     @Mock private DocEmbeddingService embeddingService;
     @Mock private DocChunkIndexService chunkIndexService;
+    @Mock private com.df.knowledge.service.model.ModelRerankService modelRerankService;
     @InjectMocks private DocSearchServiceImpl searchService;
 
     @Test
@@ -51,15 +52,16 @@ class DocSearchServiceImplTest {
         float[] vector = new float[512];
         vector[0] = 1;
         when(permissionService.getAccessibleKnowledgeBaseIds(7L)).thenReturn(List.of(2L, 3L));
-        when(docMapper.selectListByKnowledgeBaseIdsAndStatus(List.of(2L), DocStatusEnum.AVAILABLE.getCode()))
-                .thenReturn(List.of(available));
+        when(docMapper.selectListByKnowledgeBaseIdsAndStatus(eq(List.of(2L)), org.mockito.ArgumentMatchers.anyInt()))
+                .thenAnswer(i -> Integer.valueOf(4).equals(i.getArgument(1)) ? List.of(available) : List.of());
         when(embeddingService.embedAll(List.of("检索内容"))).thenReturn(List.of(vector));
-        when(chunkIndexService.searchHybrid(eq("检索内容"), eq(vector), eq(List.of(2L)), eq(List.of(5L)), eq(20)))
-                .thenReturn(List.of(101L, 102L, 100L));
+        when(chunkIndexService.search(eq("检索内容"), eq(vector), eq(List.of(2L)), eq(List.of(5L)), eq("HYBRID"), eq(10000)))
+                .thenReturn(List.of(new DocIndexHit(101L, 0.03, "HYBRID"), new DocIndexHit(102L, 0.02, "SEMANTIC"), new DocIndexHit(100L, 0.01, "KEYWORD")));
         when(docChunkMapper.selectBatchIds(List.of(101L, 102L, 100L))).thenReturn(List.of(second, stale, first));
-        when(docMapper.selectBatchIds(List.of(5L, 6L))).thenReturn(List.of(available, failed));
+        when(docMapper.selectBatchIds(org.mockito.ArgumentMatchers.anyCollection())).thenReturn(List.of(available, failed));
         when(knowledgeBaseMapper.selectBatchIds(List.of(2L))).thenReturn(List.of(knowledgeBase()));
 
+        when(modelRerankService.rerank(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyList())).thenAnswer(i -> i.getArgument(1));
         // 调用
         List<DocChunkResult> results = searchService.search(7L, " 检索内容 ", List.of(2L, 99L));
 
@@ -68,7 +70,7 @@ class DocSearchServiceImplTest {
         assertEquals("我的知识库", results.getFirst().getKnowledgeBaseName());
         assertEquals("文档 5", results.getFirst().getDocTitle());
         assertEquals("分块 1", results.getFirst().getText());
-        verify(chunkIndexService).searchHybrid(eq("检索内容"), eq(vector), eq(List.of(2L)), eq(List.of(5L)), eq(20));
+        verify(chunkIndexService).search(eq("检索内容"), eq(vector), eq(List.of(2L)), eq(List.of(5L)), eq("HYBRID"), eq(10000));
     }
 
     @Test

@@ -71,22 +71,16 @@ public class DocSearchServiceImpl implements DocSearchService {
         List<Long> scope = selected == null || selected.isEmpty() ? accessible
                 : accessible.stream().filter(selected::contains).toList();
         var page = new DocSearchPage(); page.setList(List.of()); page.setTotal(0L);
-        if (scope.isEmpty()) return page;
-        long indexing = 0;
-        for (Integer status : DocStatusEnum.IN_FLIGHT_STATUS_CODES) {
-            indexing += docMapper.selectListByKnowledgeBaseIdsAndStatus(scope, status).stream()
-                    .filter(doc -> matches(doc, request)).count();
-        }
-        page.setIndexingCount(indexing);
+        if (scope.isEmpty()) return finishPage(userId, scope, request, page);
         List<DocDO> availableDocs = docMapper.selectListByKnowledgeBaseIdsAndStatus(scope, 4).stream()
                 .filter(doc -> matches(doc, request)).toList();
-        if (availableDocs.isEmpty()) return page;
+        if (availableDocs.isEmpty()) return finishPage(userId, scope, request, page);
         List<float[]> vectors = embeddingService.embedAll(List.of(text));
         if (vectors == null || vectors.size() != 1 || vectors.getFirst() == null)
             throw new ServiceException(ErrorCodeConstants.DOC_EMBEDDING_FAILED);
         List<DocIndexHit> hits = chunkIndexService.search(text, vectors.getFirst(), scope,
                 availableDocs.stream().map(DocDO::getId).toList(), request.getMode(), RESULT_LIMIT);
-        if (hits.isEmpty()) return page;
+        if (hits.isEmpty()) return finishPage(userId, scope, request, page);
         Map<Long, DocChunkDO> chunks = byId(docChunkMapper.selectBatchIds(hits.stream().map(DocIndexHit::chunkId).toList()), DocChunkDO::getId);
         List<Long> ids = chunks.values().stream().map(DocChunkDO::getDocId).distinct().toList();
         Map<Long, DocDO> currentDocs = byId(docMapper.selectBatchIds(ids), DocDO::getId);
@@ -101,13 +95,30 @@ public class DocSearchServiceImpl implements DocSearchService {
                     && Integer.valueOf(4).equals(doc.getStatus()) && scope.contains(doc.getKnowledgeBaseId())
                     && currentAccess.contains(doc.getKnowledgeBaseId()) && bases.containsKey(doc.getKnowledgeBaseId())) {
                 results.add(toResult(chunk, doc, bases.get(doc.getKnowledgeBaseId()))
-                        .setMatchType(hit.matchType()).setScore(hit.score()).setHighlight(highlight(chunk.getText(), text)));
+                        .setMatchType(hit.matchType()).setScore(hit.score()).setHighlight("SEMANTIC".equals(hit.matchType()) ? cn.hutool.http.HtmlUtil.escape(chunk.getText()) : highlight(chunk.getText(), text)));
             }
         }
         results = modelRerankService.rerank(text, results);
+        // 重排可能调用外部服务，返回后再次读取当前权限和文档状态再计算总量与分页。
+        var finalAccess = Set.copyOf(permissionService.getAccessibleKnowledgeBaseIds(userId));
+        var finalDocs = byId(docMapper.selectBatchIds(results.stream().map(DocChunkResult::getDocId).distinct().toList()), DocDO::getId);
+        results = results.stream().filter(hit -> finalAccess.contains(hit.getKnowledgeBaseId())
+                && finalDocs.containsKey(hit.getDocId()) && Integer.valueOf(4).equals(finalDocs.get(hit.getDocId()).getStatus())).toList();
         page.setTotal((long) results.size()); page.setCandidateLimitReached(hits.size() >= RESULT_LIMIT);
         int from = Math.min(results.size(), (request.getPageNo() - 1) * request.getPageSize());
         page.setList(results.subList(from, Math.min(results.size(), from + request.getPageSize())));
+        return finishPage(userId, scope, request, page);
+    }
+
+    private DocSearchPage finishPage(Long userId, List<Long> scope,
+            com.df.knowledge.controller.doc.vo.DocSearchReqVO request, DocSearchPage page) {
+        List<Long> currentScope = permissionService.getAccessibleKnowledgeBaseIds(userId).stream().filter(scope::contains).toList();
+        long count = 0;
+        if (!currentScope.isEmpty()) for (Integer status : DocStatusEnum.IN_FLIGHT_STATUS_CODES) {
+            count += docMapper.selectListByKnowledgeBaseIdsAndStatus(currentScope, status).stream()
+                    .filter(doc -> matches(doc, request)).count();
+        }
+        page.setIndexingCount(count);
         return page;
     }
 
@@ -119,8 +130,14 @@ public class DocSearchServiceImpl implements DocSearchService {
 
     private String highlight(String text, String query) {
         String escaped = cn.hutool.http.HtmlUtil.escape(text);
-        String needle = cn.hutool.http.HtmlUtil.escape(query);
-        return escaped.replace(needle, "<em>" + needle + "</em>");
+        String[] tokens = query.split("[\\s，。！？、；：,.!?;:]+");
+        String alternatives = java.util.Arrays.stream(tokens).filter(t -> !t.isBlank())
+                .sorted(java.util.Comparator.comparingInt(String::length).reversed())
+                .map(cn.hutool.http.HtmlUtil::escape).map(java.util.regex.Pattern::quote)
+                .collect(Collectors.joining("|"));
+        if (alternatives.isBlank()) return escaped;
+        var matcher = java.util.regex.Pattern.compile(alternatives, java.util.regex.Pattern.CASE_INSENSITIVE).matcher(escaped);
+        return matcher.replaceAll(m -> "<em>" + java.util.regex.Matcher.quoteReplacement(m.group()) + "</em>");
     }
 
     @Override
