@@ -64,4 +64,14 @@ public interface ErrorCodeConstants {
     ErrorCode FILE_TYPE_NOT_ALLOWED = new ErrorCodeImpl(1_001_005_003, "不支持的文件类型");
     ErrorCode FILE_TOO_LARGE = new ErrorCodeImpl(1_001_005_004, "文件大小超过 50 MB 上限");
     ErrorCode FILE_STORE_FAILED = new ErrorCodeImpl(1_001_005_005, "文件存储失败");
+    // ========== 模型与实例设置模块 1-001-010-0xx ==========
+    ErrorCode MODEL_NOT_FOUND = new ErrorCodeImpl(1_001_010_001, "模型配置不存在");
+    ErrorCode MODEL_NAME_DUPLICATE = new ErrorCodeImpl(1_001_010_002, "已经存在该名字的模型配置");
+    ErrorCode MODEL_NOT_CONFIGURED = new ErrorCodeImpl(1_001_010_003, "未配置对话模型，请联系管理员");
+    ErrorCode MODEL_CONNECTION_FAILED = new ErrorCodeImpl(1_001_010_004, "模型服务不可达，请联系管理员");
+    ErrorCode MODEL_AUTH_FAILED = new ErrorCodeImpl(1_001_010_005, "模型服务鉴权失败，请联系管理员");
+    ErrorCode MODEL_TIMEOUT = new ErrorCodeImpl(1_001_010_006, "模型调用超时，请重试");
+    ErrorCode MODEL_RESPONSE_INVALID = new ErrorCodeImpl(1_001_010_007, "模型响应无效，请联系管理员");
+    ErrorCode MODEL_ADDRESS_INVALID = new ErrorCodeImpl(1_001_010_008, "模型地址必须是无凭据及查询参数的 HTTP 或 HTTPS 地址");
+    ErrorCode MODEL_RERANK_DUPLICATE = new ErrorCodeImpl(1_001_010_009, "仅允许配置一个重排模型");
 }
