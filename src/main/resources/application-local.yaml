@@ -5,3 +5,8 @@ spring:
     url: jdbc:mysql://127.0.0.1:3306/df_knowledge_base?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=GMT%2B8&allowPublicKeyRetrieval=true
     username: root
     password: root
+
+# 用户已授权本地使用显式模拟模型；关闭后重启并删除模拟配置即可停用。
+knowledge:
+  model:
+    mock-enabled: true

@@ -28,7 +28,10 @@ public interface RagGenerationPort {
     /**
      * 生成请求
      */
-    record GenerationRequest(String question, List<ChatMessage> history, List<Evidence> evidence) {
+    record GenerationRequest(String question, List<ChatMessage> history, List<Evidence> evidence, Long modelId) {
+        public GenerationRequest(String question, List<ChatMessage> history, List<Evidence> evidence) {
+            this(question, history, evidence, null);
+        }
     }
 
     /**

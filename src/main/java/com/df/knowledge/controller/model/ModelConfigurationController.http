@@ -1,0 +1,14 @@
+### 新增命名模型（管理员）
+POST {{baseUrl}}/system/model/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"name":"本地对话模型","kind":"CHAT","baseUrl":"http://localhost:1234/v1","apiKey":"","model":"local-model","timeoutSeconds":60}
+
+### 真实测试连接
+POST {{baseUrl}}/system/model/test?id=1
+Authorization: Bearer {{token}}
+
+### 普通用户选择模型（不返回地址和密钥）
+GET {{baseUrl}}/system/model/simple-list
+Authorization: Bearer {{token}}
