@@ -22,7 +22,10 @@ public class DocSearchReqVO {
 
     @jakarta.validation.constraints.Pattern(regexp = "HYBRID|FUZZY")
     @Schema(description = "检索模式：HYBRID 混合、FUZZY 模糊")
-    private String mode = "HYBRID";
+    private String mode;
+    @jakarta.validation.constraints.Positive
+    @Schema(description = "会话编号；提供时恢复本会话选择并持久化本轮问题和结果，不传为无会话检索")
+    private Long conversationId;
     @jakarta.validation.constraints.Min(1)
     @jakarta.validation.constraints.Max(500)
     @Schema(description = "页码，从 1 开始")

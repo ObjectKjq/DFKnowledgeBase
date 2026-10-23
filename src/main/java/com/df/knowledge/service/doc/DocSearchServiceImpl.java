@@ -35,6 +35,11 @@ public class DocSearchServiceImpl implements DocSearchService {
     private static final int RESULT_LIMIT = 10000;
 
     @Resource
+    private com.df.knowledge.service.conversation.ConversationService conversationService;
+    @Resource
+    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+    @Resource
     private com.df.knowledge.service.model.ModelRerankService modelRerankService;
 
     @Resource
@@ -65,6 +70,36 @@ public class DocSearchServiceImpl implements DocSearchService {
     @Override
     public DocSearchPage search(Long userId, com.df.knowledge.controller.doc.vo.DocSearchReqVO request) {
         if (StrUtil.isBlank(request.getQuery())) throw new ServiceException(ErrorCodeConstants.DOC_SEARCH_QUERY_EMPTY);
+        com.df.knowledge.service.conversation.RetrievalState state = null;
+        if (request.getConversationId() != null) {
+            var conversation = conversationService.getConversation(userId, request.getConversationId());
+            state = conversation.getState() == null ? new com.df.knowledge.service.conversation.RetrievalState()
+                    .setKnowledgeBaseIds(conversation.getKnowledgeBaseIds()) : conversation.getState();
+            if (request.getKnowledgeBaseIds() == null) request.setKnowledgeBaseIds(state.getKnowledgeBaseIds());
+            if (request.getFormats() == null) request.setFormats(state.getFormats());
+            if (request.getUploadedFrom() == null) request.setUploadedFrom(state.getUploadedFrom());
+            if (request.getUploadedTo() == null) request.setUploadedTo(state.getUploadedTo());
+            if (request.getMode() == null) request.setMode("FUZZY".equals(state.getMode()) ? "FUZZY" : "HYBRID");
+            state.setKnowledgeBaseIds(request.getKnowledgeBaseIds()).setFormats(request.getFormats())
+                    .setUploadedFrom(request.getUploadedFrom()).setUploadedTo(request.getUploadedTo()).setMode(request.getMode());
+            conversationService.updateState(userId, request.getConversationId(), state);
+            var content = objectMapper.createObjectNode().put("text", request.getQuery());
+            content.set("state", objectMapper.valueToTree(state));
+            conversationService.createMessage(userId, new com.df.knowledge.controller.conversation.vo.MessageCreateReqVO()
+                    .setConversationId(request.getConversationId()).setType("user").setContent(content));
+        }
+        if (request.getMode() == null) request.setMode("HYBRID");
+        var page = executeSearch(userId, request);
+        if (request.getConversationId() != null) {
+            var content = objectMapper.createObjectNode();
+            content.set("state", objectMapper.valueToTree(state)); content.set("search", objectMapper.valueToTree(page));
+            conversationService.createMessage(userId, new com.df.knowledge.controller.conversation.vo.MessageCreateReqVO()
+                    .setConversationId(request.getConversationId()).setType("results").setContent(content));
+        }
+        return page;
+    }
+
+    private DocSearchPage executeSearch(Long userId, com.df.knowledge.controller.doc.vo.DocSearchReqVO request) {
         String text = request.getQuery().trim();
         List<Long> accessible = permissionService.getAccessibleKnowledgeBaseIds(userId);
         List<Long> selected = request.getKnowledgeBaseIds();
