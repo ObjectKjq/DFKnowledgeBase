@@ -23,7 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * 验证 ES starter 在完整应用上下文中创建客户端与 Spring Data 操作接口。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
-        properties = "knowledge.doc.storage-path=./data/docs")
+        properties = {"knowledge.doc.storage-path=./data/docs", "knowledge.model.mock-enabled=false",
+                "knowledge.rag.base-url="})
 class DocIndexConfigurationTest {
 
     @MockitoBean
