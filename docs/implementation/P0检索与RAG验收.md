@@ -38,3 +38,9 @@ ES Basic 只执行 BM25 与 kNN，Java 按 `1/(60+排名)` 融合，两路共同
 引导最终响应及持久化结果包含 `query`（实际组合查询）、`originalQuestion` 和 `state`。普通检索的结果消息固定为 `query/state/search`，后续翻页应使用该条历史消息快照，不能读取当前输入框过滤条件后改写历史结果。
 
 - 2026-10-24：新增普通检索会话恢复快照、授权 PDF 全页及 Office 工作表解析预览后，真实 MySQL HTTP 旅程 5 项全部通过，0 失败/错误/跳过，日志 `target/search-rag-preview-green.log`。仅外部索引/生成使用可控替身。
+
+## 最终分支回归
+
+2026-10-24，规范与全文预览收尾并同步集成环境修正 `c186b36` 后，使用指定 JDK 21、G 盘 Maven 与 `G:/maven/repository` 运行完整普通回归：共 207 项，其中 182 项通过、25 项按明确条件跳过，0 失败、0 错误。日志为 `target/search-final-after-integration.log`。跳过项为需显式启用本机 MySQL/OCR 的旅程，不将跳过计为通过。
+
+五项真实 MySQL HTTP 旅程已在根进程安全注入数据库凭据后执行并全部通过；该结果对应格式收尾前的功能切片，日志 `target/search-rag-preview-green.log`。格式收尾后的数据库/OCR/真实 ES 与最终网页及 MCP 整链路由 #25 继续执行；当前没有用户真实对话模型，引用证据质量仍需真实模型人工核对。
