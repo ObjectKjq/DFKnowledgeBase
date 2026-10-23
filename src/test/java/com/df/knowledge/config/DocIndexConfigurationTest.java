@@ -31,6 +31,9 @@ class DocIndexConfigurationTest {
     private FileMigrationRunner fileMigrationRunner;
 
     @MockitoBean
+    private com.df.knowledge.service.model.LegacyModelConfigurationMigration legacyModelConfigurationMigration;
+
+    @MockitoBean
     private DocIngestServiceImpl docIngestService;
 
     @Autowired
