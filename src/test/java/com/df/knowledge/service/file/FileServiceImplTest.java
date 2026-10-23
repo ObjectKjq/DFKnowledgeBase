@@ -3,6 +3,7 @@ package com.df.knowledge.service.file;
 import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.dal.dataobject.file.FileContentDO;
 import com.df.knowledge.dal.dataobject.file.FileDO;
+import com.df.knowledge.dal.mysql.doc.DocMapper;
 import com.df.knowledge.dal.mysql.file.FileContentMapper;
 import com.df.knowledge.dal.mysql.file.FileMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
@@ -35,6 +36,9 @@ class FileServiceImplTest {
 
     @Mock
     private FileContentMapper fileContentMapper;
+
+    @Mock
+    private DocMapper docMapper;
 
     @InjectMocks
     private FileServiceImpl fileService;
@@ -103,13 +107,13 @@ class FileServiceImplTest {
     }
 
     @Test
-    void testDelete_noValidation() {
-        // 调用：删除不做引用/归属校验，文件不存在也静默成功（逻辑删除由持久层兜底）
+    void testDelete_unreferencedContentPurged() {
+        // 调用：内部回收接口仅清理不再被业务引用的文件。
         fileService.delete(5L);
 
         // 断言：元数据与字节两表同删
-        verify(fileMapper).deleteById(5L);
-        verify(fileContentMapper).deleteByFileId(5L);
+        verify(fileMapper).purgeById(5L);
+        verify(fileContentMapper).purgeByFileId(5L);
     }
 
     @Test

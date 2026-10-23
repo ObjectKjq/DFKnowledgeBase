@@ -23,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 import static com.df.knowledge.common.CommonResult.success;
 
 /**
@@ -50,6 +52,27 @@ public class KnowledgeBaseController {
     @Parameter(name = "id", description = "知识库编号", required = true, example = "1")
     public CommonResult<Boolean> deleteKnowledgeBase(@RequestParam("id") Long id) {
         knowledgeBaseService.deleteKnowledgeBase(StpUtil.getLoginIdAsLong(), id);
+        return success(true);
+    }
+
+    @GetMapping("/recycle-list")
+    @Operation(summary = "查看本人知识库回收站")
+    public CommonResult<List<KnowledgeBaseRespVO>> getDeletedKnowledgeBases() {
+        return success(BeanUtil.copyToList(knowledgeBaseService.getDeletedKnowledgeBases(StpUtil.getLoginIdAsLong()), KnowledgeBaseRespVO.class));
+    }
+
+    @PostMapping("/restore")
+    @Operation(summary = "恢复知识库", description = "仅原所有者可在 30 天保留期内恢复，保留原成员关系")
+    public CommonResult<Boolean> restoreKnowledgeBase(@RequestParam("id") Long id) {
+        knowledgeBaseService.restoreKnowledgeBase(StpUtil.getLoginIdAsLong(), id);
+        return success(true);
+    }
+
+    @DeleteMapping("/purge")
+    @Operation(summary = "彻底删除回收站知识库", description = "需要再次确认，不可恢复")
+    public CommonResult<Boolean> purgeKnowledgeBase(@RequestParam("id") Long id,
+            @RequestParam(value = "confirmed", defaultValue = "false") boolean confirmed) {
+        knowledgeBaseService.purgeKnowledgeBase(StpUtil.getLoginIdAsLong(), id, confirmed);
         return success(true);
     }
 

@@ -1,6 +1,7 @@
 package com.df.knowledge.job;
 
 import com.df.knowledge.service.doc.DocService;
+import com.df.knowledge.service.knowledge.KnowledgeBaseService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -18,12 +19,16 @@ public class DocPurgeJob {
     @Resource
     private DocService docService;
 
+    @Resource
+    private KnowledgeBaseService knowledgeBaseService;
+
     /**
      * 每天凌晨 3 点清理超期的软删除文档
      */
     @Scheduled(cron = "0 0 3 * * ?")
     public void execute() {
         log.info("[execute][开始清理超期软删除文档]");
+        knowledgeBaseService.purgeExpiredKnowledgeBases();
         docService.purgeExpiredDeletedDocs();
     }
 }

@@ -7,8 +7,9 @@ import com.df.knowledge.controller.doc.vo.DocCreateReqVO;
 import com.df.knowledge.controller.doc.vo.DocPageReqVO;
 import com.df.knowledge.dal.dataobject.doc.DocDO;
 import com.df.knowledge.dal.dataobject.file.FileDO;
-import com.df.knowledge.dal.mysql.doc.DocMapper;
 import com.df.knowledge.dal.mysql.doc.DocChunkMapper;
+import com.df.knowledge.dal.mysql.doc.DocMapper;
+import com.df.knowledge.dal.mysql.knowledge.KnowledgeBaseMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
 import com.df.knowledge.enums.doc.DocFormatEnum;
 import com.df.knowledge.enums.doc.DocStatusEnum;
@@ -62,6 +63,9 @@ class DocServiceImplTest {
     @Mock
     private KnowledgeBasePermissionService knowledgeBasePermissionService;
 
+    @Mock
+    private KnowledgeBaseMapper knowledgeBaseMapper;
+
     @InjectMocks
     private DocServiceImpl docService;
 
@@ -69,7 +73,8 @@ class DocServiceImplTest {
     void testCreateDoc_success() {
         // 准备参数：编辑者创建文档（文件已通过文件上传接口落库）
         DocCreateReqVO reqVO = buildCreateReqVO();
-        when(fileService.getFile(1L)).thenReturn(buildFile(1L, "期末复习笔记.pdf"));
+        when(fileService.getAttachableFile(10L, 1L)).thenReturn(buildFile(1L, "期末复习笔记.pdf"));
+        when(fileService.buildDownloadUrl(1L)).thenReturn("/api/system/file/download?id=1");
         // mock 插入回填自增主键
         doAnswer(invocation -> {
             DocDO doc = invocation.getArgument(0);
@@ -100,7 +105,7 @@ class DocServiceImplTest {
     void testCreateDoc_fileNotFound() {
         // 准备参数：文件引用不存在
         DocCreateReqVO reqVO = buildCreateReqVO();
-        when(fileService.getFile(1L)).thenReturn(null);
+        when(fileService.getAttachableFile(10L, 1L)).thenReturn(null);
 
         // 调用并断言
         ServiceException exception = assertThrows(ServiceException.class, () -> docService.createDoc(10L, reqVO));
@@ -112,7 +117,7 @@ class DocServiceImplTest {
     void testCreateDoc_formatNotSupported() {
         // 准备参数：白名单外的格式
         DocCreateReqVO reqVO = buildCreateReqVO();
-        when(fileService.getFile(1L)).thenReturn(buildFile(1L, "病毒.exe"));
+        when(fileService.getAttachableFile(10L, 1L)).thenReturn(buildFile(1L, "病毒.exe"));
 
         // 调用并断言：创建前拦截并列明支持格式
         ServiceException exception = assertThrows(ServiceException.class, () -> docService.createDoc(10L, reqVO));
@@ -189,7 +194,7 @@ class DocServiceImplTest {
         // 准备参数：失败文档重试
         DocDO doc = buildDoc(5L, 1L, DocStatusEnum.FAILED);
         doc.setFailReason("文件损坏");
-        when(docMapper.selectById(5L)).thenReturn(doc);
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
 
         // 调用
         docService.retryDoc(10L, 5L);
@@ -206,7 +211,7 @@ class DocServiceImplTest {
     void testRetryDoc_notFailed() {
         // 准备参数：可用文档不支持重试
         DocDO doc = buildDoc(5L, 1L, DocStatusEnum.AVAILABLE);
-        when(docMapper.selectById(5L)).thenReturn(doc);
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
 
         // 调用并断言
         ServiceException exception = assertThrows(ServiceException.class, () -> docService.retryDoc(10L, 5L));
@@ -218,7 +223,7 @@ class DocServiceImplTest {
     void testRetryDoc_noPermission() {
         // 准备参数：查看者重试被权限判定拒绝
         DocDO doc = buildDoc(5L, 1L, DocStatusEnum.FAILED);
-        when(docMapper.selectById(5L)).thenReturn(doc);
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
         doThrow(new ServiceException(ErrorCodeConstants.KB_NO_PERMISSION))
                 .when(knowledgeBasePermissionService).checkContentWritePermission(20L, 1L);
 
@@ -238,9 +243,7 @@ class DocServiceImplTest {
         docService.deleteDoc(10L, 5L);
 
         // 断言：软删除并记录删除前状态与删除时间
-        ArgumentCaptor<DocDO> captor = ArgumentCaptor.forClass(DocDO.class);
-        verify(docMapper).updateById(captor.capture());
-        DocDO updated = captor.getValue();
+        DocDO updated = doc;
         assertEquals(DocStatusEnum.DELETED.getCode(), updated.getStatus());
         assertEquals(DocStatusEnum.AVAILABLE.getCode(), updated.getPrevStatus());
         assertNotNull(updated.getDeleteTime());
@@ -280,15 +283,13 @@ class DocServiceImplTest {
         DocDO doc = buildDoc(5L, 1L, DocStatusEnum.DELETED);
         doc.setPrevStatus(DocStatusEnum.AVAILABLE.getCode());
         doc.setDeleteTime(LocalDateTime.now().minusDays(10));
-        when(docMapper.selectById(5L)).thenReturn(doc);
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
 
         // 调用
         docService.restoreDoc(10L, 5L);
 
         // 断言：恢复到删除前状态并清空删除标记
-        ArgumentCaptor<DocDO> captor = ArgumentCaptor.forClass(DocDO.class);
-        verify(docMapper).updateById(captor.capture());
-        DocDO updated = captor.getValue();
+        DocDO updated = doc;
         assertEquals(DocStatusEnum.INDEXING.getCode(), updated.getStatus());
         assertNull(updated.getPrevStatus());
         assertNull(updated.getDeleteTime());
@@ -301,7 +302,7 @@ class DocServiceImplTest {
         DocDO doc = buildDoc(5L, 1L, DocStatusEnum.DELETED);
         doc.setPrevStatus(DocStatusEnum.QUEUED.getCode());
         doc.setDeleteTime(LocalDateTime.now().minusDays(1));
-        when(docMapper.selectById(5L)).thenReturn(doc);
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
 
         // 调用
         docService.restoreDoc(10L, 5L);
@@ -314,7 +315,7 @@ class DocServiceImplTest {
     void testRestoreDoc_notDeleted() {
         // 准备参数：未删除的文档不支持恢复
         DocDO doc = buildDoc(5L, 1L, DocStatusEnum.AVAILABLE);
-        when(docMapper.selectById(5L)).thenReturn(doc);
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
 
         // 调用并断言
         ServiceException exception = assertThrows(ServiceException.class, () -> docService.restoreDoc(10L, 5L));
@@ -328,7 +329,7 @@ class DocServiceImplTest {
         DocDO doc = buildDoc(5L, 1L, DocStatusEnum.DELETED);
         doc.setPrevStatus(DocStatusEnum.AVAILABLE.getCode());
         doc.setDeleteTime(LocalDateTime.now().minusDays(31));
-        when(docMapper.selectById(5L)).thenReturn(doc);
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
 
         // 调用并断言：超期不可恢复
         ServiceException exception = assertThrows(ServiceException.class, () -> docService.restoreDoc(10L, 5L));
@@ -348,7 +349,7 @@ class DocServiceImplTest {
         docService.purgeExpiredDeletedDocs();
 
         // 断言：移除记录与文件引用（文件逻辑删除）
-        verify(docMapper).deleteById(5L);
+        verify(docMapper).purgeById(5L);
         verify(docChunkMapper).deleteByDocId(5L);
         verify(docChunkIndexService).deleteByDocId(5L);
         verify(fileService).delete(1L);
@@ -367,7 +368,7 @@ class DocServiceImplTest {
 
         // 断言：不清理刚恢复的索引、分块及原文件
         verifyNoInteractions(docChunkIndexService, docChunkMapper, fileService);
-        verify(docMapper, never()).deleteById(any(Long.class));
+        verify(docMapper, never()).purgeById(any(Long.class));
     }
 
     @Test
@@ -383,7 +384,7 @@ class DocServiceImplTest {
         ServiceException exception = assertThrows(ServiceException.class, docService::purgeExpiredDeletedDocs);
         assertEquals(ErrorCodeConstants.DOC_INDEX_FAILED.getCode(), exception.getErrorCode().getCode());
         verifyNoInteractions(docChunkMapper, fileService);
-        verify(docMapper, never()).deleteById(any(Long.class));
+        verify(docMapper, never()).purgeById(any(Long.class));
     }
 
     /**

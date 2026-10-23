@@ -18,6 +18,26 @@ public interface FileService {
      */
     FileDO upload(MultipartFile file);
 
+    /** 按当前业务权限获取元数据。
+     * @param userId 当前用户
+     * @param id 文件编号
+     * @return 可读取文件
+     */
+    FileDO getReadableFile(Long userId, Long id);
+
+    /** 锁定文件并校验业务关联权限；调用方须在事务内写入引用。
+     * @param userId 当前用户
+     * @param id 文件编号
+     * @return 可关联文件
+     */
+    FileDO getAttachableFile(Long userId, Long id);
+
+    /** 删除用户管理的未关联文件。
+     * @param userId 当前用户
+     * @param id 文件编号
+     */
+    void delete(Long userId, Long id);
+
     /**
      * 按字节内容新增文件（存量磁盘文件迁移入库用）
      *
@@ -29,7 +49,7 @@ public interface FileService {
     FileDO createFile(byte[] content, String name, String type);
 
     /**
-     * 获取文件元数据
+     * 内部读取文件元数据；用户入口必须调用 getReadableFile 校验当前权限。
      *
      * @param id 文件编号
      * @return 文件元数据，不存在时为 null
@@ -37,7 +57,7 @@ public interface FileService {
     FileDO getFile(Long id);
 
     /**
-     * 读取文件内容
+     * 内部读取文件内容；用户入口须先校验当前业务引用权限。
      *
      * @param id 文件编号
      * @return 文件内容，不存在时为 null
@@ -45,7 +65,7 @@ public interface FileService {
     byte[] getContent(Long id);
 
     /**
-     * 删除文件（逻辑删除，不做引用与归属校验，删除后立即不可下载）
+     * 内部回收无保留引用的文件，物理删除元数据与字节。
      *
      * @param id 文件编号
      */

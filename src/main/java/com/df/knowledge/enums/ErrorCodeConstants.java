@@ -40,6 +40,10 @@ public interface ErrorCodeConstants {
     ErrorCode KB_MEMBER_EXISTS = new ErrorCodeImpl(1_001_002_005, "该用户已是知识库成员");
     ErrorCode KB_MEMBER_NOT_FOUND = new ErrorCodeImpl(1_001_002_006, "知识库成员不存在");
 
+    ErrorCode KB_RESTORE_NOT_ALLOWED = new ErrorCodeImpl(1_001_002_007, "知识库未删除，无法恢复或彻底删除");
+    ErrorCode KB_RESTORE_EXPIRED = new ErrorCodeImpl(1_001_002_008, "知识库删除超过 30 天，无法恢复");
+    ErrorCode KB_PURGE_CONFIRM_REQUIRED = new ErrorCodeImpl(1_001_002_009, "请确认彻底删除知识库");
+
     // ========== 文档模块 1-001-003-0xx ==========
     ErrorCode DOC_NOT_FOUND = new ErrorCodeImpl(1_001_003_001, "文档不存在");
     ErrorCode DOC_FORMAT_NOT_SUPPORTED = new ErrorCodeImpl(1_001_003_002, "不支持的文件格式，仅支持 PDF、Word、PPT、Excel、TXT、Markdown");
@@ -53,6 +57,9 @@ public interface ErrorCodeConstants {
     ErrorCode DOC_SEARCH_QUERY_EMPTY = new ErrorCodeImpl(1_001_003_012, "检索内容不能为空");
     ErrorCode DOC_SEARCH_FAILED = new ErrorCodeImpl(1_001_003_013, "文档检索失败");
 
+    ErrorCode DOC_PURGE_NOT_ALLOWED = new ErrorCodeImpl(1_001_003_014, "仅回收站文档支持彻底删除");
+    ErrorCode DOC_PURGE_CONFIRM_REQUIRED = new ErrorCodeImpl(1_001_003_015, "请确认彻底删除文档");
+
     // ========== 会话模块 1-001-004-0xx ==========
     ErrorCode CONVERSATION_NOT_FOUND = new ErrorCodeImpl(1_001_004_001, "会话不存在");
     ErrorCode RAG_MODEL_UNAVAILABLE = new ErrorCodeImpl(1_001_004_002, "对话模型不可用，请联系管理员检查模型配置后重试");
@@ -64,4 +71,5 @@ public interface ErrorCodeConstants {
     ErrorCode FILE_TYPE_NOT_ALLOWED = new ErrorCodeImpl(1_001_005_003, "不支持的文件类型");
     ErrorCode FILE_TOO_LARGE = new ErrorCodeImpl(1_001_005_004, "文件大小超过 50 MB 上限");
     ErrorCode FILE_STORE_FAILED = new ErrorCodeImpl(1_001_005_005, "文件存储失败");
+    ErrorCode FILE_IN_USE = new ErrorCodeImpl(1_001_005_006, "文件仍被文档引用，请从文档回收站彻底删除");
 }
