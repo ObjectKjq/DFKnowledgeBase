@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.beans.factory.annotation.Value;
+import com.df.knowledge.service.model.InstanceSettingsService;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
@@ -45,11 +45,8 @@ public class DocIngestServiceImpl implements DocIngestService {
 
     private final Map<Long, Long> runningDocs = new HashMap<>();
 
-    @Value("${knowledge.ingest.global-concurrency:2}")
-    private int globalConcurrency = 2;
-
-    @Value("${knowledge.ingest.knowledge-base-concurrency:1}")
-    private int knowledgeBaseConcurrency = 1;
+    @Resource
+    private InstanceSettingsService instanceSettingsService;
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
@@ -61,6 +58,9 @@ public class DocIngestServiceImpl implements DocIngestService {
     /** 定时从 MySQL 的未完成状态领取任务；单实例内同一文档最多一个执行者。 */
     @Scheduled(fixedDelayString = "${knowledge.ingest.poll-delay-ms:500}")
     public synchronized void dispatchPendingDocs() {
+        var settings = instanceSettingsService.get();
+        int globalConcurrency = settings.getIngestGlobalConcurrency();
+        int knowledgeBaseConcurrency = settings.getIngestKnowledgeBaseConcurrency();
         if (runningDocs.size() >= globalConcurrency) {
             return;
         }

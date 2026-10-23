@@ -173,7 +173,7 @@ class DocIngestJourneyTest {
             nextExecutor.initialize();
             wire(restarted, "docMapper", journey.docs, "docParseService", journey.parse,
                     "docIndexService", org.springframework.test.util.ReflectionTestUtils.getField(journey.ingest, "docIndexService"),
-                    "docIngestExecutor", nextExecutor);
+                    "docIngestExecutor", nextExecutor, "instanceSettingsService", journey.settings);
             try {
                 restarted.recoverInterruptedDocs();
             } finally {
@@ -312,6 +312,7 @@ class DocIngestJourneyTest {
         final List<DocChunkDO> storedChunks = Collections.synchronizedList(new ArrayList<>());
         final DocEmbeddingService embedding = mock(DocEmbeddingService.class);
         final java.util.concurrent.atomic.AtomicLong ids = new java.util.concurrent.atomic.AtomicLong(5);
+        final com.df.knowledge.service.model.InstanceSettingsService settings = mock(com.df.knowledge.service.model.InstanceSettingsService.class);
         final DocIngestServiceImpl ingest = new DocIngestServiceImpl();
         final DocParseServiceImpl parse = new DocParseServiceImpl();
         final MockMvc mvc;
@@ -320,6 +321,8 @@ class DocIngestJourneyTest {
         }
         Journey(String name, byte[] content, DocMapper docs, DocChunkMapper chunks) throws Exception {
             this.docs = docs; this.chunks = chunks;
+            when(settings.get()).thenReturn(new com.df.knowledge.dal.dataobject.model.InstanceSettingsDO()
+                    .setIngestGlobalConcurrency(2).setIngestKnowledgeBaseConcurrency(1));
             var permission = mock(KnowledgeBasePermissionService.class);
             var indexService = new DocIndexServiceImpl();
             var index = mock(DocChunkIndexService.class);
@@ -361,7 +364,7 @@ class DocIngestJourneyTest {
             }).toList());
             wire(parse, "docMapper", docs, "docChunkMapper", chunks, "fileService", files);
             wire(indexService, "docMapper", docs, "docChunkMapper", chunks, "docEmbeddingService", embedding, "docChunkIndexService", index);
-            wire(ingest, "docMapper", docs, "docParseService", parse, "docIndexService", indexService);
+            wire(ingest, "docMapper", docs, "docParseService", parse, "docIndexService", indexService, "instanceSettingsService", settings);
             wire(service, "docMapper", docs, "fileService", files, "docIngestService", ingest, "knowledgeBasePermissionService", permission);
             wire(search, "docMapper", docs, "docChunkMapper", chunks, "knowledgeBaseMapper", bases, "permissionService", permission);
             var controller = new DocController(); wire(controller, "docService", service);

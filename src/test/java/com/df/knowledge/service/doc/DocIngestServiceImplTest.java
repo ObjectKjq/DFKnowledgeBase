@@ -39,6 +39,9 @@ class DocIngestServiceImplTest {
     @Mock
     private ThreadPoolTaskExecutor docIngestExecutor;
 
+    @Mock
+    private com.df.knowledge.service.model.InstanceSettingsService instanceSettingsService;
+
     @InjectMocks
     private DocIngestServiceImpl docIngestService;
 
@@ -188,6 +191,8 @@ class DocIngestServiceImplTest {
         when(docMapper.selectListByStatuses(DocStatusEnum.IN_FLIGHT_STATUS_CODES)).thenReturn(List.of(queued, parsing, indexing));
 
         // 调用
+        when(instanceSettingsService.get()).thenReturn(new com.df.knowledge.dal.dataobject.model.InstanceSettingsDO()
+                .setIngestGlobalConcurrency(2).setIngestKnowledgeBaseConcurrency(1));
         docIngestService.recoverInterruptedDocs();
 
         // 断言：同知识库只领取一个，其余仍由持久状态保留供下次轮询

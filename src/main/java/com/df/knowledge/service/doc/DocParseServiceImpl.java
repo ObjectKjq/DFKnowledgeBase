@@ -140,7 +140,7 @@ public class DocParseServiceImpl implements DocParseService {
     }
 
     /**
-     * 六格式使用统一的文本页列表，非分页格式只产生一个无页码的文本单元
+     * 六格式使用统一的文本单元；Excel 按工作表拆分，其他非分页格式只产生一个单元
      */
     private List<TextPage> readPages(InputStream input, DocFormatEnum format) throws IOException {
         return switch (format) {
@@ -364,23 +364,29 @@ public class DocParseServiceImpl implements DocParseService {
         extractor.setCommentsByDefault(false);
         extractor.setMasterByDefault(false);
         return slides.getSlides().stream().map(slide -> {
-            StringBuilder text = new StringBuilder(extractor.getText(slide));
-            // 提取器提供正文；额外显式记录表格行列，避免表头与数值失去对应。
-            for (S shape : slide.getShapes()) {
-                if (shape instanceof org.apache.poi.sl.usermodel.TableShape<?, ?> table) {
-                    List<List<String>> rows = new ArrayList<>();
-                    for (int row = 0; row < table.getNumberOfRows(); row++) {
-                        List<String> cells = new ArrayList<>();
-                        for (int column = 0; column < table.getNumberOfColumns(); column++) {
-                            var cell = table.getCell(row, column);
-                            cells.add(cell == null ? "" : cell.getText());
+            try {
+                StringBuilder text = new StringBuilder(extractor.getText(slide));
+                // 提取器提供正文；额外显式记录表格行列，避免表头与数值失去对应。
+                for (S shape : slide.getShapes()) {
+                    if (shape instanceof org.apache.poi.sl.usermodel.TableShape<?, ?> table) {
+                        List<List<String>> rows = new ArrayList<>();
+                        for (int row = 0; row < table.getNumberOfRows(); row++) {
+                            List<String> cells = new ArrayList<>();
+                            for (int column = 0; column < table.getNumberOfColumns(); column++) {
+                                var cell = table.getCell(row, column);
+                                cells.add(cell == null ? "" : cell.getText());
+                            }
+                            rows.add(cells);
                         }
-                        rows.add(cells);
+                        text.append('\n').append(formatTable(rows));
                     }
-                    text.append('\n').append(formatTable(rows));
                 }
+                return text.toString();
+            } catch (RuntimeException ex) {
+                throw new ServiceException(ErrorCodeConstants.DOC_PARSE_FAILED,
+                        "文档解析失败：第 " + slide.getSlideNumber() + " 页："
+                                + StrUtil.blankToDefault(ex.getMessage(), "幻灯片抽取失败"));
             }
-            return text.toString();
         }).toList();
     }
 
