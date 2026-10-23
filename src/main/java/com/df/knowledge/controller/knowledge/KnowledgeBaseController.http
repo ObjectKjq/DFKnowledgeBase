@@ -31,3 +31,15 @@ Authorization: Bearer {{token}}
 ### 分页查询知识库
 GET {{baseUrl}}/knowledge/base/page?pageNum=1&pageSize=10&type=2
 Authorization: Bearer {{token}}
+
+### 彻底删除回收站对象（再次确认后，不可恢复）
+DELETE {{baseUrl}}/knowledge/base/purge?id=1&confirmed=true
+Authorization: Bearer {{token}}
+
+### 查看本人回收站
+GET {{baseUrl}}/knowledge/base/recycle-list
+Authorization: Bearer {{token}}
+
+### 恢复知识库及原成员关系
+POST {{baseUrl}}/knowledge/base/restore?id=1
+Authorization: Bearer {{token}}

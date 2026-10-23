@@ -1,21 +1,26 @@
 package com.df.knowledge.service.file;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.StrUtil;
 import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.dal.dataobject.file.FileContentDO;
 import com.df.knowledge.dal.dataobject.file.FileDO;
+import com.df.knowledge.dal.mysql.doc.DocMapper;
 import com.df.knowledge.dal.mysql.file.FileContentMapper;
 import com.df.knowledge.dal.mysql.file.FileMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
+import com.df.knowledge.enums.doc.DocStatusEnum;
 import com.df.knowledge.enums.file.FileConstants;
+import com.df.knowledge.service.knowledge.KnowledgeBasePermissionService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
+import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -41,7 +46,14 @@ public class FileServiceImpl implements FileService {
     @Resource
     private FileContentMapper fileContentMapper;
 
+    @Resource
+    private DocMapper docMapper;
+
+    @Resource
+    private KnowledgeBasePermissionService knowledgeBasePermissionService;
+
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public FileDO upload(MultipartFile file) {
         try {
             return createFile(file.getBytes(), file.getOriginalFilename(), file.getContentType());
@@ -66,6 +78,10 @@ public class FileServiceImpl implements FileService {
         }
         // 4. 元数据与字节分表落库
         FileDO file = new FileDO().setName(name).setType(type).setSize((long) content.length);
+        if (RequestContextHolder.getRequestAttributes() != null
+                && StpUtil.isLogin()) {
+            file.setUploaderId(StpUtil.getLoginIdAsLong());
+        }
         fileMapper.insert(file);
         fileContentMapper.insert(new FileContentDO().setFileId(file.getId()).setContent(content));
         return file;
@@ -85,9 +101,85 @@ public class FileServiceImpl implements FileService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
-        // 逻辑删除且不做引用/归属校验（ADR-0009）：元数据与字节两表同删
-        fileMapper.deleteById(id);
-        fileContentMapper.deleteByFileId(id);
+        // 可恢复的业务引用也需要保留字节；只有最后一个引用移除后物理回收。
+        fileMapper.selectByIdForUpdate(id);
+        if (!docMapper.selectListByFileIdForUpdate(id).isEmpty()) {
+            return;
+        }
+        fileContentMapper.purgeByFileId(id);
+        fileMapper.purgeById(id);
+    }
+
+    @Override
+    public FileDO getReadableFile(Long userId, Long id) {
+        FileDO file = fileMapper.selectById(id);
+        if (file == null) {
+            throw new ServiceException(ErrorCodeConstants.FILE_NOT_FOUND);
+        }
+        var references = docMapper.selectListByFileId(id);
+        if (references.isEmpty() && userId.equals(file.getUploaderId())) {
+            return file;
+        }
+        for (var doc : references) {
+            if (DocStatusEnum.DELETED.getCode().equals(doc.getStatus())) {
+                continue;
+            }
+            try {
+                knowledgeBasePermissionService.checkViewPermission(userId, doc.getKnowledgeBaseId());
+                return file;
+            } catch (ServiceException ignored) {
+                // 共享文件可通过任意当前可见引用读取；上传者不享有越权例外。
+            }
+        }
+        throw new ServiceException(ErrorCodeConstants.FILE_NOT_FOUND);
+    }
+
+    @Override
+    public FileDO getAttachableFile(Long userId, Long id) {
+        FileDO file = fileMapper.selectByIdForUpdate(id);
+        if (file == null) {
+            throw new ServiceException(ErrorCodeConstants.FILE_NOT_FOUND);
+        }
+        var references = docMapper.selectListByFileIdForUpdate(id);
+        if (references.isEmpty() && userId.equals(file.getUploaderId())) {
+            return file;
+        }
+        for (var doc : references) {
+            if (DocStatusEnum.DELETED.getCode().equals(doc.getStatus())) {
+                continue;
+            }
+            try {
+                knowledgeBasePermissionService.checkContentWritePermission(userId, doc.getKnowledgeBaseId());
+                return file;
+            } catch (ServiceException ignored) {
+                // 关联属于写入操作，查看者不能复制内容到个人知识库。
+            }
+        }
+        throw new ServiceException(ErrorCodeConstants.FILE_NOT_FOUND);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void delete(Long userId, Long id) {
+        FileDO file = fileMapper.selectByIdForUpdate(id);
+        if (file == null) {
+            throw new ServiceException(ErrorCodeConstants.FILE_NOT_FOUND);
+        }
+        var references = docMapper.selectListByFileIdForUpdate(id);
+        if (!references.isEmpty()) {
+            for (var doc : references) {
+                try {
+                    knowledgeBasePermissionService.checkContentWritePermission(userId, doc.getKnowledgeBaseId());
+                } catch (ServiceException ignored) {
+                    throw new ServiceException(ErrorCodeConstants.FILE_NOT_FOUND);
+                }
+            }
+            throw new ServiceException(ErrorCodeConstants.FILE_IN_USE);
+        }
+        if (!userId.equals(file.getUploaderId())) {
+            throw new ServiceException(ErrorCodeConstants.FILE_NOT_FOUND);
+        }
+        delete(id);
     }
 
     @Override

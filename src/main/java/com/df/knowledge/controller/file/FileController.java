@@ -1,5 +1,6 @@
 package com.df.knowledge.controller.file;
 
+import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import com.df.knowledge.common.CommonResult;
 import com.df.knowledge.controller.file.vo.FileRespVO;
@@ -29,7 +30,7 @@ import static com.df.knowledge.common.CommonResult.success;
 /**
  * 文件 Controller
  *
- * 通用文件上传、下载与删除，接口仅要求登录（ADR-0009）
+ * 文件上传、下载与删除，按当前业务内容权限校验（ADR-0009）
  */
 @Tag(name = "fileController")
 @RestController
@@ -49,10 +50,10 @@ public class FileController {
     }
 
     @GetMapping("/download")
-    @Operation(summary = "下载文件", description = "返回文件字节流：图片与 PDF 内联预览，其余附件下载；文件不存在返回 404")
+    @Operation(summary = "下载文件", description = "按业务内容权限返回文件字节流：图片与 PDF 内联预览，其余附件下载；无权与不存在统一返回文件不存在")
     @Parameter(name = "id", description = "文件编号", required = true, example = "1")
     public void downloadFile(@RequestParam("id") Long id, HttpServletResponse response) throws IOException {
-        FileDO file = fileService.getFile(id);
+        FileDO file = fileService.getReadableFile(StpUtil.getLoginIdAsLong(), id);
         byte[] content = file != null ? fileService.getContent(id) : null;
         if (content == null) {
             response.setStatus(HttpStatus.NOT_FOUND.value());
@@ -72,10 +73,10 @@ public class FileController {
     }
 
     @DeleteMapping("/delete")
-    @Operation(summary = "删除文件", description = "逻辑删除且不做引用/归属校验，删除后立即不可下载（ADR-0009）")
+    @Operation(summary = "删除文件", description = "仅上传者可删除未关联文件；业务引用须从文档回收站彻底删除")
     @Parameter(name = "id", description = "文件编号", required = true, example = "1")
     public CommonResult<Boolean> deleteFile(@RequestParam("id") Long id) {
-        fileService.delete(id);
+        fileService.delete(StpUtil.getLoginIdAsLong(), id);
         return success(true);
     }
 

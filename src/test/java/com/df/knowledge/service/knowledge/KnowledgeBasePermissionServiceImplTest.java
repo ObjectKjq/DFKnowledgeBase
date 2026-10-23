@@ -250,6 +250,9 @@ class KnowledgeBasePermissionServiceImplTest {
                 buildMember(2L, 10L, KnowledgeBaseMemberRoleEnum.EDITOR),
                 buildMember(3L, 10L, KnowledgeBaseMemberRoleEnum.VIEWER)));
 
+        when(knowledgeBaseMapper.selectById(1L)).thenReturn(buildKnowledgeBase(1L, 10L, KnowledgeBaseTypeEnum.PERSONAL, true));
+        when(knowledgeBaseMapper.selectById(2L)).thenReturn(buildKnowledgeBase(2L, 10L, KnowledgeBaseTypeEnum.SHARED, false));
+        when(knowledgeBaseMapper.selectById(3L)).thenReturn(buildKnowledgeBase(3L, 20L, KnowledgeBaseTypeEnum.SHARED, false));
         // 调用并断言：有权访问的知识库去重后返回
         List<Long> knowledgeBaseIds = permissionService.getAccessibleKnowledgeBaseIds(10L);
         assertEquals(List.of(1L, 2L, 3L), knowledgeBaseIds);

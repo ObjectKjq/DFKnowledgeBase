@@ -11,6 +11,7 @@ import com.df.knowledge.enums.knowledge.KnowledgeBaseTypeEnum;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.ArrayList;
@@ -55,6 +56,9 @@ public class KnowledgeBasePermissionServiceImpl implements KnowledgeBasePermissi
 
     @Override
     public void checkMemberManagePermission(Long userId, Long knowledgeBaseId) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            knowledgeBaseMapper.selectByIdForUpdate(knowledgeBaseId);
+        }
         KnowledgeBaseDO knowledgeBase = validateAccessible(userId, knowledgeBaseId);
         // 1. 个人知识库无共享概念，不支持成员管理
         if (!KnowledgeBaseTypeEnum.SHARED.getCode().equals(knowledgeBase.getType())) {
@@ -88,7 +92,10 @@ public class KnowledgeBasePermissionServiceImpl implements KnowledgeBasePermissi
         knowledgeBaseMemberMapper.selectListByUserId(userId)
                 .forEach(member -> knowledgeBaseIds.add(member.getKnowledgeBaseId()));
         // 3. 去重后返回
-        return knowledgeBaseIds.stream().distinct().toList();
+        return knowledgeBaseIds.stream().distinct().filter(id -> {
+            KnowledgeBaseDO knowledgeBase = knowledgeBaseMapper.selectById(id);
+            return knowledgeBase != null && knowledgeBase.getDeleteTime() == null;
+        }).toList();
     }
 
     /**
@@ -102,7 +109,7 @@ public class KnowledgeBasePermissionServiceImpl implements KnowledgeBasePermissi
      */
     private KnowledgeBaseDO validateAccessible(Long userId, Long knowledgeBaseId) {
         KnowledgeBaseDO knowledgeBase = knowledgeBaseMapper.selectById(knowledgeBaseId);
-        if (knowledgeBase == null || (!knowledgeBase.getOwnerId().equals(userId)
+        if (knowledgeBase == null || knowledgeBase.getDeleteTime() != null || (!knowledgeBase.getOwnerId().equals(userId)
                 && knowledgeBaseMemberMapper.selectByKnowledgeBaseIdAndUserId(knowledgeBaseId, userId) == null)) {
             throw new ServiceException(ErrorCodeConstants.KB_NOT_FOUND);
         }

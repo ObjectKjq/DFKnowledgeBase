@@ -67,4 +67,15 @@ public interface DocService {
      * 彻底删除超过保留期的软删除文档（移除记录与文件引用，PRD §8.2）
      */
     void purgeExpiredDeletedDocs();
+    /** 彻底删除回收站文档。
+     * @param userId 操作者
+     * @param id 文档编号
+     * @param confirmed 是否再次确认
+     */
+    void purgeDoc(Long userId, Long id, boolean confirmed);
+
+    /** 清理已授权彻底删除的知识库内容，仅供知识库生命周期使用。
+     * @param knowledgeBaseId 知识库编号
+     */
+    void purgeKnowledgeBaseDocs(Long knowledgeBaseId);
 }
