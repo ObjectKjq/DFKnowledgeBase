@@ -1,7 +1,6 @@
 package com.df.knowledge.config;
 
 import cn.dev33.satoken.interceptor.SaInterceptor;
-import cn.dev33.satoken.router.SaRouter;
 import cn.dev33.satoken.stp.StpUtil;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -26,9 +25,11 @@ public class SaTokenConfiguration implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(new SaInterceptor(handle -> SaRouter.match("/**")
-                        .notMatch(EXCLUDE_PATHS)
-                        .check(r -> StpUtil.checkLogin())))
-                .addPathPatterns("/**");
+        // 方法注解在所有MVC路径上独立执行，公开登录/文档路径也不能绕过显式权限注解。
+        registry.addInterceptor(new SaInterceptor()).addPathPatterns("/**");
+        // MVC匹配会剥离context-path，避免默认/api部署下登录接口误触发登录检查。
+        registry.addInterceptor(new SaInterceptor(handle -> StpUtil.checkLogin()).isAnnotation(false))
+                .addPathPatterns("/**")
+                .excludePathPatterns(EXCLUDE_PATHS);
     }
 }
