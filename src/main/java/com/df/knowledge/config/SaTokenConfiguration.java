@@ -20,6 +20,7 @@ public class SaTokenConfiguration implements WebMvcConfigurer {
      */
     private static final String[] EXCLUDE_PATHS = {
             "/system/auth/login", // 登录
+            "/mcp", // MCP 协议逐请求使用独立 Bearer 凭证
             "/doc.html", "/webjars/**", "/swagger-ui/**", "/v3/api-docs/**", // 接口文档
             "/error" // 兜底错误页
     };
