@@ -131,6 +131,7 @@ CREATE TABLE `system_login_log` (
 DROP TABLE IF EXISTS `system_file`;
 CREATE TABLE `system_file` (
     `id`          bigint       NOT NULL AUTO_INCREMENT COMMENT '文件ID',
+    `uploader_id` bigint NULL DEFAULT NULL COMMENT '上传者用户编号',
     `name`        varchar(255) NOT NULL COMMENT '上传时的原始文件名',
     `type`        varchar(128) NOT NULL COMMENT '文件 MIME 类型（Content-Type）',
     `size`        bigint       NOT NULL COMMENT '文件大小（字节）',
@@ -165,6 +166,7 @@ CREATE TABLE `system_file_content` (
 DROP TABLE IF EXISTS `knowledge_base`;
 CREATE TABLE `knowledge_base` (
     `id`           bigint       NOT NULL AUTO_INCREMENT COMMENT '知识库ID',
+    `delete_time` datetime NULL DEFAULT NULL COMMENT '回收站删除时间',
     `name`         varchar(50)  NOT NULL COMMENT '知识库名称',
     `type`         tinyint      NOT NULL COMMENT '知识库类型（1 个人 2 共享）',
     `owner_id`     bigint       NOT NULL COMMENT '所有者用户ID（关联 system_user 表）',

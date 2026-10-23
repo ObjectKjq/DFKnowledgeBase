@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.df.knowledge.controller.doc.vo.DocPageReqVO;
 import com.df.knowledge.dal.dataobject.doc.DocDO;
 import com.df.knowledge.enums.doc.DocStatusEnum;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.time.LocalDateTime;
@@ -20,6 +21,50 @@ import java.util.List;
  */
 @Mapper
 public interface DocMapper extends BaseMapper<DocDO> {
+
+    /**
+     * 恢复文档状态并显式清空回收站字段
+     *
+     * @param id 文档编号
+     * @param status 恢复后的状态
+     * @return 更新条数
+     */
+    default int restoreDeletedDoc(Long id, Integer status) {
+        return update(null, new LambdaUpdateWrapper<DocDO>()
+                .eq(DocDO::getId, id).set(DocDO::getStatus, status)
+                .set(DocDO::getPrevStatus, null).set(DocDO::getDeleteTime, null));
+    }
+
+    /** 查询全部仍保留的业务引用，包括可恢复的文档。
+     * @param fileId 文件编号
+     * @return 文档列表
+     */
+    default List<DocDO> selectListByFileId(Long fileId) {
+        return selectList(new LambdaQueryWrapper<DocDO>().eq(DocDO::getFileId, fileId));
+    }
+
+    /** 读取最新引用并加锁，避免 REPEATABLE READ 旧快照漏掉刚提交的关联。
+     * @param fileId 文件编号
+     * @return 当前仍保留的文档引用
+     */
+    default List<DocDO> selectListByFileIdForUpdate(Long fileId) {
+        return selectList(new LambdaQueryWrapper<DocDO>().eq(DocDO::getFileId, fileId).last("FOR UPDATE"));
+    }
+
+    /** 查询知识库的全部文档。
+     * @param knowledgeBaseId 知识库编号
+     * @return 文档列表
+     */
+    default List<DocDO> selectListByKnowledgeBaseId(Long knowledgeBaseId) {
+        return selectList(new LambdaQueryWrapper<DocDO>().eq(DocDO::getKnowledgeBaseId, knowledgeBaseId));
+    }
+
+    /** 物理清理文档。
+     * @param id 文档编号
+     * @return 清理条数
+     */
+    @Delete("DELETE FROM knowledge_doc WHERE id = #{id}")
+    int purgeById(Long id);
 
     /**
      * 锁定文档，串行化同一文档的分块替换与彻底删除
@@ -49,6 +94,7 @@ public interface DocMapper extends BaseMapper<DocDO> {
                         .eq(reqVO.getKnowledgeBaseId() != null, DocDO::getKnowledgeBaseId, reqVO.getKnowledgeBaseId())
                         .like(StrUtil.isNotBlank(reqVO.getTitle()), DocDO::getTitle, reqVO.getTitle())
                         .eq(reqVO.getStatus() != null, DocDO::getStatus, reqVO.getStatus())
+                        .ne(reqVO.getStatus() == null, DocDO::getStatus, DocStatusEnum.DELETED.getCode())
                         .orderByDesc(DocDO::getId));
     }
 
@@ -89,7 +135,7 @@ public interface DocMapper extends BaseMapper<DocDO> {
     default List<DocDO> selectListByStatusAndDeleteTimeBefore(Integer status, LocalDateTime maxDeleteTime) {
         return selectList(new LambdaQueryWrapper<DocDO>()
                 .eq(DocDO::getStatus, status)
-                .lt(DocDO::getDeleteTime, maxDeleteTime));
+                .le(DocDO::getDeleteTime, maxDeleteTime));
     }
 
     /**

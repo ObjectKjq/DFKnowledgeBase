@@ -78,10 +78,18 @@ public class DocController {
     }
 
     @PostMapping("/restore")
-    @Operation(summary = "恢复文档", description = "恢复到删除前状态，仅 30 天保留期内可恢复")
+    @Operation(summary = "恢复文档", description = "仅 30 天保留期内可恢复；原可用文档须重建索引后才可用，原处理中重新排队，原失败保留失败原因")
     @Parameter(name = "id", description = "文档编号", required = true, example = "1")
     public CommonResult<Boolean> restoreDoc(@RequestParam("id") Long id) {
         docService.restoreDoc(StpUtil.getLoginIdAsLong(), id);
         return success(true);
     }
+    @DeleteMapping("/purge")
+    @Operation(summary = "彻底删除回收站文档", description = "需要再次确认，无其他业务引用时回收文件字节")
+    public CommonResult<Boolean> purgeDoc(@RequestParam("id") Long id,
+            @RequestParam(value = "confirmed", defaultValue = "false") boolean confirmed) {
+        docService.purgeDoc(StpUtil.getLoginIdAsLong(), id, confirmed);
+        return success(true);
+    }
+
 }

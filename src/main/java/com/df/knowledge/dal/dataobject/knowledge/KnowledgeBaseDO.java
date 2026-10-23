@@ -7,6 +7,8 @@ import com.df.knowledge.enums.knowledge.KnowledgeBaseTypeEnum;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
+import java.time.LocalDateTime;
+
 /**
  * 知识库 DO
  */
@@ -14,6 +16,9 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 public class KnowledgeBaseDO extends BaseDO {
+
+    /** 回收站删除时间；为空表示未进入回收站。 */
+    private LocalDateTime deleteTime;
 
     /**
      * 知识库名称

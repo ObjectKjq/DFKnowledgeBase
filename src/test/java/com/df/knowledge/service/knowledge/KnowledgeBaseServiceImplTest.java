@@ -6,6 +6,7 @@ import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.controller.knowledge.vo.knowledgebase.KnowledgeBasePageReqVO;
 import com.df.knowledge.controller.knowledge.vo.knowledgebase.KnowledgeBaseSaveReqVO;
 import com.df.knowledge.dal.dataobject.knowledge.KnowledgeBaseDO;
+import com.df.knowledge.dal.mysql.doc.DocMapper;
 import com.df.knowledge.dal.mysql.knowledge.KnowledgeBaseMapper;
 import com.df.knowledge.dal.mysql.knowledge.KnowledgeBaseMemberMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
@@ -43,6 +45,9 @@ class KnowledgeBaseServiceImplTest {
 
     @Mock
     private KnowledgeBasePermissionService knowledgeBasePermissionService;
+
+    @Mock
+    private DocMapper docMapper;
 
     @InjectMocks
     private KnowledgeBaseServiceImpl knowledgeBaseService;
@@ -117,14 +122,17 @@ class KnowledgeBaseServiceImplTest {
 
     @Test
     void testDeleteKnowledgeBase_success() {
-        // 准备参数：所有者删除自建知识库
+        // 准备参数：所有者删除自建知识库。
+        when(knowledgeBaseMapper.selectByIdForUpdate(5L)).thenReturn(buildKnowledgeBase(5L, 10L, KnowledgeBaseTypeEnum.SHARED, false));
 
         // 调用
         knowledgeBaseService.deleteKnowledgeBase(10L, 5L);
 
-        // 断言：知识库与其成员关联一并删除
-        verify(knowledgeBaseMapper).deleteById(5L);
-        verify(knowledgeBaseMemberMapper).deleteByKnowledgeBaseId(5L);
+        // 断言：进入回收站且保留成员关系。
+        ArgumentCaptor<KnowledgeBaseDO> captor = ArgumentCaptor.forClass(KnowledgeBaseDO.class);
+        verify(knowledgeBaseMapper).updateById(captor.capture());
+        org.junit.jupiter.api.Assertions.assertNotNull(captor.getValue().getDeleteTime());
+        Mockito.verifyNoInteractions(knowledgeBaseMemberMapper);
     }
 
     @Test

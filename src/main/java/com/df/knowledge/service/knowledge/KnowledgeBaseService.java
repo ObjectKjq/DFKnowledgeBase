@@ -5,6 +5,8 @@ import com.df.knowledge.controller.knowledge.vo.knowledgebase.KnowledgeBasePageR
 import com.df.knowledge.controller.knowledge.vo.knowledgebase.KnowledgeBaseSaveReqVO;
 import com.df.knowledge.dal.dataobject.knowledge.KnowledgeBaseDO;
 
+import java.util.List;
+
 /**
  * 知识库 Service 接口
  */
@@ -27,7 +29,7 @@ public interface KnowledgeBaseService {
     void createDefaultKnowledgeBase(Long userId);
 
     /**
-     * 删除知识库（默认知识库不可删除，同时清理其成员关联）
+     * 软删除知识库（默认知识库不可删除，保留成员关系与内容供恢复）
      *
      * @param userId 操作者用户编号
      * @param id 知识库编号
@@ -51,4 +53,25 @@ public interface KnowledgeBaseService {
      * @return 知识库分页
      */
     PageResult<KnowledgeBaseDO> getKnowledgeBasePage(Long userId, KnowledgeBasePageReqVO reqVO);
+    /** 查看本人知识库回收站。
+     * @param userId 原所有者
+     * @return 已删除知识库
+     */
+    List<KnowledgeBaseDO> getDeletedKnowledgeBases(Long userId);
+
+    /** 在 30 天内恢复知识库，保留原成员。
+     * @param userId 原所有者
+     * @param id 知识库编号
+     */
+    void restoreKnowledgeBase(Long userId, Long id);
+
+    /** 确认后彻底删除回收站知识库。
+     * @param userId 原所有者
+     * @param id 知识库编号
+     * @param confirmed 是否确认
+     */
+    void purgeKnowledgeBase(Long userId, Long id, boolean confirmed);
+
+    /** 清理达到保留期的回收站知识库。 */
+    void purgeExpiredKnowledgeBases();
 }

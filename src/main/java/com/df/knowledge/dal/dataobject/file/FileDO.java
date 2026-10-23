@@ -13,6 +13,9 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 public class FileDO extends BaseDO {
 
+    /** 上传者用户编号；无法确认归属的历史未关联文件不开放。 */
+    private Long uploaderId;
+
     /**
      * 文件名（上传时的原始文件名）
      */

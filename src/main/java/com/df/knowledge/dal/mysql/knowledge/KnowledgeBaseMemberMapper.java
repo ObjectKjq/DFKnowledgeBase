@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.df.knowledge.dal.dataobject.knowledge.KnowledgeBaseMemberDO;
+import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;
@@ -13,6 +14,13 @@ import java.util.List;
  */
 @Mapper
 public interface KnowledgeBaseMemberMapper extends BaseMapper<KnowledgeBaseMemberDO> {
+    /** 彻底删除知识库成员关系。
+     * @param knowledgeBaseId 知识库编号
+     * @return 清理条数
+     */
+    @Delete("DELETE FROM knowledge_base_member WHERE knowledge_base_id = #{knowledgeBaseId}")
+    int purgeByKnowledgeBaseId(Long knowledgeBaseId);
+
 
     /**
      * 查询知识库的成员关联
