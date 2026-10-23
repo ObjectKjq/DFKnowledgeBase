@@ -36,6 +36,7 @@ public interface ConversationMapper extends BaseMapper<ConversationDO> {
     default ConversationDO selectByIdAndUserId(Long id, Long userId) {
         return selectOne(new LambdaQueryWrapper<ConversationDO>()
                 .eq(ConversationDO::getId, id)
-                .eq(ConversationDO::getUserId, userId));
+                .eq(ConversationDO::getUserId, userId)
+                .last(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive() ? "FOR UPDATE" : ""));
     }
 }

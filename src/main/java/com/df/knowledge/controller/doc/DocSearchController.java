@@ -34,12 +34,33 @@ public class DocSearchController {
 
     @Resource
     private DocSearchService docSearchService;
+    @Resource
+    private com.df.knowledge.service.doc.DocGuideService docGuideService;
+
+    @PostMapping("/guide")
+    @Operation(summary="引导检索", description="最多两轮澄清；可跳过，模型失败后说明原因并执行混合检索")
+    public CommonResult<com.df.knowledge.controller.doc.vo.DocGuideRespVO> guide(
+            @Valid @RequestBody com.df.knowledge.controller.doc.vo.DocGuideReqVO request) {
+        var result = docGuideService.guide(StpUtil.getLoginIdAsLong(), request);
+        var response = BeanUtil.copyProperties(result, com.df.knowledge.controller.doc.vo.DocGuideRespVO.class);
+        if (result.getSearch() != null) response.setSearch(toPageResponse(result.getSearch()));
+        return success(response);
+    }
 
     @PostMapping("/search")
     @Operation(summary = "混合检索", description = "仅检索当前用户有权范围内的可用文档，返回最多 20 个融合排序分块")
-    public CommonResult<List<DocChunkRespVO>> search(@Valid @RequestBody DocSearchReqVO reqVO) {
-        return success(BeanUtil.copyToList(docSearchService.search(StpUtil.getLoginIdAsLong(),
-                reqVO.getQuery(), reqVO.getKnowledgeBaseIds()), DocChunkRespVO.class));
+    public CommonResult<com.df.knowledge.controller.doc.vo.DocSearchPageRespVO> search(@Valid @RequestBody DocSearchReqVO reqVO) {
+        var result = docSearchService.search(StpUtil.getLoginIdAsLong(), reqVO);
+        return success(toPageResponse(result));
+    }
+
+    private com.df.knowledge.controller.doc.vo.DocSearchPageRespVO toPageResponse(com.df.knowledge.service.doc.DocSearchPage result) {
+        var response = new com.df.knowledge.controller.doc.vo.DocSearchPageRespVO();
+        response.setTotal(result.getTotal());
+        response.setList(BeanUtil.copyToList(result.getList(), DocChunkRespVO.class));
+        response.setIndexingCount(result.getIndexingCount());
+        response.setCandidateLimitReached(result.isCandidateLimitReached());
+        return response;
     }
 
     @GetMapping("/preview")

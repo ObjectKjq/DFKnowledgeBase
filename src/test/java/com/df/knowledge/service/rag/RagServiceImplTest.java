@@ -68,8 +68,7 @@ class RagServiceImplTest {
     void testStream_deliversDeltasBeforeReturningCompleteCitations() {
         // 准备参数
         mockConversation(11L, List.of(2L));
-        when(docSearchService.search(7L, "问题", List.of(2L)))
-                .thenReturn(List.of(chunk(101L, 5L, "证据", 1, 0)));
+        mockSearch("问题", List.of(chunk(101L, 5L, "证据", 1, 0)));
         List<String> deltas = new ArrayList<>();
         List<List<RagCitation>> citationEvents = new ArrayList<>();
         doAnswer(invocation -> {
@@ -96,8 +95,7 @@ class RagServiceImplTest {
     void testStream_interruptedGenerationDoesNotPersistLateAnswer() {
         // 准备参数：模拟生成端口在取消后仍返回完整结果
         mockConversation(11L, List.of(2L));
-        when(docSearchService.search(7L, "问题", List.of(2L)))
-                .thenReturn(List.of(chunk(101L, 5L, "证据", 1, 0)));
+        mockSearch("问题", List.of(chunk(101L, 5L, "证据", 1, 0)));
         doAnswer(invocation -> {
             Thread.currentThread().interrupt();
             return new RagGenerationPort.GenerationResult(true, "迟到的答案。[1]", List.of(1));
@@ -121,8 +119,7 @@ class RagServiceImplTest {
     void testStream_failureKeepsQuestionAndDoesNotSavePartialAnswer(ErrorCode errorCode) {
         // 准备参数
         mockConversation(11L, List.of(2L));
-        when(docSearchService.search(7L, "问题", List.of(2L)))
-                .thenReturn(List.of(chunk(101L, 5L, "证据", 1, 0)));
+        mockSearch("问题", List.of(chunk(101L, 5L, "证据", 1, 0)));
         doAnswer(invocation -> {
             Consumer<String> delta = invocation.getArgument(1);
             delta.accept("部分答案");
@@ -151,8 +148,7 @@ class RagServiceImplTest {
     void testStream_invalidCitationsReturnRefusalAsFinalResult() {
         // 准备参数
         mockConversation(11L, List.of(2L));
-        when(docSearchService.search(7L, "问题", List.of(2L)))
-                .thenReturn(List.of(chunk(101L, 5L, "证据", 1, 0)));
+        mockSearch("问题", List.of(chunk(101L, 5L, "证据", 1, 0)));
         doAnswer(invocation -> {
             Consumer<String> delta = invocation.getArgument(1);
             delta.accept("无法验证。[9]");
@@ -174,7 +170,7 @@ class RagServiceImplTest {
         mockConversation(11L, List.of(2L));
         DocChunkResult first = chunk(101L, 5L, "可信答案", 3, 1);
         DocChunkResult second = chunk(102L, 6L, "引用规则", null, 0);
-        when(docSearchService.search(7L, "如何保证可信？", List.of(2L))).thenReturn(List.of(first, second));
+        mockSearch("如何保证可信？", List.of(first, second));
         when(generationPort.generate(any())).thenReturn(
                 new RagGenerationPort.GenerationResult(true, "答案应逐条附带引用。[2][1]", List.of(2, 1, 2)));
 
@@ -198,7 +194,7 @@ class RagServiceImplTest {
     void testAsk_noEvidenceRefusesWithoutCallingModel() {
         // 准备参数：当前范围有权限，但没有检索到支撑分块
         mockConversation(11L, List.of(2L));
-        when(docSearchService.search(7L, "不存在的内容", List.of(2L))).thenReturn(List.of());
+        mockSearch("不存在的内容", List.of());
         when(docSearchService.hasAvailableDocuments(7L, List.of(2L))).thenReturn(true);
 
         // 调用
@@ -216,8 +212,7 @@ class RagServiceImplTest {
     void testAsk_invalidModelCitationRefuses() {
         // 准备参数：模型声称有依据，但返回的引用编号不属于本次证据
         mockConversation(11L, List.of(2L));
-        when(docSearchService.search(7L, "问题", List.of(2L)))
-                .thenReturn(List.of(chunk(101L, 5L, "证据", 1, 0)));
+        mockSearch("问题", List.of(chunk(101L, 5L, "证据", 1, 0)));
         when(generationPort.generate(any())).thenReturn(
                 new RagGenerationPort.GenerationResult(true, "没有可验证引用的答案", List.of(9)));
 
@@ -234,8 +229,7 @@ class RagServiceImplTest {
     void testAsk_refusesAnswerWhenInlineCitationIsMissingOrUnmapped() {
         // 准备参数：答案里的引用标记必须和可映射的引用编号一致
         mockConversation(11L, List.of(2L));
-        when(docSearchService.search(7L, "问题", List.of(2L)))
-                .thenReturn(List.of(chunk(101L, 5L, "证据", 1, 0)));
+        mockSearch("问题", List.of(chunk(101L, 5L, "证据", 1, 0)));
         when(generationPort.generate(any())).thenReturn(
                 new RagGenerationPort.GenerationResult(true, "无引用的断言", List.of(1)));
 
@@ -251,7 +245,7 @@ class RagServiceImplTest {
     void testAsk_emptyKnowledgeBaseReturnsUploadGuidance() {
         // 准备参数：知识库可访问，但没有已完成索引的文档
         mockConversation(11L, List.of(2L));
-        when(docSearchService.search(7L, "问题", List.of(2L))).thenReturn(List.of());
+        mockSearch("问题", List.of());
         when(docSearchService.hasAvailableDocuments(7L, List.of(2L))).thenReturn(false);
 
         // 调用
@@ -275,8 +269,9 @@ class RagServiceImplTest {
         when(conversationService.getMessageList(7L, 11L)).thenReturn(List.of(previousQuestion, previousAnswer));
         when(conversationService.getMessageList(7L, 22L)).thenReturn(List.of());
         when(permissionService.getAccessibleKnowledgeBaseIds(7L)).thenReturn(List.of(2L));
-        when(docSearchService.search(eq(7L), any(), eq(List.of(2L))))
-                .thenReturn(List.of(chunk(101L, 5L, "证据", 1, 0)));
+        var page = new com.df.knowledge.service.doc.DocSearchPage();
+        page.setList(List.of(chunk(101L, 5L, "证据", 1, 0)));
+        when(docSearchService.search(eq(7L), any(com.df.knowledge.controller.doc.vo.DocSearchReqVO.class))).thenReturn(page);
         when(docSearchService.getPreview(7L, 101L)).thenReturn(chunk(101L, 5L, "当前文档原文", 1, 0));
         when(generationPort.generate(any())).thenReturn(
                 new RagGenerationPort.GenerationResult(true, "回答[1]", List.of(1)));
@@ -302,8 +297,7 @@ class RagServiceImplTest {
         MessageDO revokedAnswer = answerMessage(2L, "来自已撤权知识库的答案", 99L);
         when(conversationService.getMessageList(7L, 11L)).thenReturn(List.of(
                 previousQuestion, revokedAnswer));
-        when(docSearchService.search(7L, "问题", List.of(2L)))
-                .thenReturn(List.of(chunk(101L, 5L, "有权证据", 1, 0)));
+        mockSearch("问题", List.of(chunk(101L, 5L, "有权证据", 1, 0)));
         when(generationPort.generate(any())).thenReturn(
                 new RagGenerationPort.GenerationResult(true, "回答[1]", List.of(1)));
 
@@ -311,7 +305,7 @@ class RagServiceImplTest {
         ragService.ask(7L, request(11L, "问题"));
 
         // 断言：无权知识库不进入检索或生成上下文
-        verify(docSearchService).search(7L, "问题", List.of(2L));
+        verify(docSearchService).search(eq(7L), org.mockito.ArgumentMatchers.argThat(r -> r.getKnowledgeBaseIds().equals(List.of(2L))));
         ArgumentCaptor<RagGenerationPort.GenerationRequest> request =
                 ArgumentCaptor.forClass(RagGenerationPort.GenerationRequest.class);
         verify(generationPort).generate(request.capture());
@@ -329,8 +323,7 @@ class RagServiceImplTest {
         MessageDO previousAnswer = answerMessage(2L, "不可重放的答案", 2L);
         when(conversationService.getMessageList(7L, 11L)).thenReturn(List.of(previousQuestion, previousAnswer));
         when(docSearchService.getPreview(7L, 101L)).thenThrow(new ServiceException(ErrorCodeConstants.DOC_NOT_FOUND));
-        when(docSearchService.search(7L, "问题", List.of(2L)))
-                .thenReturn(List.of(chunk(102L, 6L, "当前证据", 1, 0)));
+        mockSearch("问题", List.of(chunk(102L, 6L, "当前证据", 1, 0)));
         when(generationPort.generate(any())).thenReturn(
                 new RagGenerationPort.GenerationResult(true, "当前回答[1]", List.of(1)));
 
@@ -366,8 +359,7 @@ class RagServiceImplTest {
     void testAsk_modelUnavailableKeepsUserQuestionAndReturnsExplicitError() {
         // 准备参数
         mockConversation(11L, List.of(2L));
-        when(docSearchService.search(7L, "问题", List.of(2L)))
-                .thenReturn(List.of(chunk(101L, 5L, "证据", 1, 0)));
+        mockSearch("问题", List.of(chunk(101L, 5L, "证据", 1, 0)));
         doThrow(new ServiceException(ErrorCodeConstants.RAG_MODEL_UNAVAILABLE)).when(generationPort).generate(any());
 
         // 调用并断言
@@ -378,6 +370,12 @@ class RagServiceImplTest {
         verify(conversationService).createMessage(eq(7L), message.capture());
         assertEquals("user", message.getValue().getType());
         assertEquals("问题", message.getValue().getContent().path("text").asText());
+    }
+
+    private void mockSearch(String query, List<DocChunkResult> chunks) {
+        var page = new com.df.knowledge.service.doc.DocSearchPage(); page.setList(chunks);
+        when(docSearchService.search(eq(7L), org.mockito.ArgumentMatchers.argThat(r -> r != null && query.equals(r.getQuery())))).thenReturn(page);
+        for (var chunk : chunks) org.mockito.Mockito.lenient().when(docSearchService.getPreview(7L, chunk.getChunkId())).thenReturn(chunk);
     }
 
     private void mockConversation(Long id, List<Long> scope) {

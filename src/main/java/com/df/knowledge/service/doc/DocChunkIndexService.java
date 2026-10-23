@@ -36,6 +36,19 @@ public interface DocChunkIndexService {
      * @param limit 最大结果数
      * @return 按相关性排序的分块编号
      */
+    /**
+     * 执行模糊或混合检索，两路均应用相同内容权限及文档状态过滤。
+     * @param query 查询文本
+     * @param vector 查询向量
+     * @param knowledgeBaseIds 授权范围
+     * @param docIds 当前可用且通过过滤的文档
+     * @param mode HYBRID 或 FUZZY
+     * @param limit 候选上限
+     * @return 实际命中及得分
+     */
+    List<DocIndexHit> search(String query, float[] vector, Collection<Long> knowledgeBaseIds,
+                             Collection<Long> docIds, String mode, int limit);
+
     List<Long> searchHybrid(String query, float[] vector, Collection<Long> knowledgeBaseIds,
                             Collection<Long> docIds, int limit);
 }

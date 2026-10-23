@@ -49,8 +49,19 @@ public class ConversationServiceImpl implements ConversationService {
         conversation.setUserId(userId);
         conversation.setTitle(reqVO.getTitle());
         conversation.setKnowledgeBaseIds(knowledgeBaseIds);
+        conversation.setState(new RetrievalState().setKnowledgeBaseIds(knowledgeBaseIds));
         conversationMapper.insert(conversation);
         return conversation.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateState(Long userId, Long id, RetrievalState state) {
+        var conversation = validateConversationOwner(userId, id);
+        // 状态记录用户选择，允许保留已失权的历史编号；真正读取内容时逐次求当前权限交集。
+        // 将失权选择改成空数组会把“无可见范围”错误扩大为“全部有权知识库”。
+        conversation.setState(state);
+        conversationMapper.updateById(conversation);
     }
 
     @Override
