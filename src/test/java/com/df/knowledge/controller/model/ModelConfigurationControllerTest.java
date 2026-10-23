@@ -38,6 +38,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class ModelConfigurationControllerTest {
     private static final String DATABASE = "df_p0_model_" + ProcessHandle.current().pid();
     private static final String DB_ROOT = "jdbc:mysql://localhost:3306/";
+    private static final String DB_USER = System.getenv().getOrDefault("P0_MYSQL_USER", "root");
+    private static final String DB_PASSWORD = System.getenv().getOrDefault("P0_MYSQL_PASSWORD", "root");
     @LocalServerPort int port;
     private final ObjectMapper json = new ObjectMapper();
     private HttpServer modelServer;
@@ -47,17 +49,17 @@ class ModelConfigurationControllerTest {
     private String userToken;
 
     @DynamicPropertySource static void database(DynamicPropertyRegistry registry) throws Exception {
-        try (Connection connection = DriverManager.getConnection(DB_ROOT, "root", "root")) {
+        try (Connection connection = DriverManager.getConnection(DB_ROOT, DB_USER, DB_PASSWORD)) {
             connection.createStatement().execute("CREATE DATABASE " + DATABASE);
         }
-        try (Connection connection = DriverManager.getConnection(DB_ROOT + DATABASE, "root", "root")) {
+        try (Connection connection = DriverManager.getConnection(DB_ROOT + DATABASE, DB_USER, DB_PASSWORD)) {
             ScriptUtils.executeSqlScript(connection, new FileSystemResource("sql/schema.sql"));
             connection.createStatement().execute("INSERT INTO system_role(id,name,code,sort,status,type) VALUES (1,'管理员','instance_admin',1,0,1)");
             connection.createStatement().execute("INSERT INTO system_user_role(user_id,role_id) VALUES (1,1)");
         }
         registry.add("spring.datasource.url", () -> DB_ROOT + DATABASE);
-        registry.add("spring.datasource.username", () -> "root");
-        registry.add("spring.datasource.password", () -> "root");
+        registry.add("spring.datasource.username", () -> DB_USER);
+        registry.add("spring.datasource.password", () -> DB_PASSWORD);
         registry.add("mybatis-plus.configuration.map-underscore-to-camel-case", () -> true);
     }
     @BeforeAll void start() throws Exception {
@@ -95,7 +97,7 @@ class ModelConfigurationControllerTest {
     @AfterAll void stop() throws Exception {
         if (modelServer != null) modelServer.stop(0);
         if (modelExecutor != null) modelExecutor.shutdownNow();
-        try (Connection connection = DriverManager.getConnection(DB_ROOT, "root", "root")) {
+        try (Connection connection = DriverManager.getConnection(DB_ROOT, DB_USER, DB_PASSWORD)) {
             connection.createStatement().execute("DROP DATABASE " + DATABASE);
         }
     }
@@ -222,7 +224,8 @@ class ModelConfigurationControllerTest {
         // 调用：启动独立的新应用实例读取同一个隔离数据库，不复用服务或缓存
         try (var restarted = new org.springframework.boot.builder.SpringApplicationBuilder(TestApplication.class).run(
                 "--server.port=0", "--server.servlet.context-path=", "--spring.profiles.active=test",
-                "--spring.datasource.url=" + DB_ROOT + DATABASE, "--spring.datasource.username=root", "--spring.datasource.password=root",
+                "--spring.datasource.url=" + DB_ROOT + DATABASE, "--spring.datasource.username=" + DB_USER,
+                "--spring.datasource.password=" + DB_PASSWORD,
                 "--knowledge.model.mock-enabled=true", "--knowledge.rag.base-url=http://127.0.0.1:1/v1",
                 "--knowledge.rag.api-key=legacy-key", "--knowledge.rag.model=legacy-model")) {
             port = Integer.parseInt(restarted.getEnvironment().getProperty("local.server.port"));

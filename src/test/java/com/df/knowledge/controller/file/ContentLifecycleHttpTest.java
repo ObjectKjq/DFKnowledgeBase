@@ -53,13 +53,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @EnabledIfSystemProperty(named = "p0.mysql.enabled", matches = "true")
 @SpringBootTest(classes = ContentLifecycleHttpTest.Application.class, properties = {
         "spring.datasource.url=jdbc:mysql://127.0.0.1:3306/df_knowledge_base_p0_19_test?allowPublicKeyRetrieval=true&useSSL=false",
-        "spring.datasource.username=root", "spring.datasource.password=root",
+        "spring.datasource.username=${P0_MYSQL_USER:root}", "spring.datasource.password=${P0_MYSQL_PASSWORD:root}",
         "spring.autoconfigure.exclude=org.springframework.boot.elasticsearch.autoconfigure.ElasticsearchClientAutoConfiguration,org.springframework.boot.data.elasticsearch.autoconfigure.DataElasticsearchAutoConfiguration"
 })
 class ContentLifecycleHttpTest {
     static {
         // 使用专用测试库，绝不清理部署者数据库。
-        try (var connection = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/?allowPublicKeyRetrieval=true&useSSL=false", "root", "root");
+        try (var connection = DriverManager.getConnection("jdbc:mysql://127.0.0.1:3306/?allowPublicKeyRetrieval=true&useSSL=false",
+                System.getenv().getOrDefault("P0_MYSQL_USER", "root"),
+                System.getenv().getOrDefault("P0_MYSQL_PASSWORD", "root"));
              var statement = connection.createStatement()) {
             statement.execute("CREATE DATABASE IF NOT EXISTS df_knowledge_base_p0_19_test CHARACTER SET utf8mb4");
             statement.execute("USE df_knowledge_base_p0_19_test");
