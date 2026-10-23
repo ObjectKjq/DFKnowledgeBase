@@ -1,13 +1,39 @@
-import { Fragment } from 'react'
+import { Fragment, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { search } from '@/api/docSearchController'
+import { useAuthStore } from '@/stores/auth'
 
 import { Icon } from '@/components/Icon'
 import { useLibraries } from '@/features/knowledge/useLibraries'
-import { libName } from '@/mock/logic'
+import { libName } from '@/lib/format'
 import { useChat } from '@/stores/chat'
 import { useKb } from '@/stores/knowledge'
 
 import { sendQuestion } from './chatActions'
 import { useConversation, type ChatMessage, type MessageContent } from './conversations'
+
+/** 高亮只解释后端 em 标记，其他内容始终作为文本渲染。 */
+function HitSnippet({ chunk }: { chunk: API.DocChunkRespVO }) {
+  if (!chunk.highlight) return <>{chunk.text}</>
+  const decode = (value: string) =>
+    value.replace(
+      /&(lt|gt|amp|quot|#39);/g,
+      (_, name: string) => ({ lt: '<', gt: '>', amp: '&', quot: '"', '#39': "'" })[name] ?? '',
+    )
+  return (
+    <>
+      {chunk.highlight
+        .split(/(<em>.*?<\/em>)/gs)
+        .map((part, i) =>
+          part.startsWith('<em>') ? (
+            <mark key={i}>{decode(part.slice(4, -5))}</mark>
+          ) : (
+            <Fragment key={i}>{decode(part)}</Fragment>
+          ),
+        )}
+    </>
+  )
+}
 
 function Citation({ citation }: { citation: API.RagCitationRespVO }) {
   const showPreview = useChat((s) => s.showPreview)
@@ -97,10 +123,48 @@ function Answer({
   )
 }
 
-function MessageView({ message }: { message: ChatMessage }) {
+function MessageView({
+  message,
+  activeGuide = false,
+}: {
+  message: ChatMessage
+  activeGuide?: boolean
+}) {
+  const busy = useChat((s) => s.busy)
+  const guideQuestion = useChat((s) => s.guideState.guideQuestion)
+  const token = useAuthStore((s) => s.token)
+  const original = message.content
+  const [pageNo, setPageNo] = useState(original.pageNo ?? 1)
+  const page = useQuery({
+    queryKey: [
+      'message-search-page',
+      token,
+      message.id,
+      original.question,
+      original.selection,
+      pageNo,
+    ],
+    queryFn: async () =>
+      (
+        await search({
+          query: original.question ?? '',
+          ...original.selection,
+          mode: original.mode === '模糊检索' ? 'FUZZY' : 'HYBRID',
+          pageNo,
+          pageSize: 20,
+        })
+      ).data,
+    enabled: !!token && message.type === 'results' && pageNo !== (original.pageNo ?? 1),
+    retry: false,
+  })
+  const selected = useChat((s) => s.selectedChunkIds)
+  const toggle = useChat((s) => s.toggleChunk)
   const { libs } = useLibraries()
   const showPreview = useChat((s) => s.showPreview)
-  const content = message.content
+  const content =
+    pageNo === (original.pageNo ?? 1)
+      ? original
+      : { ...original, results: page.data?.list ?? [], searchPage: page.data }
   if (message.type === 'user') {
     const scope =
       content.knowledgeBaseIds?.map((id) => libName(libs, String(id))).join('、') || '全部知识库'
@@ -118,33 +182,130 @@ function MessageView({ message }: { message: ChatMessage }) {
   }
   return (
     <div className="message">
-      {message.type === 'results' ? (
+      {message.type === 'guide' ? (
+        <div className="settings-card">
+          <p>引导澄清 · 第 {content.round ?? 1} / 2 轮</p>
+          <h3>{content.question}</h3>
+          <p>可选择推荐选项，或在输入框自由回答。</p>
+          <div className="form-actions">
+            {activeGuide &&
+              content.options?.map((option) => (
+                <button
+                  className="btn ghost"
+                  key={option}
+                  disabled={!activeGuide || busy}
+                  onClick={() => void sendQuestion(option)}
+                >
+                  {option}
+                </button>
+              ))}
+            {activeGuide && (
+              <button
+                className="btn"
+                disabled={!activeGuide || busy}
+                onClick={() => void sendQuestion(guideQuestion ?? '', { skipGuide: true })}
+              >
+                跳过引导，直接混合检索
+              </button>
+            )}
+          </div>
+        </div>
+      ) : message.type === 'results' ? (
         <>
-          <p className="result-summary">混合检索 · 找到 {content.results?.length ?? 0} 个分块</p>
+          <p className="result-summary">
+            {content.mode ?? '混合检索'} · 找到{' '}
+            {content.searchPage?.total ?? content.results?.length ?? 0} 个分块
+          </p>
+          {content.reason && <p role="status">{content.reason}</p>}
+          {!content.results?.length && !page.isFetching && !page.isError && (
+            <p className="empty-result">
+              当前范围内没有匹配结果，请调整范围、文档格式或上传时间，也可补充文档后重试。
+            </p>
+          )}
+          {!!content.searchPage?.indexingCount && (
+            <p role="status">{content.searchPage.indexingCount} 份文档正在入库，完成后可检索。</p>
+          )}
+          {content.searchPage?.candidateLimitReached && (
+            <p className="table-note">结果已达到候选范围上限，可缩小知识库或过滤条件继续检索。</p>
+          )}
+          {page.isFetching && <p role="status">正在加载第 {pageNo} 页…</p>}
+          {page.isError && <button onClick={() => void page.refetch()}>分页加载失败，重试</button>}
           {content.results?.map((chunk) => (
-            <button
-              className="result-card"
-              key={chunk.chunkId}
-              disabled={chunk.chunkId === undefined}
-              onClick={() => showPreview(chunk.chunkId!)}
-            >
-              <span className="result-top">
-                <h3>
-                  <Icon name="file" />
-                  {chunk.docTitle}
-                </h3>
-                <span className="tag">混合检索</span>
-              </span>
-              <span className="result-snippet chat-plain-text">{chunk.text}</span>
-              <span className="result-path">
-                {chunk.knowledgeBaseName} › {chunk.pageNumber ? `第 ${chunk.pageNumber} 页 › ` : ''}
-                分块 {(chunk.chunkIndex ?? 0) + 1}
-              </span>
-            </button>
+            <div key={chunk.chunkId}>
+              <label className="menu-option">
+                <input
+                  type="checkbox"
+                  aria-label={`选择${chunk.docTitle}分块${(chunk.chunkIndex ?? 0) + 1}`}
+                  checked={chunk.chunkId !== undefined && selected.includes(chunk.chunkId)}
+                  disabled={chunk.chunkId === undefined}
+                  onChange={() => toggle(chunk.chunkId!)}
+                />
+                用于所选上下文
+              </label>
+              <button
+                className="result-card"
+                disabled={chunk.chunkId === undefined}
+                onClick={() => showPreview(chunk.chunkId!)}
+              >
+                <span className="result-top">
+                  <h3>
+                    <Icon name="file" />
+                    {chunk.docTitle}
+                  </h3>
+                  <span className="tag">
+                    {(
+                      { KEYWORD: '关键词命中', SEMANTIC: '语义命中', HYBRID: '混合命中' } as Record<
+                        string,
+                        string
+                      >
+                    )[chunk.matchType ?? ''] ??
+                      content.mode ??
+                      '混合检索'}
+                  </span>
+                </span>
+                <span className="result-snippet chat-plain-text">
+                  <HitSnippet chunk={chunk} />
+                </span>
+                {chunk.ocr && <span className="tag">OCR 文本</span>}
+                {typeof chunk.score === 'number' && (
+                  <span className="table-note">相关性 {chunk.score.toFixed(4)}</span>
+                )}
+                <span className="result-path">
+                  {chunk.knowledgeBaseName} ›{' '}
+                  {chunk.pageNumber ? `第 ${chunk.pageNumber} 页 › ` : ''}
+                  {chunk.sheetName && `工作表 ${chunk.sheetName} › `}
+                  分块 {(chunk.chunkIndex ?? 0) + 1}
+                </span>
+              </button>
+            </div>
           ))}
+          {!!original.searchPage?.total && (
+            <div className="pager">
+              <button
+                disabled={pageNo <= 1 || page.isFetching}
+                onClick={() => setPageNo(pageNo - 1)}
+              >
+                上一页
+              </button>
+              <span>
+                {pageNo} / {Math.ceil(original.searchPage.total / 20)}
+              </span>
+              <button
+                disabled={pageNo * 20 >= original.searchPage.total || page.isFetching}
+                onClick={() => setPageNo(pageNo + 1)}
+              >
+                下一页
+              </button>
+            </div>
+          )}
         </>
       ) : message.type === 'answer' || message.type === 'empty' ? (
-        <Answer content={content} />
+        <>
+          {!!content.searchPage?.indexingCount && (
+            <p role="status">{content.searchPage.indexingCount} 份文档正在入库，完成后可检索。</p>
+          )}
+          <Answer content={content} />
+        </>
       ) : (
         <p className="chat-plain-text">
           {content.text || content.answer || '该消息暂无可展示内容'}
@@ -176,8 +337,12 @@ export function MessageList() {
           </button>
         </div>
       )}
-      {visible.map((message) => (
-        <MessageView key={message.id} message={message} />
+      {visible.map((message, index) => (
+        <MessageView
+          key={message.id}
+          message={message}
+          activeGuide={!currentPending && index === visible.length - 1}
+        />
       ))}
       {currentPending && (
         <>
@@ -199,7 +364,9 @@ export function MessageList() {
                 <button
                   className="btn ghost"
                   disabled={busy}
-                  onClick={() => void sendQuestion(currentPending.question)}
+                  onClick={() =>
+                    void sendQuestion(currentPending.question, { retry: currentPending })
+                  }
                 >
                   重新提问
                 </button>

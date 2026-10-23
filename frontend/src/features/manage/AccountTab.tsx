@@ -11,7 +11,6 @@ import { useKb } from '@/stores/knowledge'
 export function AccountTab() {
   const navigate = useNavigate()
   const clearSession = useAuthStore((s) => s.clearSession)
-  const resetDemo = useKb((s) => s.resetDemo)
 
   const profile = useQuery({
     queryKey: ['manage-profile'],
@@ -39,16 +38,7 @@ export function AccountTab() {
 
       <div className="settings-card">
         <h3>关于本应用</h3>
-        <p>文档上传、检索、会话和 RAG 问答由服务器处理。MCP 接入与模型管理页仍保留演示配置。</p>
-        <div className="settings-pair">
-          <span>
-            交互数据
-            <small>仅重置 MCP 与模型管理的本地演示配置，不影响服务器文档和会话。</small>
-          </span>
-          <button className="btn danger small" onClick={resetDemo}>
-            重置演示
-          </button>
-        </div>
+        <p>文档入库、检索、会话、模型管理与 MCP 接入均使用本实例服务。</p>
         <div className="settings-pair">
           <span>
             登录会话

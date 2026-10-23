@@ -1,5 +1,5 @@
-import { createConversation, createMessage } from '@/api/conversationController'
-import { search } from '@/api/docSearchController'
+import { createConversation } from '@/api/conversationController'
+import { guide, search } from '@/api/docSearchController'
 import { queryClient } from '@/lib/queryClient'
 import { useAuthStore } from '@/stores/auth'
 import { useChat, type PendingTurn } from '@/stores/chat'
@@ -9,9 +9,9 @@ import {
   conversationsKey,
   fetchConversation,
   type Conversation,
-  type MessageContent,
 } from './conversations'
 import { streamRag } from './ragStream'
+import { currentSelection, saveSelection } from './selection'
 
 let controller: AbortController | null = null
 
@@ -31,13 +31,22 @@ useAuthStore.subscribe((state, previous) => {
     busy: false,
     pending: null,
     previewChunkId: null,
+    mode: '混合检索',
+    modelId: undefined,
+    filters: { formats: [] },
+    selectedChunkIds: [],
+    guideState: {},
+    guidePrompt: undefined,
   })
 })
 
 /** 发送一个真实提问；范围和模式在点击发送时固定，不影响随后编辑的选择。 */
-export async function sendQuestion(override?: string) {
+export async function sendQuestion(
+  override?: string,
+  options?: { skipGuide?: boolean; retry?: PendingTurn },
+) {
   const state = useChat.getState()
-  const question = (override ?? state.draft).trim()
+  const question = (options?.retry?.question ?? override ?? state.draft).trim()
   const token = useAuthStore.getState().token
   if (!question || state.busy || !token || question.length > 2000 || state.restoreScope) return
   const request = new AbortController()
@@ -48,10 +57,18 @@ export async function sendQuestion(override?: string) {
     conversationId: id,
     previousMessageId: Math.max(0, ...(previous?.messages ?? []).map((message) => message.id ?? 0)),
     question,
-    knowledgeBaseIds: state.scope.map(Number),
-    mode: state.mode,
+    knowledgeBaseIds: options?.retry?.knowledgeBaseIds ?? state.scope.map(Number),
+    mode: options?.retry?.mode ?? state.mode,
     text: '',
     citations: [],
+    selection: options?.retry?.selection ?? currentSelection(),
+    guideOriginalQuestion:
+      options?.retry?.guideOriginalQuestion ??
+      (state.guidePrompt?.stage === 'CLARIFY' ? state.guideState.guideQuestion : question),
+    guideAnswer:
+      options?.retry?.guideAnswer ??
+      (state.guidePrompt?.stage === 'CLARIFY' && !options?.skipGuide ? question : undefined),
+    skipGuide: options?.retry?.skipGuide ?? options?.skipGuide,
   }
   useChat.setState({ busy: true, draft: '', pending })
   const active = () => controller === request && token === useAuthStore.getState().token
@@ -81,9 +98,33 @@ export async function sendQuestion(override?: string) {
       })
       void queryClient.invalidateQueries({ queryKey: conversationsKey(token) })
     }
-    if (pending.mode === 'RAG 检索') {
+    await saveSelection(id, pending.selection!)
+    if (pending.mode === '引导检索') {
+      const { data } = await guide(
+        {
+          ...pending.selection,
+          mode: 'HYBRID',
+          conversationId: id,
+          query: pending.guideOriginalQuestion ?? question,
+          answer: pending.guideAnswer,
+          skip: pending.skipGuide,
+          pageNo: 1,
+          pageSize: 20,
+        },
+        { signal: request.signal, silent: true },
+      )
+      if (!data) throw new Error('引导响应不可用，请重试')
+      if (active())
+        useChat.setState({
+          guidePrompt: data.stage === 'CLARIFY' ? data : undefined,
+          ...(data.stage !== 'CLARIFY' && useChat.getState().mode === pending.mode
+            ? { mode: '混合检索' }
+            : {}),
+        })
+      if (data.search) update({ results: data.search.list ?? [], searchPage: data.search })
+    } else if (pending.mode === 'RAG 检索') {
       // 对本次提问附加范围；后端未传该字段的旧调用仍使用会话初始范围。
-      const body = { conversationId: id, question, knowledgeBaseIds: pending.knowledgeBaseIds }
+      const body = { conversationId: id, question, ...pending.selection }
       await streamRag(body, request.signal, ({ event, data }) => {
         if (!active()) return
         if (event === 'delta') {
@@ -105,28 +146,19 @@ export async function sendQuestion(override?: string) {
         }
       })
     } else {
-      const save = (type: API.MessageCreateReqVO['type'], content: MessageContent) =>
-        createMessage(
-          { conversationId: id!, type, content: content as unknown as API.JsonNode },
-          { signal: request.signal, silent: true },
-        )
-      await save('user', {
-        text: question,
-        mode: '混合检索',
-        knowledgeBaseIds: pending.knowledgeBaseIds,
-      })
       const { data } = await search(
-        { query: question, knowledgeBaseIds: pending.knowledgeBaseIds },
+        {
+          conversationId: id,
+          query: question,
+          ...pending.selection,
+          mode: pending.mode === '模糊检索' ? 'FUZZY' : 'HYBRID',
+          pageNo: 1,
+          pageSize: 20,
+        },
         { signal: request.signal, silent: true },
       )
-      await save(data?.length ? 'results' : 'empty', {
-        question,
-        results: data ?? [],
-        answer: data?.length
-          ? undefined
-          : '当前范围内未找到相关资料，请调整范围、换一种问法或补充文档。',
-      })
-      update({ results: data ?? [] })
+      const results = data?.list ?? []
+      update({ results, searchPage: data })
     }
     succeeded = true
     update({ completed: true })
@@ -153,6 +185,14 @@ export async function sendQuestion(override?: string) {
         })
         if (active()) {
           queryClient.setQueryData(conversationKey(token, id), conversation)
+          if (conversation.state)
+            useChat.setState({
+              guideState: {
+                guideQuestion: conversation.state.guideQuestion,
+                guideRound: conversation.state.guideRound,
+                guideAnswers: conversation.state.guideAnswers,
+              },
+            })
           if (succeeded) useChat.setState({ pending: null })
         }
       } catch (error) {

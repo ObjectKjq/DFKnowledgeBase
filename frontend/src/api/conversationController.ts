@@ -84,3 +84,18 @@ export async function getMessageList(
     ...(options || {}),
   })
 }
+
+/** 修改会话当前选择 保存范围、过滤、模式、模型和所选上下文；只影响后续消息 PUT /knowledge/conversation/state/update */
+export async function updateState(
+  body: API.ConversationStateReqVO,
+  options?: { [key: string]: any },
+) {
+  return request<API.CommonResultBoolean>('/knowledge/conversation/state/update', {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    data: body,
+    ...(options || {}),
+  })
+}

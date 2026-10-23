@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { getDocPage } from '@/api/docController'
 import { Icon } from '@/components/Icon'
 import { useLibraries } from '@/features/knowledge/useLibraries'
-import { libName } from '@/mock/logic'
+import { libName } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth'
 import { useChat } from '@/stores/chat'
 import { useKb } from '@/stores/knowledge'
@@ -70,16 +70,16 @@ export function Home() {
             生成可核对引用的答案。
           </p>
         </button>
-        <button className="quick-card" onClick={() => navigate('/settings/libraries')}>
+        <button className="quick-card" onClick={() => navigate('/settings/mcp')}>
           <span className="quick-icon">
             <Icon name="book" />
           </span>
           <Icon name="arrow" className="arrow" />
-          <h2>管理知识库</h2>
+          <h2>连接 AI 智能体</h2>
           <p>
-            整理文档和成员，
+            通过只读 MCP 工具，
             <br />
-            维护自己的知识积累。
+            连接你有权访问的知识。
           </p>
         </button>
       </div>

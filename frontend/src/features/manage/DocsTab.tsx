@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
 
-import { deleteDoc, getDocPage, restoreDoc, retryDoc } from '@/api/docController'
+import { deleteDoc, getDocPage, purgeDoc, restoreDoc, retryDoc } from '@/api/docController'
 import { Icon } from '@/components/Icon'
-import { DOCUMENT_STATUSES } from '@/features/documents/documents'
+import { DOCUMENT_FORMATS, DOCUMENT_STATUSES } from '@/features/documents/documents'
 import { useLibraries } from '@/features/knowledge/useLibraries'
-import { formatSize } from '@/mock/logic'
+import { formatSize } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth'
 import { useKb } from '@/stores/knowledge'
 
@@ -54,7 +54,14 @@ export function DocsTab() {
       void refresh()
     },
   })
-  const pending = deletion.isPending || restoration.isPending || retry.isPending
+  const purge = useMutation({
+    mutationFn: (id: number) => purgeDoc({ id, confirmed: true }),
+    onSuccess: () => {
+      toastMsg('文档已彻底删除')
+      void refresh()
+    },
+  })
+  const pending = deletion.isPending || restoration.isPending || retry.isPending || purge.isPending
   const rows = query.isError ? [] : (query.data?.list ?? [])
   const total = query.data?.total ?? 0
   const page = filters.pageNum ?? 1
@@ -132,6 +139,7 @@ export function DocsTab() {
           <thead>
             <tr>
               <th>文档名称</th>
+              <th>格式</th>
               <th>所属知识库</th>
               <th>状态</th>
               <th>上传时间</th>
@@ -165,6 +173,7 @@ export function DocsTab() {
                       </div>
                     )}
                   </td>
+                  <td>{DOCUMENT_FORMATS[doc.format ?? 0] ?? '—'}</td>
                   <td>{library?.name ?? '—'}</td>
                   <td>
                     <span
@@ -179,13 +188,28 @@ export function DocsTab() {
                     <span className="table-actions">
                       {canWrite ? (
                         doc.status === 6 ? (
-                          <button
-                            disabled={pending || !canRestore}
-                            title="删除后仅 30 天内可恢复"
-                            onClick={() => restoration.mutate(doc.id!)}
-                          >
-                            恢复
-                          </button>
+                          <>
+                            <button
+                              disabled={pending || !canRestore}
+                              title="删除后仅 30 天内可恢复"
+                              onClick={() => restoration.mutate(doc.id!)}
+                            >
+                              恢复
+                            </button>
+                            <button
+                              disabled={pending}
+                              onClick={() =>
+                                confirmThen(
+                                  '彻底删除文档',
+                                  '文档将被永久删除，此操作不可恢复。',
+                                  '确认彻底删除',
+                                  () => purge.mutate(doc.id!),
+                                )
+                              }
+                            >
+                              彻底删除
+                            </button>
+                          </>
                         ) : (
                           <>
                             {doc.status === 5 && (
@@ -208,7 +232,7 @@ export function DocsTab() {
             })}
             {!rows.length && (
               <tr>
-                <td colSpan={6} className="empty-cell">
+                <td colSpan={7} className="empty-cell">
                   {query.isPending
                     ? '正在加载文档…'
                     : query.isError
