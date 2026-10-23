@@ -83,4 +83,7 @@ public interface ErrorCodeConstants {
     ErrorCode MODEL_RESPONSE_INVALID = new ErrorCodeImpl(1_001_010_007, "模型响应无效，请联系管理员");
     ErrorCode MODEL_ADDRESS_INVALID = new ErrorCodeImpl(1_001_010_008, "模型地址必须是无凭据及查询参数的 HTTP 或 HTTPS 地址");
     ErrorCode MODEL_RERANK_DUPLICATE = new ErrorCodeImpl(1_001_010_009, "仅允许配置一个重排模型");
+    // ========== MCP 接入模块 1-001-011-0xx ==========
+    ErrorCode MCP_CREDENTIAL_NOT_FOUND = new ErrorCodeImpl(1_001_011_001, "MCP 凭证不存在");
+    ErrorCode MCP_CREDENTIAL_INVALID = new ErrorCodeImpl(1_001_011_002, "MCP 凭证配置无效");
 }

@@ -35,8 +35,11 @@ export function ManagementPage() {
   const closePreview = useChat((s) => s.closePreview)
   const closePopover = useKb((s) => s.closePopover)
   const menus = useAuthStore((s) => s.menus)
+  const admin = useAuthStore((s) => s.roles.includes('instance_admin'))
 
-  const tabs = TAB_CONFIGS.filter((t) => hasMenuPath(menus, t.menuPath))
+  const tabs = TAB_CONFIGS.filter(
+    (t) => (t.key !== 'models' || admin) && hasMenuPath(menus, t.menuPath),
+  )
   const active = tab && tabs.some((t) => t.key === tab) ? tab : (tabs[0]?.key ?? 'docs')
 
   // 原型 showManage：进入管理页时关闭预览抽屉与输入选项弹层。

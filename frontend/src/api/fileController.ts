@@ -2,7 +2,7 @@
 /* eslint-disable */
 import request from '@/lib/http'
 
-/** 删除文件 逻辑删除且不做引用/归属校验，删除后立即不可下载（ADR-0009） DELETE /system/file/delete */
+/** 删除文件 仅上传者可删除未关联文件；业务引用须从文档回收站彻底删除 DELETE /system/file/delete */
 export async function deleteFile(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.deleteFileParams,
@@ -17,7 +17,7 @@ export async function deleteFile(
   })
 }
 
-/** 下载文件 返回文件字节流：图片与 PDF 内联预览，其余附件下载；文件不存在返回 404 GET /system/file/download */
+/** 下载文件 按业务内容权限返回文件字节流：图片与 PDF 内联预览，其余附件下载；无权与不存在统一返回文件不存在 GET /system/file/download */
 export async function downloadFile(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.downloadFileParams,

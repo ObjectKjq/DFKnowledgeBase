@@ -178,3 +178,13 @@
   flex: 1;
   min-width: 0;
 }
+
+/* 原始 PDF 随抽屉自适应，保留浏览器分页与缩放控件。 */
+.pdf-preview {
+  width: 100%;
+  min-height: 65vh;
+  border: 0;
+}
+.preview-hit {
+  outline: 2px solid var(--sage);
+}

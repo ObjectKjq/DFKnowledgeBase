@@ -4,13 +4,25 @@ import { useEffect } from 'react'
 import { getConversation, getConversationList } from '@/api/conversationController'
 import { useAuthStore } from '@/stores/auth'
 import { useChat } from '@/stores/chat'
+import { modeLabel } from './selection'
 
 export interface MessageContent extends API.RagAnswerRespVO {
   text?: string
   question?: string
+  query?: string
+  originalQuestion?: string
   mode?: string
   knowledgeBaseIds?: number[]
   results?: API.DocChunkRespVO[]
+  selection?: API.RetrievalState
+  searchPage?: API.DocSearchPageRespVO
+  pageNo?: number
+  state?: API.RetrievalState
+  search?: API.DocSearchPageRespVO
+  options?: string[]
+  round?: number
+  reason?: string
+  stage?: string
 }
 export type ChatMessage = Omit<API.MessageRespVO, 'content'> & { content: MessageContent }
 export type Conversation = Omit<API.ConversationDetailRespVO, 'messages'> & {
@@ -34,12 +46,25 @@ export async function fetchConversation(id: number, signal?: AbortSignal): Promi
     messages: messages
       .map((message) => ({
         ...message,
-        content: message.content && typeof message.content === 'object' ? message.content : {},
+        content: normalizeContent(message.content),
       }))
       .sort(
         (a, b) =>
           (a.createTime ?? '').localeCompare(b.createTime ?? '') || (a.id ?? 0) - (b.id ?? 0),
       ),
+  }
+}
+
+function normalizeContent(content: MessageContent): MessageContent {
+  if (!content || typeof content !== 'object') return {}
+  const selection = content.selection ?? content.state
+  return {
+    ...content,
+    question: content.query ?? content.question,
+    selection,
+    mode: content.mode ?? (selection ? modeLabel(selection.mode) : undefined),
+    results: content.results ?? content.search?.list,
+    searchPage: content.searchPage ?? content.search,
   }
 }
 
@@ -66,9 +91,35 @@ export function useConversation() {
   useEffect(() => {
     if (!restoreScope || !query.data || query.isFetching || query.isError) return
     const lastUser = [...query.data.messages].reverse().find((message) => message.type === 'user')
+    const saved = query.data.state ?? lastUser?.content.selection
     useChat.setState({
-      scope: (lastUser?.content.knowledgeBaseIds ?? query.data.knowledgeBaseIds ?? []).map(String),
-      mode: lastUser?.content.mode === 'RAG 检索' ? 'RAG 检索' : '混合检索',
+      scope: (
+        saved?.knowledgeBaseIds ??
+        lastUser?.content.knowledgeBaseIds ??
+        query.data.knowledgeBaseIds ??
+        []
+      ).map(String),
+      mode: saved
+        ? modeLabel(saved.mode)
+        : lastUser?.content.mode === 'RAG 检索'
+          ? 'RAG 检索'
+          : '混合检索',
+      modelId: saved?.modelId,
+      filters: {
+        formats: saved?.formats ?? [],
+        uploadedFrom: saved?.uploadedFrom,
+        uploadedTo: saved?.uploadedTo,
+      },
+      selectedChunkIds: saved?.selectedChunkIds ?? [],
+      guideState: {
+        guideQuestion: saved?.guideQuestion,
+        guideRound: saved?.guideRound,
+        guideAnswers: saved?.guideAnswers,
+      },
+      guidePrompt:
+        query.data.messages.at(-1)?.type === 'guide'
+          ? (query.data.messages.at(-1)?.content as API.DocGuideRespVO)
+          : undefined,
       restoreScope: false,
     })
   }, [query.data, query.isFetching, query.isError, restoreScope])

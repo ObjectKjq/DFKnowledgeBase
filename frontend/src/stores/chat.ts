@@ -1,6 +1,12 @@
 import { create } from 'zustand'
 
-export type ChatMode = '混合检索' | 'RAG 检索'
+export type ChatMode = '混合检索' | '模糊检索' | '引导检索' | 'RAG 检索'
+
+export interface ChatFilters {
+  formats: number[]
+  uploadedFrom?: string
+  uploadedTo?: string
+}
 
 export interface PendingTurn {
   conversationId: number | null
@@ -8,12 +14,18 @@ export interface PendingTurn {
   question: string
   knowledgeBaseIds: number[]
   mode: ChatMode
+  modelId?: number
   text: string
   citations: API.RagCitationRespVO[]
   result?: API.RagAnswerRespVO
   results?: API.DocChunkRespVO[]
+  searchPage?: API.DocSearchPageRespVO
+  selection?: API.RetrievalState
   completed?: boolean
   error?: string
+  guideOriginalQuestion?: string
+  guideAnswer?: string
+  skipGuide?: boolean
 }
 
 interface ChatState {
@@ -21,6 +33,11 @@ interface ChatState {
   scope: string[]
   restoreScope: boolean
   mode: ChatMode
+  modelId?: number
+  filters: ChatFilters
+  selectedChunkIds: number[]
+  guideState: Pick<API.RetrievalState, 'guideQuestion' | 'guideRound' | 'guideAnswers'>
+  guidePrompt?: API.DocGuideRespVO
   draft: string
   busy: boolean
   pending: PendingTurn | null
@@ -30,6 +47,10 @@ interface ChatState {
   setScope: (scope: string[]) => void
   setDraft: (draft: string) => void
   setMode: (mode: ChatMode) => void
+  setModelId: (modelId?: number) => void
+  setFilters: (filters: ChatFilters) => void
+  toggleChunk: (id: number) => void
+  clearChunks: () => void
   showPreview: (chunkId: number) => void
   closePreview: () => void
 }
@@ -40,6 +61,9 @@ export const useChat = create<ChatState>()((set, get) => ({
   scope: [],
   restoreScope: false,
   mode: '混合检索',
+  filters: { formats: [] },
+  selectedChunkIds: [],
+  guideState: {},
   draft: '',
   busy: false,
   pending: null,
@@ -48,6 +72,13 @@ export const useChat = create<ChatState>()((set, get) => ({
     if (get().busy) return
     set({
       conversationId: null,
+      scope: [],
+      mode: '混合检索',
+      modelId: undefined,
+      filters: { formats: [] },
+      selectedChunkIds: [],
+      guideState: {},
+      guidePrompt: undefined,
       draft: '',
       pending: null,
       previewChunkId: null,
@@ -61,6 +92,15 @@ export const useChat = create<ChatState>()((set, get) => ({
   setScope: (scope) => set({ scope, restoreScope: false }),
   setDraft: (draft) => set({ draft }),
   setMode: (mode) => set({ mode }),
+  setModelId: (modelId) => set({ modelId }),
+  setFilters: (filters) => set({ filters }),
+  toggleChunk: (id) =>
+    set((state) => ({
+      selectedChunkIds: state.selectedChunkIds.includes(id)
+        ? state.selectedChunkIds.filter((value) => value !== id)
+        : [...state.selectedChunkIds, id],
+    })),
+  clearChunks: () => set({ selectedChunkIds: [] }),
   showPreview: (chunkId) => set({ previewChunkId: chunkId }),
   closePreview: () => set({ previewChunkId: null }),
 }))

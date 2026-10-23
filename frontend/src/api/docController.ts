@@ -61,7 +61,22 @@ export async function getDocPage(
   })
 }
 
-/** 恢复文档 恢复到删除前状态，仅 30 天保留期内可恢复 POST /knowledge/doc/restore */
+/** 彻底删除回收站文档 需要再次确认，无其他业务引用时回收文件字节 DELETE /knowledge/doc/purge */
+export async function purgeDoc(
+  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
+  params: API.purgeDocParams,
+  options?: { [key: string]: any },
+) {
+  return request<API.CommonResultBoolean>('/knowledge/doc/purge', {
+    method: 'DELETE',
+    params: {
+      ...params,
+    },
+    ...(options || {}),
+  })
+}
+
+/** 恢复文档 仅 30 天保留期内可恢复；原可用文档须重建索引后才可用，原处理中重新排队，原失败保留失败原因 POST /knowledge/doc/restore */
 export async function restoreDoc(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.restoreDocParams,
