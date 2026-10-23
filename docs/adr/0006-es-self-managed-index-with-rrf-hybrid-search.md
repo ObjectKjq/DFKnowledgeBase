@@ -1,11 +1,16 @@
-# ES 索引自管，混合检索用 ES 原生 RRF
+# ES 索引自管，混合检索用 Java 端 RRF
 
-检索要求「混合检索」（关键字 + 语义融合排序）与 kb_id/doc_id 级的内容权限过滤，且分块以 MySQL 为权威副本、ES 索引须可重建。我们不用 langchain4j 的 `ElasticsearchEmbeddingStore`（固定 vector/text/metadata 三字段、无自定义 mapping 钩子、RRF 混合配置带许可限制），改为自管 ES 索引：mapping 由本工程维护（`vector` 512 维 dense_vector（hnsw/cosine）、`text` ik 分词、`kb_id`/`doc_id`/`chunk_id` keyword），检索一次 ES 请求走原生 RRF retriever（knn + bm25 融合），langchain4j 只承担文档解析/切分/向量化/AiServices/引用编排，检索侧以自定义 `ContentRetriever` 桥接 ES。ES 侧建索引等变更以 DSL 脚本（`es/` 目录）交付，由部署者执行。
+检索要求「混合检索」（关键词 + 语义融合排序）与 kb_id/doc_id 级的内容权限过滤，且分块以 MySQL 为权威副本、ES 索引须可重建。继续自管 ES 索引：mapping 由本工程维护（`vector` 512 维 dense_vector（hnsw/cosine）、`text` ik 分词、`kb_id`/`doc_id`/`chunk_id` keyword），由 ES 分别执行 BM25 与 kNN，再在 Java 端按 RRF 公式融合；模糊检索仅使用 kNN。两路查询均须过滤有权且选中的知识库和当前可用文档，返回前再次检查当前权限和状态。
 
-**Considered Options**：
+2026-10-23，实施 #18 时实际探测本机 ES Basic 许可，原生 RRF 返回 `403 current license is non-compliant for [Reciprocal Rank Fusion (RRF)]`。此前关于直接使用原生 RRF 可避免费用的判断不成立；用户据此明确确认改为 Java 端融合，不引入付费许可依赖。[Elastic 订阅说明](https://www.elastic.co/subscriptions)列出许可边界，[官方 RRF 文档](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/reciprocal-rank-fusion)给出融合公式。
 
-- `ElasticsearchEmbeddingStore` + langchain4j `ReciprocalRankFuser` 双路融合：mapping 不可控、需两条查询自行融合、metadata 过滤黑盒；被否决。
+langchain4j 继续承担解析、切分、向量化及生成编排；检索侧以自定义 `ContentRetriever` 桥接业务检索。ES 建索引等变更仍以 `es/` 中的 DSL 脚本交付，由部署者执行。
+
+**考虑过的方案**：
+
+- `ElasticsearchEmbeddingStore` + langchain4j `ReciprocalRankFuser`：mapping 不可控、metadata 过滤黑盒；不采用该存储封装。
 - langchain4j `ElasticsearchConfigurationHybrid`（RRF）：依赖企业许可；被否决。
-- 自管索引 + ES 原生 RRF retriever：融合在 ES 侧一次完成，mapping/分词/元数据字段完全可控；被采纳。
+- 自管索引 + ES 原生 RRF retriever：原方案，融合在 ES 侧一次完成；本机 Basic 许可不能执行，已被替代。
+- 自管索引 + Java 端 RRF：保留透明的权限过滤、mapping 与分词，不要求付费许可；用户确认采用。
 
-**Consequences**：ES 索引可从 MySQL 分块表全量重建（FR-11 重建索引、FR-10 换模型重建的前提）；检索 DSL 由本工程维护；ik 分词器成为 ES 侧前置依赖（ES 9.4.8，elasticsearch-java 9.x）；langchain4j 不再依赖 `langchain4j-elasticsearch`。
+**影响**：Java 端负责合并候选、计算融合得分和保留实际命中类型，分页与可选重排须基于融合后的候选；两路 ES 查询增加调用成本，任一路失败必须明确报错，不返回伪装完整的结果。ES 索引仍可从 MySQL 分块表重建，检索 DSL 由本工程维护；ik 分词器是 ES 侧前置依赖（ES 9.4.8，elasticsearch-java 9.x），不引入 `langchain4j-elasticsearch`。
