@@ -22,6 +22,19 @@ import java.util.List;
 @Mapper
 public interface DocMapper extends BaseMapper<DocDO> {
 
+    /**
+     * 恢复文档状态并显式清空回收站字段
+     *
+     * @param id 文档编号
+     * @param status 恢复后的状态
+     * @return 更新条数
+     */
+    default int restoreDeletedDoc(Long id, Integer status) {
+        return update(null, new LambdaUpdateWrapper<DocDO>()
+                .eq(DocDO::getId, id).set(DocDO::getStatus, status)
+                .set(DocDO::getPrevStatus, null).set(DocDO::getDeleteTime, null));
+    }
+
     /** 查询全部仍保留的业务引用，包括可恢复的文档。
      * @param fileId 文件编号
      * @return 文档列表

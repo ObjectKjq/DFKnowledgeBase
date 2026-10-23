@@ -4,7 +4,6 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.df.knowledge.common.PageResult;
 import com.df.knowledge.common.exception.ServiceException;
@@ -191,9 +190,7 @@ public class DocServiceImpl implements DocService {
                 : DocStatusEnum.isInFlight(doc.getPrevStatus()) ? DocStatusEnum.QUEUED.getCode() : doc.getPrevStatus());
         doc.setPrevStatus(null);
         doc.setDeleteTime(null);
-        docMapper.update(null, new LambdaUpdateWrapper<DocDO>()
-                .eq(DocDO::getId, id).set(DocDO::getStatus, doc.getStatus())
-                .set(DocDO::getPrevStatus, null).set(DocDO::getDeleteTime, null));
+        docMapper.restoreDeletedDoc(id, doc.getStatus());
         // 5. 删除前仍在入库流程中的文档，恢复后重新入队继续处理
         if (DocStatusEnum.isInFlight(doc.getStatus())) {
             submitAfterCommit(id);
