@@ -11,6 +11,7 @@ export function useLibraries() {
   const userId = useAuthStore((s) => s.user?.id)
   const token = useAuthStore((s) => s.token)
   const scope = useChat((s) => s.scope)
+  const restoring = useChat((s) => s.restoreScope)
   const query = useQuery({
     queryKey: librariesKey(userId, token),
     queryFn: () => fetchLibraries(userId!),
@@ -19,9 +20,9 @@ export function useLibraries() {
     enabled: userId !== undefined && !!token,
   })
   useEffect(() => {
-    if (!query.data) return
+    if (!query.data || restoring) return
     const next = scope.filter((id) => query.data.some((library) => library.id === id))
     if (next.length !== scope.length) useChat.getState().setScope(next)
-  }, [query.data, scope])
+  }, [query.data, scope, restoring])
   return { ...query, libs: query.isError ? [] : (query.data ?? []) }
 }

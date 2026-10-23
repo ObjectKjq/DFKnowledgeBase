@@ -71,6 +71,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
         disabled={busy}
         onClick={() => {
           newChat()
+          useKb.getState().closePopover()
           navigate('/')
           onClose()
         }}

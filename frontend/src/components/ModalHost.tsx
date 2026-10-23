@@ -1,6 +1,6 @@
 import { UploadModal } from '@/features/documents/UploadModal'
 import { CreateLibraryModal } from '@/features/knowledge/CreateLibraryModal'
-import { useState, type FormEvent, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 import { useKb } from '@/stores/knowledge'
 
@@ -40,122 +40,6 @@ export function ModalShell({
         {children}
       </section>
     </div>
-  )
-}
-
-/** 新建凭证弹窗。 */
-function CredentialModal() {
-  const [name, setName] = useState('')
-  const [days, setDays] = useState('90')
-  const createCredential = useKb((s) => s.createCredential)
-  const closeModal = useKb((s) => s.closeModal)
-  const toastMsg = useKb((s) => s.toastMsg)
-
-  const submit = (e: FormEvent) => {
-    e.preventDefault()
-    const value = name.trim()
-    if (!value) {
-      toastMsg('请填写凭证名称', true)
-      return
-    }
-    createCredential(value, Number(days))
-  }
-
-  return (
-    <ModalShell
-      title="为工具打开一扇门"
-      description="新凭证默认只读。访问范围始终跟随你当前有权访问的知识库。"
-    >
-      <form onSubmit={submit}>
-        <label className="field">
-          凭证名称
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            maxLength={50}
-            placeholder="例如：我的 Codex"
-            autoFocus
-          />
-        </label>
-        <label className="field">
-          有效期
-          <select value={days} onChange={(e) => setDays(e.target.value)}>
-            <option value="90">90 天 · 默认</option>
-            <option value="30">30 天</option>
-            <option value="7">7 天</option>
-          </select>
-        </label>
-        <div className="info-banner">
-          <Icon name="lock" />
-          <span>
-            只读工具：search、search_images、ask、list_knowledge_bases。写入工具本期不开放。
-          </span>
-        </div>
-        <div className="form-actions">
-          <button type="button" className="btn ghost" onClick={closeModal}>
-            取消
-          </button>
-          <button className="btn primary" type="submit">
-            创建演示凭证
-          </button>
-        </div>
-      </form>
-    </ModalShell>
-  )
-}
-
-/** 一次性令牌弹窗。 */
-function TokenModal({ token }: { token: string }) {
-  const closeModal = useKb((s) => s.closeModal)
-  const copyText = useKb((s) => s.copyText)
-  return (
-    <ModalShell
-      title="你的连接已准备好"
-      description="这是无真实访问能力的演示令牌。仅展示这一次，关闭后无法重新查看。"
-    >
-      <div className="info-banner">
-        <Icon name="shield" />
-        <span>请妥善保管令牌。演示令牌不会保存至浏览器存储。</span>
-      </div>
-      <pre className="code-box">{token}</pre>
-      <div className="form-actions">
-        <button className="btn" onClick={() => void copyText(token)}>
-          <Icon name="copy" />
-          复制演示令牌
-        </button>
-        <button className="btn primary" onClick={closeModal}>
-          已妥善保存
-        </button>
-      </div>
-    </ModalShell>
-  )
-}
-
-/** 向量模型更新确认弹窗。 */
-function VectorConfirmModal() {
-  const closeModal = useKb((s) => s.closeModal)
-  const confirm = useKb((s) => s.modalConfirm)
-  return (
-    <ModalShell
-      title="更新向量模型"
-      description="更换向量模型需要重建索引。此原型仅演示设置流程，不执行真实重建。"
-    >
-      <div className="form-actions">
-        <button className="btn ghost" onClick={closeModal}>
-          取消
-        </button>
-        <button
-          className="btn primary"
-          onClick={() => {
-            closeModal()
-            confirm?.()
-          }}
-        >
-          保存演示配置
-        </button>
-      </div>
-    </ModalShell>
   )
 }
 
@@ -220,14 +104,8 @@ export function ModalHost() {
   switch (modal.kind) {
     case 'upload':
       return <UploadModal />
-    case 'credential':
-      return <CredentialModal />
-    case 'token':
-      return <TokenModal token={modal.token} />
     case 'library':
       return <CreateLibraryModal />
-    case 'vector-confirm':
-      return <VectorConfirmModal />
     case 'copy':
       return <CopyModal text={modal.text} />
     case 'confirm':

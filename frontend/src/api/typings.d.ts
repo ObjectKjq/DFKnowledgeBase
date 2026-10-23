@@ -54,10 +54,28 @@ declare namespace API {
     data?: DocChunkRespVO
   }
 
+  type CommonResultDocDocumentPreviewRespVO = {
+    code?: number
+    msg?: string
+    data?: DocDocumentPreviewRespVO
+  }
+
+  type CommonResultDocGuideRespVO = {
+    code?: number
+    msg?: string
+    data?: DocGuideRespVO
+  }
+
   type CommonResultDocRespVO = {
     code?: number
     msg?: string
     data?: DocRespVO
+  }
+
+  type CommonResultDocSearchPageRespVO = {
+    code?: number
+    msg?: string
+    data?: DocSearchPageRespVO
   }
 
   type CommonResultFileRespVO = {
@@ -84,12 +102,6 @@ declare namespace API {
     data?: ConversationRespVO[]
   }
 
-  type CommonResultListDocChunkRespVO = {
-    code?: number
-    msg?: string
-    data?: DocChunkRespVO[]
-  }
-
   type CommonResultListKnowledgeBaseMemberRespVO = {
     code?: number
     msg?: string
@@ -106,6 +118,18 @@ declare namespace API {
     code?: number
     msg?: string
     data?: number[]
+  }
+
+  type CommonResultListMapStringObject = {
+    code?: number
+    msg?: string
+    data?: Record<string, any>[]
+  }
+
+  type CommonResultListMcpCredentialRespVO = {
+    code?: number
+    msg?: string
+    data?: McpCredentialRespVO[]
   }
 
   type CommonResultListMenuRespVO = {
@@ -144,6 +168,12 @@ declare namespace API {
     data?: number
   }
 
+  type CommonResultMcpCredentialCreatedRespVO = {
+    code?: number
+    msg?: string
+    data?: McpCredentialCreatedRespVO
+  }
+
   type CommonResultMenuRespVO = {
     code?: number
     msg?: string
@@ -166,6 +196,12 @@ declare namespace API {
     code?: number
     msg?: string
     data?: PageResultKnowledgeBaseRespVO
+  }
+
+  type CommonResultPageResultMcpCallLogRespVO = {
+    code?: number
+    msg?: string
+    data?: PageResultMcpCallLogRespVO
   }
 
   type CommonResultPageResultRoleRespVO = {
@@ -210,6 +246,8 @@ declare namespace API {
     id?: number
     /** 会话标题 */
     title?: string
+    /** 会话当前范围、过滤、模式、模型、所选上下文与引导状态 */
+    state?: RetrievalState
     /** 发起会话时的知识库编号范围，空列表表示全部有权知识库 */
     knowledgeBaseIds?: number[]
     /** 创建时间 */
@@ -225,12 +263,21 @@ declare namespace API {
     id?: number
     /** 会话标题 */
     title?: string
+    /** 会话当前范围、过滤、模式、模型、所选上下文与引导状态 */
+    state?: RetrievalState
     /** 发起会话时的知识库编号范围，空列表表示全部有权知识库 */
     knowledgeBaseIds?: number[]
     /** 创建时间 */
     createTime?: string
     /** 更新时间 */
     updateTime?: string
+  }
+
+  type ConversationStateReqVO = {
+    /** 会话编号 */
+    id: number
+    /** 完整会话当前选择；新选择只影响后续消息 */
+    state: RetrievalState
   }
 
   type deleteConversationParams = {
@@ -298,6 +345,22 @@ declare namespace API {
     sheetName?: string
     /** 分块是否来自扫描页 OCR */
     ocr?: boolean
+    /** 实际命中类型：KEYWORD、SEMANTIC 或 HYBRID */
+    matchType?: string
+    /** 实际索引相关性，混合模式为 RRF 得分 */
+    score?: number
+    /** HTML 转义后以 em 标记关键词的原文 */
+    highlight?: string
+    /** 原始文件编号，下载时仍重新校验授权 */
+    fileId?: number
+    /** 当前授权文件下载地址 */
+    downloadUrl?: string
+    /** PDF 原始页面、TEXT 原文、OFFICE 解析内容 */
+    previewType?: string
+    /** 文档格式编码 */
+    format?: number
+    /** 文档上传时间 */
+    uploadTime?: string
   }
 
   type DocCreateReqVO = {
@@ -307,6 +370,61 @@ declare namespace API {
     fileId: number
     /** 文件下载链接（上传接口返回） */
     fileUrl: string
+  }
+
+  type DocDocumentPreviewRespVO = {
+    /** 原命中分块与原始文件下载元数据 */
+    source?: DocChunkRespVO
+    /** 文档全部解析分块，按原文顺序并保留页码、工作表、偏移 */
+    chunks?: DocChunkRespVO[]
+  }
+
+  type DocGuideReqVO = {
+    /** 检索文本 */
+    query: string
+    /** 知识库编号范围，不传或为空表示全部有权知识库 */
+    knowledgeBaseIds?: number[]
+    /** 检索模式：HYBRID 混合、FUZZY 模糊 */
+    mode?: string
+    /** 会话编号 */
+    conversationId: number
+    /** 页码，从 1 开始 */
+    pageNo?: number
+    /** 每页数量，默认 20 */
+    pageSize?: number
+    /** 文档格式编码过滤，空列表表示不限 */
+    formats?: number[]
+    /** 上传时间起点，包含 */
+    uploadedFrom?: string
+    /** 上传时间终点，包含 */
+    uploadedTo?: string
+    /** 澄清回答，支持推荐选项或自由输入 */
+    answer?: string
+    /** 立即跳过后续澄清并执行混合检索 */
+    skip?: boolean
+    /** 命名对话模型；省略沿用会话选择 */
+    modelId?: number
+  }
+
+  type DocGuideRespVO = {
+    /** CLARIFY 澄清、RESULTS 检索完成、FALLBACK 模型故障后直接混合 */
+    stage?: string
+    /** 实际执行的混合查询，供翻页沿用 */
+    query?: string
+    /** 原始用户问题 */
+    originalQuestion?: string
+    /** 本轮完整选择快照 */
+    state?: RetrievalState
+    /** 已提出的澄清问题轮数，上限 2 */
+    round?: number
+    /** 澄清问题 */
+    question?: string
+    /** 推荐选项，仍可自由输入 */
+    options?: string[]
+    /** 模型未配置或失败后的中文原因 */
+    reason?: string
+    /** 真实混合检索分页结果 */
+    search?: DocSearchPageRespVO
   }
 
   type DocPageReqVO = {
@@ -349,11 +467,34 @@ declare namespace API {
     updateTime?: string
   }
 
+  type DocSearchPageRespVO = {
+    total?: number
+    list?: DocChunkRespVO[]
+    /** 当前有权过滤范围内入库中的文档数 */
+    indexingCount?: number
+    /** 候选达到一万条窗口，建议缩小过滤范围；total 为当前候选总量 */
+    candidateLimitReached?: boolean
+  }
+
   type DocSearchReqVO = {
     /** 检索文本 */
     query: string
     /** 知识库编号范围，不传或为空表示全部有权知识库 */
     knowledgeBaseIds?: number[]
+    /** 检索模式：HYBRID 混合、FUZZY 模糊 */
+    mode?: string
+    /** 会话编号；提供时恢复本会话选择并持久化本轮问题和结果，不传为无会话检索 */
+    conversationId?: number
+    /** 页码，从 1 开始 */
+    pageNo?: number
+    /** 每页数量，默认 20 */
+    pageSize?: number
+    /** 文档格式编码过滤，空列表表示不限 */
+    formats?: number[]
+    /** 上传时间起点，包含 */
+    uploadedFrom?: string
+    /** 上传时间终点，包含 */
+    uploadedTo?: string
   }
 
   type downloadFileParams = {
@@ -391,6 +532,11 @@ declare namespace API {
   type getDocParams = {
     /** 文档编号 */
     id: number
+  }
+
+  type getDocumentPreviewParams = {
+    /** 原命中分块编号 */
+    chunkId: number
   }
 
   type getKnowledgeBasePageParams = {
@@ -543,6 +689,90 @@ declare namespace API {
     description?: string
   }
 
+  type McpCallLogPageReqVO = {
+    /** 页码，从 1 开始 */
+    pageNum?: number
+    /** 每页条数 */
+    pageSize?: number
+  }
+
+  type McpCallLogRespVO = {
+    /** 记录编号 */
+    id?: number
+    /** 来源凭证编号 */
+    credentialId?: number
+    /** 调用时间 */
+    callTime?: string
+    /** 工具名称 */
+    toolName?: string
+    /** 已确认有权的知识库编号 JSON */
+    knowledgeBaseIds?: string
+    /** 结果条数 */
+    resultCount?: number
+    /** SUCCESS、FAILED 或 REJECTED */
+    outcome?: string
+    /** 固定原因码 */
+    reasonCode?: string
+  }
+
+  type McpCredentialCreatedRespVO = {
+    /** 凭证编号 */
+    id?: number
+    /** 名称 */
+    name?: string
+    /** 仅供辨认的前缀 */
+    tokenPrefix?: string
+    /** 允许工具 */
+    tools?: string[]
+    /** 过期时间 */
+    expiresAt?: string
+    /** 撤销时间 */
+    revokedAt?: string
+    /** 最后使用时间 */
+    lastUsedAt?: string
+    /** 创建时间 */
+    createTime?: string
+    /** 仅本次返回的完整令牌 */
+    token?: string
+    /** 接入指引 */
+    instructions?: string
+  }
+
+  type McpCredentialCreateReqVO = {
+    /** 凭证名称 */
+    name: string
+    /** 允许工具：search、ask、list_knowledge_bases，可为空 */
+    tools: string[]
+    /** 有效天数，默认 90 */
+    validDays: number
+  }
+
+  type McpCredentialRespVO = {
+    /** 凭证编号 */
+    id?: number
+    /** 名称 */
+    name?: string
+    /** 仅供辨认的前缀 */
+    tokenPrefix?: string
+    /** 允许工具 */
+    tools?: string[]
+    /** 过期时间 */
+    expiresAt?: string
+    /** 撤销时间 */
+    revokedAt?: string
+    /** 最后使用时间 */
+    lastUsedAt?: string
+    /** 创建时间 */
+    createTime?: string
+  }
+
+  type McpCredentialToolsReqVO = {
+    /** 本人凭证编号 */
+    id: number
+    /** 允许工具名称，可为空 */
+    tools: string[]
+  }
+
   type MenuRespVO = {
     /** 菜单编号 */
     id?: number
@@ -687,6 +917,10 @@ declare namespace API {
     simulated?: boolean
   }
 
+  type pageParams = {
+    request: McpCallLogPageReqVO
+  }
+
   type PageResultDocRespVO = {
     total?: number
     list?: DocRespVO[]
@@ -695,6 +929,11 @@ declare namespace API {
   type PageResultKnowledgeBaseRespVO = {
     total?: number
     list?: KnowledgeBaseRespVO[]
+  }
+
+  type PageResultMcpCallLogRespVO = {
+    total?: number
+    list?: McpCallLogRespVO[]
   }
 
   type PageResultRoleRespVO = {
@@ -733,8 +972,18 @@ declare namespace API {
     conversationId: number
     /** 问题 */
     question: string
-    /** 本次提问的知识库范围；不传沿用会话初始范围，空列表表示全部有权知识库 */
+    /** 本次提问的知识库范围；不传沿用会话当前范围，空列表表示全部有权知识库 */
     knowledgeBaseIds?: number[]
+    /** 所选分块：不传沿用会话，空数组清空；选择后严格只用这些分块 */
+    selectedChunkIds?: number[]
+    /** 所选命名模型；不传沿用会话模型 */
+    modelId?: number
+    /** 格式过滤，不传沿用会话，空列表清空 */
+    formats?: number[]
+    /** 上传起点，不传沿用会话 */
+    uploadedFrom?: string
+    /** 上传终点，不传沿用会话 */
+    uploadedTo?: string
   }
 
   type RagCitationRespVO = {
@@ -776,8 +1025,35 @@ declare namespace API {
     id: number
   }
 
+  type RetrievalState = {
+    /** 当前模式，新会话默认混合 */
+    mode: string
+    /** 知识库范围，空数组表示全部有权内容 */
+    knowledgeBaseIds?: number[]
+    /** 格式编码过滤 */
+    formats?: number[]
+    /** 上传起点 */
+    uploadedFrom?: string
+    /** 上传终点 */
+    uploadedTo?: string
+    /** 所选分块，空数组自动检索 */
+    selectedChunkIds?: number[]
+    /** 所选命名模型编号 */
+    modelId?: number
+    /** 引导原始问题 */
+    guideQuestion?: string
+    /** 已回答的澄清轮数，最多两轮 */
+    guideRound?: number
+    /** 澄清回答，支持选项或自由输入 */
+    guideAnswers?: string[]
+  }
+
   type retryDocParams = {
     /** 文档编号 */
+    id: number
+  }
+
+  type revokeParams = {
     id: number
   }
 

@@ -5,7 +5,7 @@ import { deleteDoc, getDocPage, purgeDoc, restoreDoc, retryDoc } from '@/api/doc
 import { Icon } from '@/components/Icon'
 import { DOCUMENT_FORMATS, DOCUMENT_STATUSES } from '@/features/documents/documents'
 import { useLibraries } from '@/features/knowledge/useLibraries'
-import { formatSize } from '@/mock/logic'
+import { formatSize } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth'
 import { useKb } from '@/stores/knowledge'
 
