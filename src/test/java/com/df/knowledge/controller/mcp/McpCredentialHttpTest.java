@@ -60,7 +60,7 @@ class McpCredentialHttpTest {
             c.createStatement()
                     .execute(
                             "INSERT INTO system_user(id,username,password,nickname,status) VALUES"
-                                + " (1,'mcp-owner','x','用户一',0),(2,'mcp-other','x','用户二',0)");
+                                    + " (1,'mcp-owner','x','用户一',0),(2,'mcp-other','x','用户二',0)");
         }
         registry.add("spring.datasource.url", () -> URL + DB);
         registry.add("spring.datasource.username", McpCredentialHttpTest::user);
@@ -96,7 +96,8 @@ class McpCredentialHttpTest {
     static class Application {
         @Bean
         McpToolServiceImpl tools() {
-            return new McpToolServiceImpl(null, null, null);
+            return new McpToolServiceImpl(
+                    null, null, null, new ObjectMapper().findAndRegisterModules());
         }
     }
 
