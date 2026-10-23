@@ -24,7 +24,129 @@ import java.time.*;
 
 /** MCP 传输边界测试，不替代真实数据库与工具旅程。 */
 class McpProtocolControllerTest {
+    @Test
+    void testTransport_invalidOriginIsRejectedEvenOnUnsupportedMethod() throws Exception {
+        authenticatedMvc()
+                .perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(
+                                        "/mcp")
+                                .header("Origin", "https://untrusted.example.com"))
+                .andExpect(status().isForbidden());
+        authenticatedMvc()
+                .perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(
+                                "/mcp"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(header().string("Allow", "POST"));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(
+            strings = {
+                "[]",
+                "{\"jsonrpc\":\"2.0\",\"id\":null,\"method\":\"ping\"}",
+                "{\"jsonrpc\":\"1.0\",\"id\":1,\"method\":\"ping\"}",
+                "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\",\"params\":[]}"
+            })
+    void testRequest_invalidEnvelopeIsJsonRpcError(String body) throws Exception {
+        authenticatedMvc()
+                .perform(
+                        post("/mcp")
+                                .header("Authorization", "Bearer dfkb_mcp_test")
+                                .header("MCP-Protocol-Version", "2025-11-25")
+                                .contentType("application/json")
+                                .accept("application/json", "text/event-stream")
+                                .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error.code").value(-32600));
+    }
+
+    @Test
+    void testSecurity_originVersionAndMediaTypesAreEnforced() throws Exception {
+        var mvc = authenticatedMvc();
+        String ping = "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}";
+        mvc.perform(
+                        post("/mcp")
+                                .header("Authorization", "Bearer dfkb_mcp_test")
+                                .header("Origin", "http://localhost.evil:80")
+                                .contentType("application/json")
+                                .accept("application/json", "text/event-stream")
+                                .content(ping))
+                .andExpect(status().isForbidden());
+        mvc.perform(
+                        post("/mcp")
+                                .header("Authorization", "Bearer dfkb_mcp_test")
+                                .header("MCP-Protocol-Version", "2026-07-28")
+                                .contentType("application/json")
+                                .accept("application/json", "text/event-stream")
+                                .content(ping))
+                .andExpect(status().isBadRequest());
+        mvc.perform(
+                        post("/mcp")
+                                .header("Authorization", "Bearer dfkb_mcp_test")
+                                .header("MCP-Protocol-Version", "2025-11-25")
+                                .contentType("application/json")
+                                .accept("application/json")
+                                .content(ping))
+                .andExpect(status().isNotAcceptable());
+        mvc.perform(
+                        post("/mcp")
+                                .header("Authorization", "Bearer dfkb_mcp_test")
+                                .header("MCP-Protocol-Version", "2025-11-25")
+                                .contentType("text/plain")
+                                .accept("application/json", "text/event-stream")
+                                .content(ping))
+                .andExpect(status().isUnsupportedMediaType());
+    }
+
+    @Test
+    void testProtocol_unknownMethodAndToolPreserveRequestId() throws Exception {
+        var mvc = authenticatedMvc();
+        mvc.perform(
+                        post("/mcp")
+                                .header("Authorization", "Bearer dfkb_mcp_test")
+                                .header("MCP-Protocol-Version", "2025-11-25")
+                                .contentType("application/json")
+                                .accept("application/json", "text/event-stream")
+                                .content(
+                                        "{\"jsonrpc\":\"2.0\",\"id\":\"a\",\"method\":\"unknown\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("a"))
+                .andExpect(jsonPath("$.error.code").value(-32601));
+        mvc.perform(
+                        post("/mcp")
+                                .header("Authorization", "Bearer dfkb_mcp_test")
+                                .header("MCP-Protocol-Version", "2025-11-25")
+                                .contentType("application/json")
+                                .accept("application/json", "text/event-stream")
+                                .content(
+                                        "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"tools/call\",\"params\":{\"name\":\"add_note\"}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(9))
+                .andExpect(jsonPath("$.error.code").value(-32602));
+    }
+
+    @Test
+    void testTools_invalidBusinessArgumentsAreSafeToolErrors() throws Exception {
+        authenticatedMvc("search")
+                .perform(
+                        post("/mcp")
+                                .header("Authorization", "Bearer dfkb_mcp_test")
+                                .header("MCP-Protocol-Version", "2025-11-25")
+                                .contentType("application/json")
+                                .accept("application/json", "text/event-stream")
+                                .content(
+                                        "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"search\",\"arguments\":{\"query\":\"沸点\",\"mode\":\"EXACT\"}}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.isError").value(true))
+                .andExpect(jsonPath("$.error").doesNotExist());
+    }
+
     private org.springframework.test.web.servlet.MockMvc authenticatedMvc() {
+        return authenticatedMvc("list_knowledge_bases");
+    }
+
+    private org.springframework.test.web.servlet.MockMvc authenticatedMvc(String permittedTools) {
         McpCredentialMapper credentials =
                 mock(McpCredentialMapper.class, withSettings().mockMaker("mock-maker-proxy"));
         UserMapper users = mock(UserMapper.class, withSettings().mockMaker("mock-maker-proxy"));
@@ -39,8 +161,9 @@ class McpProtocolControllerTest {
                         new McpCredentialDO()
                                 .setId(1L)
                                 .setUserId(2L)
-                                .setTools("list_knowledge_bases")
+                                .setTools(permittedTools)
                                 .setExpiresAt(LocalDateTime.of(2027, 1, 1, 0, 0)));
+        when(credentials.claimCall(anyLong(), anyLong(), anyInt(), any())).thenReturn(1);
         when(users.selectById(2L)).thenReturn(new UserDO().setStatus(0));
         when(settingsMapper.selectById(1L))
                 .thenReturn(
@@ -51,11 +174,28 @@ class McpProtocolControllerTest {
                 new McpProtocolServiceImpl(
                         credentialService,
                         mock(McpCallLogMapper.class, withSettings().mockMaker("mock-maker-proxy")),
-                        new McpToolServiceImpl(null, null, null),
+                        new McpToolServiceImpl(
+                                null, null, null, new ObjectMapper().findAndRegisterModules()),
                         new ObjectMapper(),
                         clock,
                         "");
         return MockMvcBuilders.standaloneSetup(new McpProtocolController(protocol)).build();
+    }
+
+    @Test
+    void testTools_allowedThreeReadOnlyToolsAreDiscoverable() throws Exception {
+        authenticatedMvc("ask,list_knowledge_bases,search")
+                .perform(
+                        post("/mcp")
+                                .header("Authorization", "Bearer dfkb_mcp_test")
+                                .header("MCP-Protocol-Version", "2025-11-25")
+                                .contentType("application/json")
+                                .accept("application/json", "text/event-stream")
+                                .content(
+                                        "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/list\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.result.tools.length()").value(3))
+                .andExpect(jsonPath("$.result.tools[0].annotations.readOnlyHint").value(true));
     }
 
     @Test
@@ -107,6 +247,7 @@ class McpProtocolControllerTest {
                                 .setUserId(2L)
                                 .setTools("list_knowledge_bases")
                                 .setExpiresAt(LocalDateTime.of(2027, 1, 1, 0, 0)));
+        when(credentials.claimCall(anyLong(), anyLong(), anyInt(), any())).thenReturn(1);
         when(users.selectById(2L)).thenReturn(new UserDO().setStatus(0));
         when(settingsMapper.selectById(1L))
                 .thenReturn(
@@ -117,7 +258,8 @@ class McpProtocolControllerTest {
                 new McpProtocolServiceImpl(
                         credentialService,
                         mock(McpCallLogMapper.class, withSettings().mockMaker("mock-maker-proxy")),
-                        new McpToolServiceImpl(null, null, null),
+                        new McpToolServiceImpl(
+                                null, null, null, new ObjectMapper().findAndRegisterModules()),
                         new ObjectMapper(),
                         clock,
                         "");

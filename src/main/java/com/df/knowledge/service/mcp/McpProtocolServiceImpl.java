@@ -7,10 +7,13 @@ import com.fasterxml.jackson.databind.*;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
 
 import java.net.URI;
 import java.time.*;
@@ -18,11 +21,13 @@ import java.util.*;
 
 /** 仅支持明确声明的 2025-11-25 协议，所有调用重新认证。 */
 @Service
+@Slf4j
+@Validated
 public class McpProtocolServiceImpl implements McpProtocolService {
     private static final String VERSION = "2025-11-25";
     private final McpCredentialService credentials;
     private final McpCallLogMapper logs;
-    private final McpToolServiceImpl tools;
+    private final McpToolService tools;
     private final ObjectMapper json;
     private final Clock clock;
     private final Set<String> allowedOrigins;
@@ -30,7 +35,7 @@ public class McpProtocolServiceImpl implements McpProtocolService {
     public McpProtocolServiceImpl(
             McpCredentialService credentials,
             McpCallLogMapper logs,
-            McpToolServiceImpl tools,
+            McpToolService tools,
             ObjectMapper json,
             Clock mcpClock,
             @Value("${knowledge.mcp.allowed-origins:}") String origins) {
@@ -42,6 +47,12 @@ public class McpProtocolServiceImpl implements McpProtocolService {
         this.allowedOrigins = new HashSet<>();
         for (String origin : origins.split(","))
             if (!origin.isBlank()) allowedOrigins.add(origin.trim());
+    }
+
+    @Override
+    public ResponseEntity<?> unsupported(HttpServletRequest request) {
+        if (!validOrigin(request)) return error(403, null, 403, "MCP 来源不受信任");
+        return ResponseEntity.status(405).header("Allow", "POST").build();
     }
 
     @Override
@@ -152,7 +163,7 @@ public class McpProtocolServiceImpl implements McpProtocolService {
                             || (params.has("arguments") && !params.path("arguments").isObject()))
                         return rejected(audit, 200, id, -32602, "工具调用参数无效", "INVALID_PARAMS");
                     String name = params.path("name").asText();
-                    if (!McpToolServiceImpl.TOOL_NAMES.contains(name))
+                    if (!McpToolService.TOOL_NAMES.contains(name))
                         return rejected(audit, 200, id, -32602, "工具不存在", "UNKNOWN_TOOL");
                     audit.setToolName(name);
                     if (!Arrays.asList(credential.getTools().split(",")).contains(name))
@@ -263,7 +274,11 @@ public class McpProtocolServiceImpl implements McpProtocolService {
     }
 
     /**
-     * @param status HTTP 状态 @param id 请求编号 @param code 协议错误码 @param message 脱敏提示 @return 错误响应
+     * @param status HTTP 状态
+     * @param id 请求编号
+     * @param code 协议错误码
+     * @param message 脱敏提示
+     * @return 错误响应
      */
     public static ResponseEntity<?> error(int status, Object id, int code, String message) {
         return ResponseEntity.status(status).body(errorBody(id, code, message));

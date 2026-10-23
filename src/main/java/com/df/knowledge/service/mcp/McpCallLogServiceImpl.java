@@ -10,6 +10,7 @@ import com.df.knowledge.dal.dataobject.mcp.McpCallLogDO;
 import com.df.knowledge.dal.mysql.mcp.McpCallLogMapper;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -18,6 +19,7 @@ import java.util.*;
 
 /** 审计分页强制绑定当前用户，管理员统计不返回用户或目标知识库。 */
 @Service
+@Slf4j
 @Validated
 @RequiredArgsConstructor
 public class McpCallLogServiceImpl implements McpCallLogService {

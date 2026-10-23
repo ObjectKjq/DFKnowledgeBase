@@ -14,6 +14,6 @@ public interface McpCallLogMapper extends BaseMapper<McpCallLogDO> {
      */
     @Select(
             "SELECT tool_name AS toolName,outcome,COUNT(*) AS callCount FROM mcp_call_log GROUP BY"
-                + " tool_name,outcome ORDER BY tool_name,outcome")
+                    + " tool_name,outcome ORDER BY tool_name,outcome")
     java.util.List<java.util.Map<String, Object>> selectStatistics();
 }

@@ -42,9 +42,9 @@ public class McpCredentialController {
         response.setToken(created.token());
         response.setInstructions(
                 "端点为应用地址下 /mcp（默认 /api/mcp），传输 Streamable HTTP，协议 2025-11-25。请求头 Authorization:"
-                    + " Bearer <令牌>；Accept: application/json, text/event-stream。后续请求带"
-                    + " MCP-Protocol-Version: 2025-11-25。令牌仅本次显示，请安全保存。使用支持自定义 Bearer 请求头的 MCP"
-                    + " 客户端；本期未实现 OAuth 自动授权。");
+                        + " Bearer <令牌>；Accept: application/json, text/event-stream。后续请求带"
+                        + " MCP-Protocol-Version: 2025-11-25。令牌仅本次显示，请安全保存。使用支持自定义 Bearer 请求头的 MCP"
+                        + " 客户端；本期未实现 OAuth 自动授权。");
         return success(response);
     }
 
