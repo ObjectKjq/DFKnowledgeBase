@@ -32,7 +32,10 @@ import java.util.stream.Collectors;
 @Slf4j
 public class DocSearchServiceImpl implements DocSearchService {
 
-    private static final int RESULT_LIMIT = 20;
+    private static final int RESULT_LIMIT = 10000;
+
+    @Resource
+    private com.df.knowledge.service.model.ModelRerankService modelRerankService;
 
     @Resource
     private KnowledgeBasePermissionService permissionService;
@@ -54,49 +57,70 @@ public class DocSearchServiceImpl implements DocSearchService {
 
     @Override
     public List<DocChunkResult> search(Long userId, String query, List<Long> selectedKnowledgeBaseIds) {
-        if (StrUtil.isBlank(query)) {
-            throw new ServiceException(ErrorCodeConstants.DOC_SEARCH_QUERY_EMPTY);
-        }
-        String text = query.trim();
+        var request = new com.df.knowledge.controller.doc.vo.DocSearchReqVO().setQuery(query)
+                .setKnowledgeBaseIds(selectedKnowledgeBaseIds);
+        return search(userId, request).getList();
+    }
+
+    @Override
+    public DocSearchPage search(Long userId, com.df.knowledge.controller.doc.vo.DocSearchReqVO request) {
+        if (StrUtil.isBlank(request.getQuery())) throw new ServiceException(ErrorCodeConstants.DOC_SEARCH_QUERY_EMPTY);
+        String text = request.getQuery().trim();
         List<Long> accessible = permissionService.getAccessibleKnowledgeBaseIds(userId);
-        List<Long> scope = selectedKnowledgeBaseIds == null || selectedKnowledgeBaseIds.isEmpty()
-                ? accessible : accessible.stream().filter(selectedKnowledgeBaseIds::contains).toList();
-        if (scope.isEmpty()) {
-            return List.of();
+        List<Long> selected = request.getKnowledgeBaseIds();
+        List<Long> scope = selected == null || selected.isEmpty() ? accessible
+                : accessible.stream().filter(selected::contains).toList();
+        var page = new DocSearchPage(); page.setList(List.of()); page.setTotal(0L);
+        if (scope.isEmpty()) return page;
+        long indexing = 0;
+        for (Integer status : DocStatusEnum.IN_FLIGHT_STATUS_CODES) {
+            indexing += docMapper.selectListByKnowledgeBaseIdsAndStatus(scope, status).stream()
+                    .filter(doc -> matches(doc, request)).count();
         }
-        List<DocDO> availableDocs = docMapper.selectListByKnowledgeBaseIdsAndStatus(scope,
-                DocStatusEnum.AVAILABLE.getCode());
-        if (availableDocs.isEmpty()) {
-            return List.of();
-        }
+        page.setIndexingCount(indexing);
+        List<DocDO> availableDocs = docMapper.selectListByKnowledgeBaseIdsAndStatus(scope, 4).stream()
+                .filter(doc -> matches(doc, request)).toList();
+        if (availableDocs.isEmpty()) return page;
         List<float[]> vectors = embeddingService.embedAll(List.of(text));
-        if (vectors == null || vectors.size() != 1 || vectors.getFirst() == null) {
+        if (vectors == null || vectors.size() != 1 || vectors.getFirst() == null)
             throw new ServiceException(ErrorCodeConstants.DOC_EMBEDDING_FAILED);
-        }
-        List<Long> chunkIds = chunkIndexService.searchHybrid(text, vectors.getFirst(), scope,
-                availableDocs.stream().map(DocDO::getId).toList(), RESULT_LIMIT);
-        if (chunkIds.isEmpty()) {
-            return List.of();
-        }
-        Map<Long, DocChunkDO> chunks = byId(docChunkMapper.selectBatchIds(chunkIds), DocChunkDO::getId);
-        List<Long> docIds = chunkIds.stream().map(chunks::get).filter(chunk -> chunk != null)
-                .map(DocChunkDO::getDocId).distinct().toList();
-        Map<Long, DocDO> currentDocs = byId(docMapper.selectBatchIds(docIds), DocDO::getId);
-        Map<Long, KnowledgeBaseDO> knowledgeBases = byId(knowledgeBaseMapper.selectBatchIds(scope), KnowledgeBaseDO::getId);
+        List<DocIndexHit> hits = chunkIndexService.search(text, vectors.getFirst(), scope,
+                availableDocs.stream().map(DocDO::getId).toList(), request.getMode(), RESULT_LIMIT);
+        if (hits.isEmpty()) return page;
+        Map<Long, DocChunkDO> chunks = byId(docChunkMapper.selectBatchIds(hits.stream().map(DocIndexHit::chunkId).toList()), DocChunkDO::getId);
+        List<Long> ids = chunks.values().stream().map(DocChunkDO::getDocId).distinct().toList();
+        Map<Long, DocDO> currentDocs = byId(docMapper.selectBatchIds(ids), DocDO::getId);
+        Map<Long, KnowledgeBaseDO> bases = byId(knowledgeBaseMapper.selectBatchIds(scope), KnowledgeBaseDO::getId);
         Set<Long> currentAccess = Set.copyOf(permissionService.getAccessibleKnowledgeBaseIds(userId));
         List<DocChunkResult> results = new ArrayList<>();
-        for (Long chunkId : chunkIds) {
-            DocChunkDO chunk = chunks.get(chunkId);
+        Set<Long> filteredDocIds = availableDocs.stream().map(DocDO::getId).collect(Collectors.toSet());
+        for (DocIndexHit hit : hits) {
+            DocChunkDO chunk = chunks.get(hit.chunkId());
             DocDO doc = chunk == null ? null : currentDocs.get(chunk.getDocId());
-            if (doc != null && DocStatusEnum.AVAILABLE.getCode().equals(doc.getStatus())
-                    && scope.contains(doc.getKnowledgeBaseId()) && currentAccess.contains(doc.getKnowledgeBaseId())) {
-                KnowledgeBaseDO knowledgeBase = knowledgeBases.get(doc.getKnowledgeBaseId());
-                if (knowledgeBase != null) {
-                    results.add(toResult(chunk, doc, knowledgeBase));
-                }
+            if (doc != null && filteredDocIds.contains(doc.getId()) && matches(doc, request)
+                    && Integer.valueOf(4).equals(doc.getStatus()) && scope.contains(doc.getKnowledgeBaseId())
+                    && currentAccess.contains(doc.getKnowledgeBaseId()) && bases.containsKey(doc.getKnowledgeBaseId())) {
+                results.add(toResult(chunk, doc, bases.get(doc.getKnowledgeBaseId()))
+                        .setMatchType(hit.matchType()).setScore(hit.score()).setHighlight(highlight(chunk.getText(), text)));
             }
         }
-        return results;
+        results = modelRerankService.rerank(text, results);
+        page.setTotal((long) results.size()); page.setCandidateLimitReached(hits.size() >= RESULT_LIMIT);
+        int from = Math.min(results.size(), (request.getPageNo() - 1) * request.getPageSize());
+        page.setList(results.subList(from, Math.min(results.size(), from + request.getPageSize())));
+        return page;
+    }
+
+    private boolean matches(DocDO doc, com.df.knowledge.controller.doc.vo.DocSearchReqVO request) {
+        return (request.getFormats() == null || request.getFormats().isEmpty() || request.getFormats().contains(doc.getFormat()))
+                && (request.getUploadedFrom() == null || doc.getCreateTime() != null && !doc.getCreateTime().isBefore(request.getUploadedFrom()))
+                && (request.getUploadedTo() == null || doc.getCreateTime() != null && !doc.getCreateTime().isAfter(request.getUploadedTo()));
+    }
+
+    private String highlight(String text, String query) {
+        String escaped = cn.hutool.http.HtmlUtil.escape(text);
+        String needle = cn.hutool.http.HtmlUtil.escape(query);
+        return escaped.replace(needle, "<em>" + needle + "</em>");
     }
 
     @Override
@@ -134,10 +158,15 @@ public class DocSearchServiceImpl implements DocSearchService {
                 .setDocTitle(doc.getTitle()).setChunkId(chunk.getId())
                 .setChunkIndex(chunk.getChunkIndex()).setPageNumber(chunk.getPageNumber())
                 .setStartOffset(chunk.getStartOffset()).setEndOffset(chunk.getEndOffset())
-                .setText(chunk.getText()).setSheetName(chunk.getSheetName()).setOcr(chunk.getOcr());
+                .setText(chunk.getText()).setSheetName(chunk.getSheetName()).setOcr(chunk.getOcr())
+                .setFileId(doc.getFileId()).setDownloadUrl(doc.getFileId() == null ? null : "/system/file/download?id=" + doc.getFileId())
+                .setFormat(doc.getFormat()).setUploadTime(doc.getCreateTime())
+                .setPreviewType(doc.getFileName() != null && doc.getFileName().toLowerCase().endsWith(".pdf") ? "PDF"
+                        : doc.getFileName() != null && doc.getFileName().matches("(?i).*\\.(txt|md)$") ? "TEXT" : "OFFICE");
     }
 
     private static <T> Map<Long, T> byId(Collection<T> values, Function<T, Long> id) {
         return values.stream().collect(Collectors.toMap(id, Function.identity()));
     }
 }
+

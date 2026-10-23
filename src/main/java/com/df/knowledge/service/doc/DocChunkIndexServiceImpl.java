@@ -93,35 +93,58 @@ public class DocChunkIndexServiceImpl implements DocChunkIndexService {
     @Override
     public List<Long> searchHybrid(String query, float[] vector, Collection<Long> knowledgeBaseIds,
                                    Collection<Long> docIds, int limit) {
-        if (knowledgeBaseIds.isEmpty() || docIds.isEmpty()) {
-            return List.of();
-        }
-        Query knowledgeBaseFilter = Query.of(q -> q.terms(t -> t.field("kb_id")
-                .terms(v -> v.value(knowledgeBaseIds.stream().map(id -> FieldValue.of(id.toString())).toList()))));
-        Query docFilter = Query.of(q -> q.terms(t -> t.field("doc_id")
-                .terms(v -> v.value(docIds.stream().map(id -> FieldValue.of(id.toString())).toList()))));
+        return search(query, vector, knowledgeBaseIds, docIds, "HYBRID", limit).stream()
+                .map(DocIndexHit::chunkId).toList();
+    }
+
+    @Override
+    public List<DocIndexHit> search(String query, float[] vector, Collection<Long> knowledgeBaseIds,
+                                    Collection<Long> docIds, String mode, int limit) {
+        if (knowledgeBaseIds.isEmpty() || docIds.isEmpty()) return List.of();
+        Query kbFilter = Query.of(q -> q.terms(t -> t.field("kb_id").terms(v -> v.value(
+                knowledgeBaseIds.stream().map(id -> FieldValue.of(id.toString())).toList()))));
+        Query docFilter = Query.of(q -> q.terms(t -> t.field("doc_id").terms(v -> v.value(
+                docIds.stream().map(id -> FieldValue.of(id.toString())).toList()))));
+        List<Query> filters = List.of(kbFilter, docFilter);
         List<Float> queryVector = IntStream.range(0, vector.length).mapToObj(i -> vector[i]).toList();
-        Retriever retriever = Retriever.of(r -> r.rrf(rrf -> rrf
-                .filter(List.of(knowledgeBaseFilter, docFilter))
-                .retrievers(entry -> entry.retriever(child -> child.standard(standard -> standard
-                        .query(q -> q.match(match -> match.field("text").query(query).analyzer("ik_smart"))))))
-                .retrievers(entry -> entry.retriever(child -> child.knn(knn -> knn
-                        .field("vector").queryVector(queryVector).k(50).numCandidates(100))))
-                .rankWindowSize(50)));
-        SearchRequest request = SearchRequest.of(s -> s.index(indexName).size(limit)
-                .source(source -> source.fetch(false)).retriever(retriever));
         try {
-            SearchResponse<Void> response = elasticsearchClient.search(request, Void.class);
-            if (response.timedOut() || (response.shards() != null && response.shards().failed().intValue() > 0)) {
-                throw new ServiceException(ErrorCodeConstants.DOC_SEARCH_FAILED);
+            // ES Basic 不支持原生 RRF；两路请求独立授权，任一路失败均终止整次检索。
+            SearchRequest semantic = SearchRequest.of(s -> s.index(indexName).size(limit)
+                    .source(source -> source.fetch(false)).knn(k -> k.field("vector").queryVector(queryVector)
+                            .k(limit).numCandidates(Math.min(10000, Math.max(limit, 100))).filter(filters)));
+            var semanticHits = checkedSearch(semantic);
+            if ("FUZZY".equals(mode)) return semanticHits.stream().map(h ->
+                    new DocIndexHit(Long.valueOf(h.id()), h.score() == null ? 0 : h.score(), "SEMANTIC")).toList();
+            SearchRequest keyword = SearchRequest.of(s -> s.index(indexName).size(limit)
+                    .source(source -> source.fetch(false)).query(q -> q.bool(b -> b.filter(filters)
+                            .must(m -> m.match(match -> match.field("text").query(query).analyzer("ik_smart"))))));
+            var keywordHits = checkedSearch(keyword);
+            Map<Long, Double> scores = new LinkedHashMap<>();
+            Map<Long, String> types = new LinkedHashMap<>();
+            for (int rank = 0; rank < keywordHits.size(); rank++) {
+                Long id = Long.valueOf(keywordHits.get(rank).id());
+                scores.merge(id, 1.0 / (61 + rank), Double::sum); types.put(id, "KEYWORD");
             }
-            return response.hits().hits().stream().map(hit -> Long.valueOf(hit.id())).toList();
-        } catch (ServiceException ex) {
-            throw ex;
+            for (int rank = 0; rank < semanticHits.size(); rank++) {
+                Long id = Long.valueOf(semanticHits.get(rank).id());
+                scores.merge(id, 1.0 / (61 + rank), Double::sum);
+                types.compute(id, (key, old) -> old == null ? "SEMANTIC" : "HYBRID");
+            }
+            return scores.entrySet().stream().sorted(Map.Entry.<Long, Double>comparingByValue().reversed()
+                    .thenComparing(Map.Entry.comparingByKey())).limit(limit)
+                    .map(e -> new DocIndexHit(e.getKey(), e.getValue(), types.get(e.getKey()))).toList();
+        } catch (ServiceException ex) { throw ex;
         } catch (IOException | RuntimeException ex) {
-            log.warn("[searchHybrid][分块混合检索失败]", ex);
+            log.warn("[search][分块检索失败]", ex);
             throw new ServiceException(ErrorCodeConstants.DOC_SEARCH_FAILED);
         }
+    }
+
+    private List<co.elastic.clients.elasticsearch.core.search.Hit<Void>> checkedSearch(SearchRequest request) throws IOException {
+        SearchResponse<Void> response = elasticsearchClient.search(request, Void.class);
+        if (response.timedOut() || (response.shards() != null && response.shards().failed().intValue() > 0))
+            throw new ServiceException(ErrorCodeConstants.DOC_SEARCH_FAILED);
+        return response.hits().hits();
     }
 
     /**
