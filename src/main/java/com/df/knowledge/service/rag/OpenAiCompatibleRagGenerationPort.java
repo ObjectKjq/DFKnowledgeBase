@@ -13,7 +13,10 @@ import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.model.chat.response.StreamingHandle;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.df.knowledge.service.model.ModelConfigurationService;
+import com.df.knowledge.service.model.ModelConfigurationServiceImpl;
+import com.df.knowledge.dal.dataobject.model.ModelConfigurationDO;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
@@ -45,16 +48,32 @@ public class OpenAiCompatibleRagGenerationPort implements RagGenerationPort {
             sufficient=false 时 answer 置为空字符串、citations 置为空数组。
             """;
 
+    private ModelConfigurationService configurationService;
+
+    @Autowired
+    public OpenAiCompatibleRagGenerationPort(ObjectMapper objectMapper,
+            ModelConfigurationService configurationService) {
+        this(objectMapper, "", "", "");
+        this.configurationService = configurationService;
+    }
+
     private final RagAssistant assistant;
     private final StreamingRagAssistant streamingAssistant;
     private final ObjectMapper objectMapper;
+    private final int timeoutSeconds;
 
     public OpenAiCompatibleRagGenerationPort(
             ObjectMapper objectMapper,
-            @Value("${knowledge.rag.base-url:}") String baseUrl,
-            @Value("${knowledge.rag.api-key:}") String apiKey,
-            @Value("${knowledge.rag.model:}") String model) {
+            String baseUrl,
+            String apiKey,
+            String model) {
+        this(objectMapper, baseUrl, apiKey, model, 60);
+    }
+
+    private OpenAiCompatibleRagGenerationPort(ObjectMapper objectMapper, String baseUrl, String apiKey, String model,
+            int timeoutSeconds) {
         this.objectMapper = objectMapper;
+        this.timeoutSeconds = timeoutSeconds;
         if (StrUtil.isBlank(baseUrl) || StrUtil.isBlank(model)) {
             this.assistant = null;
             this.streamingAssistant = null;
@@ -66,18 +85,28 @@ public class OpenAiCompatibleRagGenerationPort implements RagGenerationPort {
                 .modelName(model)
                 .temperature(0.0)
                 .responseFormat("json_object")
-                .timeout(Duration.ofSeconds(60))
+                .maxRetries(0)
+                .timeout(Duration.ofSeconds(timeoutSeconds))
                 .build();
         this.assistant = AiServices.create(RagAssistant.class, chatModel);
         this.streamingAssistant = AiServices.create(StreamingRagAssistant.class,
                 OpenAiStreamingChatModel.builder()
                         .baseUrl(StrUtil.removeSuffix(baseUrl.trim(), "/"))
                         .apiKey(StrUtil.blankToDefault(apiKey, "not-needed"))
-                        .modelName(model).temperature(0.0).timeout(Duration.ofSeconds(60)).build());
+                        .modelName(model).temperature(0.0).timeout(Duration.ofSeconds(timeoutSeconds)).build());
     }
 
     @Override
     public GenerationResult stream(GenerationRequest request, Consumer<String> onDelta) {
+        if (configurationService != null) {
+            var model = configurationService.resolveChatModel(request.modelId());
+            if (ModelConfigurationServiceImpl.isSimulated(model)) {
+                GenerationResult result = simulate(request);
+                onDelta.accept(result.answer());
+                return result;
+            }
+            return configuredPort(model).stream(request, onDelta);
+        }
         if (streamingAssistant == null) {
             throw new ServiceException(RAG_MODEL_UNAVAILABLE);
         }
@@ -99,7 +128,7 @@ public class OpenAiCompatibleRagGenerationPort implements RagGenerationPort {
                     })
                     .onCompleteResponse(response -> completed.complete(response.aiMessage().text()))
                     .onError(completed::completeExceptionally).start();
-            String answer = completed.get(60, TimeUnit.SECONDS);
+            String answer = completed.get(timeoutSeconds, TimeUnit.SECONDS);
             List<Integer> citations = new ArrayList<>();
             Matcher matcher = Pattern.compile("\\[(\\d+)]").matcher(answer);
             while (matcher.find()) {
@@ -117,7 +146,7 @@ public class OpenAiCompatibleRagGenerationPort implements RagGenerationPort {
         } catch (TimeoutException ex) {
             throw new ServiceException(RAG_GENERATION_TIMEOUT);
         } catch (ExecutionException | RuntimeException ex) {
-            log.warn("[stream][对话模型流式调用失败]", ex);
+            log.warn("[stream][对话模型流式调用失败]");
             throw new ServiceException(RAG_MODEL_UNAVAILABLE);
         } finally {
             completed.cancel(true);
@@ -129,6 +158,13 @@ public class OpenAiCompatibleRagGenerationPort implements RagGenerationPort {
 
     @Override
     public GenerationResult generate(GenerationRequest request) {
+        if (configurationService != null) {
+            var model = configurationService.resolveChatModel(request.modelId());
+            if (ModelConfigurationServiceImpl.isSimulated(model)) {
+                return simulate(request);
+            }
+            return configuredPort(model).generate(request);
+        }
         if (assistant == null) {
             throw new ServiceException(RAG_MODEL_UNAVAILABLE);
         }
@@ -137,9 +173,23 @@ public class OpenAiCompatibleRagGenerationPort implements RagGenerationPort {
         } catch (ServiceException ex) {
             throw ex;
         } catch (RuntimeException | JsonProcessingException ex) {
-            log.warn("[generate][对话模型调用或响应解析失败]", ex);
+            log.warn("[generate][对话模型调用或响应解析失败]");
             throw new ServiceException(RAG_MODEL_UNAVAILABLE);
         }
+    }
+
+    private GenerationResult simulate(GenerationRequest request) {
+        if (request.evidence().isEmpty()) {
+            return new GenerationResult(false, "【本地模拟，非真实模型生成】未找到足够依据", List.of());
+        }
+        Evidence evidence = request.evidence().getFirst();
+        return new GenerationResult(true, "【本地模拟，非真实模型生成】依据所选证据：" + evidence.text()
+                + "[" + evidence.number() + "]", List.of(evidence.number()));
+    }
+
+    private OpenAiCompatibleRagGenerationPort configuredPort(ModelConfigurationDO model) {
+        return new OpenAiCompatibleRagGenerationPort(objectMapper, model.getBaseUrl(), model.getApiKey(), model.getModel(),
+                model.getTimeoutSeconds());
     }
 
     private static String buildPrompt(GenerationRequest request) {
