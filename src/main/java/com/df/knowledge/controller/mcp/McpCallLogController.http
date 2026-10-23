@@ -1,0 +1,10 @@
+@baseUrl = http://localhost:8080/api
+@session = 替换为网页登录令牌
+
+### 本人脱敏调用记录，禁止查看其他人的明细
+GET {{baseUrl}}/mcp/call-log/page?pageNum=1&pageSize=20
+Authorization: Bearer {{session}}
+
+### 实例管理员只取得聚合计数，不取得其他用户内容
+GET {{baseUrl}}/mcp/call-log/statistics
+Authorization: Bearer {{session}}

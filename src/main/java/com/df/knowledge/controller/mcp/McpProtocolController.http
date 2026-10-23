@@ -1,0 +1,55 @@
+@baseUrl = http://localhost:8080/api
+@mcpToken = 替换为创建时唯一展示的MCP令牌
+
+### MCP 2025-11-25 初始化，不能使用网页登录令牌
+POST {{baseUrl}}/mcp
+Authorization: Bearer {{mcpToken}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"dfkb-http-check","version":"1.0.0"}}}
+
+### 初始化通知：202 空响应
+POST {{baseUrl}}/mcp
+Authorization: Bearer {{mcpToken}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2025-11-25
+
+{"jsonrpc":"2.0","method":"notifications/initialized"}
+
+### 只发现当前凭证允许的工具
+POST {{baseUrl}}/mcp
+Authorization: Bearer {{mcpToken}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2025-11-25
+
+{"jsonrpc":"2.0","id":2,"method":"tools/list"}
+
+### 检索分页与格式过滤
+POST {{baseUrl}}/mcp
+Authorization: Bearer {{mcpToken}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2025-11-25
+
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search","arguments":{"query":"沸点","mode":"HYBRID","pageNo":1,"pageSize":20,"formats":[1,5]}}}
+
+### 只读 RAG：不创建或修改网页聊天会话
+POST {{baseUrl}}/mcp
+Authorization: Bearer {{mcpToken}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2025-11-25
+
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"ask","arguments":{"question":"资料里的定义是什么？","selectedChunkIds":[100],"modelId":1}}}
+
+### 分页列出当前有权知识库
+POST {{baseUrl}}/mcp
+Authorization: Bearer {{mcpToken}}
+Content-Type: application/json
+Accept: application/json, text/event-stream
+MCP-Protocol-Version: 2025-11-25
+
+{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"list_knowledge_bases","arguments":{"pageNo":1,"pageSize":20}}}
