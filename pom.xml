@@ -42,7 +42,7 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
         </dependency>
-        <!-- 文档解析：Word/Excel 统一走 LangChain4j，PDF/PPT 使用底层解析器保留页码 -->
+        <!-- 文档解析：Apache POI 保留 Office 表格和工作表，PDFBox 按物理页抽取与渲染 -->
         <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j-document-parser-apache-poi</artifactId>

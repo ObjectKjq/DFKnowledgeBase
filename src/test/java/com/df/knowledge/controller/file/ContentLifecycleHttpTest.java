@@ -77,12 +77,15 @@ class ContentLifecycleHttpTest {
 
     @SpringBootConfiguration
     @EnableAutoConfiguration
+    @org.springframework.scheduling.annotation.EnableScheduling
     @MapperScan("com.df.knowledge.dal.mysql")
     @Import({FileController.class, DocController.class, KnowledgeBaseController.class,
             GlobalExceptionHandler.class, MyBatisPlusConfiguration.class, DefaultDBFieldHandler.class,
             SaTokenConfiguration.class, FileServiceImpl.class, DocServiceImpl.class,
             KnowledgeBaseServiceImpl.class, KnowledgeBasePermissionServiceImpl.class,
             DocIngestServiceImpl.class, DocParseServiceImpl.class, DocIndexServiceImpl.class,
+            com.df.knowledge.service.doc.DocOcrServiceImpl.class,
+            com.df.knowledge.service.model.InstanceSettingsServiceImpl.class,
             DocIngestExecutorConfiguration.class, SecurityConfiguration.class,
             UserController.class,
             AuthController.class,

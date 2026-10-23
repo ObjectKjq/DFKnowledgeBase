@@ -105,7 +105,10 @@ public interface DocMapper extends BaseMapper<DocDO> {
      * @return 文档列表
      */
     default List<DocDO> selectListByStatuses(Collection<Integer> statuses) {
-        return selectList(new LambdaQueryWrapper<DocDO>().in(DocDO::getStatus, statuses));
+        return selectList(new LambdaQueryWrapper<DocDO>().in(DocDO::getStatus, statuses)
+                .apply("EXISTS (SELECT 1 FROM knowledge_base kb WHERE kb.id = knowledge_doc.knowledge_base_id"
+                        + " AND kb.deleted = 0 AND kb.delete_time IS NULL)")
+                .orderByAsc(DocDO::getIngestSubmitTime, DocDO::getId));
     }
 
     /**
@@ -164,6 +167,17 @@ public interface DocMapper extends BaseMapper<DocDO> {
                 .eq(DocDO::getStatus, fromStatus)
                 .set(DocDO::getStatus, toStatus)
                 .set(StrUtil.isNotBlank(failReason), DocDO::getFailReason, failReason));
+    }
+
+    /**
+     * 持久保存本次提交的排序时间；状态仍是权威任务状态。
+     * @param id 文档编号
+     * @return 更新条数
+     */
+    default int updateIngestSubmitTime(Long id) {
+        return update(null, new LambdaUpdateWrapper<DocDO>().eq(DocDO::getId, id)
+                .in(DocDO::getStatus, DocStatusEnum.IN_FLIGHT_STATUS_CODES)
+                .set(DocDO::getIngestSubmitTime, LocalDateTime.now()));
     }
 
     /**

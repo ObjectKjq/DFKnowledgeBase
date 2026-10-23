@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.df.knowledge.dal.dataobject.doc.DocDO;
 import com.df.knowledge.dal.mysql.doc.DocMapper;
 import com.df.knowledge.enums.doc.DocStatusEnum;
+import com.df.knowledge.service.model.InstanceSettingsService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -13,6 +14,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.core.task.TaskRejectedException;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 
 /**
  * 文档入库 Service 实现类
@@ -36,9 +43,63 @@ public class DocIngestServiceImpl implements DocIngestService {
     @Resource
     private ThreadPoolTaskExecutor docIngestExecutor;
 
+    private final Map<Long, Long> runningDocs = new HashMap<>();
+
+    @Resource
+    private InstanceSettingsService instanceSettingsService;
+
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void submit(Long docId) {
-        docIngestExecutor.execute(() -> processDoc(docId));
+        // 提交时间与状态已在文档事务中保存；无锁读取避免回调与解析线程争写同一行。
+        DocDO doc = docMapper.selectById(docId);
+        if (doc != null && DocStatusEnum.isInFlight(doc.getStatus()) && doc.getIngestSubmitTime() == null) {
+            // 兼容尚未写排序时间的旧调用，正常创建、重试与恢复不进入此分支。
+            docMapper.updateIngestSubmitTime(docId);
+        }
+    }
+
+    /** 定时从 MySQL 的未完成状态领取任务；单实例内同一文档最多一个执行者。 */
+    @Scheduled(fixedDelayString = "${knowledge.ingest.poll-delay-ms:500}")
+    public synchronized void dispatchPendingDocs() {
+        var settings = instanceSettingsService.get();
+        int globalConcurrency = settings.getIngestGlobalConcurrency();
+        int knowledgeBaseConcurrency = settings.getIngestKnowledgeBaseConcurrency();
+        if (runningDocs.size() >= globalConcurrency) {
+            return;
+        }
+        // 管理员调整限额后下次领取生效，已执行任务自然完成。
+        if (docIngestExecutor.getMaxPoolSize() != globalConcurrency) {
+            docIngestExecutor.setCorePoolSize(0);
+            docIngestExecutor.setMaxPoolSize(globalConcurrency);
+            docIngestExecutor.setCorePoolSize(globalConcurrency);
+        }
+        List<DocDO> pending = docMapper.selectListByStatuses(DocStatusEnum.IN_FLIGHT_STATUS_CODES);
+        for (DocDO doc : pending) {
+            if (runningDocs.size() >= globalConcurrency) {
+                break;
+            }
+            long activeInBase = runningDocs.values().stream().filter(doc.getKnowledgeBaseId()::equals).count();
+            if (runningDocs.containsKey(doc.getId()) || activeInBase >= knowledgeBaseConcurrency) {
+                continue;
+            }
+            runningDocs.put(doc.getId(), doc.getKnowledgeBaseId());
+            try {
+                docIngestExecutor.execute(() -> {
+                    try {
+                        processDoc(doc.getId());
+                    } finally {
+                        synchronized (DocIngestServiceImpl.this) {
+                            runningDocs.remove(doc.getId());
+                        }
+                    }
+                });
+            } catch (TaskRejectedException ex) {
+                // 线程池正在关停或调整：任务仍在数据库中，下次轮询继续，不由调度线程代跑。
+                runningDocs.remove(doc.getId());
+                break;
+            }
+        }
     }
 
     @Override
@@ -81,12 +142,8 @@ public class DocIngestServiceImpl implements DocIngestService {
     @Override
     @EventListener(ApplicationReadyEvent.class)
     public void recoverInterruptedDocs() {
-        // 服务启动时把停留在排队/解析中/索引中的文档重新入队（ADR-0007），不丢任务
-        List<DocDO> docs = docMapper.selectListByStatuses(DocStatusEnum.IN_FLIGHT_STATUS_CODES);
-        docs.forEach(doc -> submit(doc.getId()));
-        if (!docs.isEmpty()) {
-            log.info("[recoverInterruptedDocs][重新入队中断的入库任务({}个)]", docs.size());
-        }
+        // 数据库保留排队及中断状态；不重写提交时间，避免重启改变先后顺序。
+        dispatchPendingDocs();
     }
 
     /**
@@ -100,6 +157,11 @@ public class DocIngestServiceImpl implements DocIngestService {
      * @param ex 失败异常
      */
     private void markFailed(Long docId, DocDO doc, Integer fromStatus, Exception ex) {
+        // 正常关停打断的任务保持未完成状态，启动时继续，而非要求用户手动重试。
+        if (Thread.currentThread().isInterrupted()) {
+            log.info("[markFailed][文档({})处理因关停中断，保留状态供重启恢复]", docId);
+            return;
+        }
         String failReason = StrUtil.isBlank(doc.getFailReason())
                 ? StrUtil.subPre(StrUtil.blankToDefault(ex.getMessage(), "文档处理失败"), 500)
                 : doc.getFailReason();

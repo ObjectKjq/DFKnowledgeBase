@@ -134,7 +134,7 @@ public class DocSearchServiceImpl implements DocSearchService {
                 .setDocTitle(doc.getTitle()).setChunkId(chunk.getId())
                 .setChunkIndex(chunk.getChunkIndex()).setPageNumber(chunk.getPageNumber())
                 .setStartOffset(chunk.getStartOffset()).setEndOffset(chunk.getEndOffset())
-                .setText(chunk.getText());
+                .setText(chunk.getText()).setSheetName(chunk.getSheetName()).setOcr(chunk.getOcr());
     }
 
     private static <T> Map<Long, T> byId(Collection<T> values, Function<T, Long> id) {

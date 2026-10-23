@@ -219,6 +219,7 @@ CREATE TABLE `knowledge_doc` (
     `file_url`          varchar(255) NULL DEFAULT NULL COMMENT '文件下载链接（上传接口返回的 url，过渡期存量文档为空）',
     `file_path`         varchar(500) NULL DEFAULT NULL COMMENT '过渡字段：存量磁盘文件路径，迁移入库后置空，随双读逻辑一并移除',
     `status`            tinyint      NOT NULL COMMENT '文档状态（1 排队 2 解析中 3 索引中 4 可用 5 失败 6 已删除）',
+    `ingest_submit_time` datetime(6) NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '本次入库提交时间',
     `fail_reason`       varchar(500) NULL DEFAULT NULL COMMENT '失败原因（保留首次失败原因）',
     `prev_status`       tinyint      NULL DEFAULT NULL COMMENT '删除前状态（软删除恢复到删除前状态用）',
     `delete_time`       datetime     NULL DEFAULT NULL COMMENT '删除时间（软删除 30 天保留期起算点）',
@@ -229,6 +230,7 @@ CREATE TABLE `knowledge_doc` (
     `deleted`           bit(1)       NOT NULL DEFAULT b'0' COMMENT '是否删除',
     PRIMARY KEY (`id`) USING BTREE,
     KEY `idx_knowledge_base_id` (`knowledge_base_id`) USING BTREE,
+    KEY `idx_ingest_schedule` (`status`, `ingest_submit_time`, `id`) USING BTREE,
     KEY `idx_status` (`status`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '文档表';
 
@@ -244,6 +246,8 @@ CREATE TABLE `knowledge_doc_chunk` (
     `text`         text        NOT NULL COMMENT '分块文本',
     `start_offset` int         NOT NULL COMMENT '文档抽取文本的起始字符偏移（含）',
     `end_offset`   int         NOT NULL COMMENT '文档抽取文本的结束字符偏移（不含）',
+    `sheet_name`   varchar(255) NULL DEFAULT NULL COMMENT 'Excel工作表名称',
+    `ocr`          bit(1) NOT NULL DEFAULT b'0' COMMENT '是否来自扫描页OCR',
     `page_number`  int         NULL DEFAULT NULL COMMENT 'PDF/PPT页码（从1开始），其他格式为空',
     `creator`      varchar(64) NULL DEFAULT '' COMMENT '创建者',
     `create_time`  datetime    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

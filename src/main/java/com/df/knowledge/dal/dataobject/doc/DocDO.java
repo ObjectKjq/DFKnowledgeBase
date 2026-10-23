@@ -63,6 +63,9 @@ public class DocDO extends BaseDO {
      */
     private Integer status;
 
+    /** 本次入库提交时间，重试与恢复时更新，服务重启保留 */
+    private LocalDateTime ingestSubmitTime;
+
     /**
      * 失败原因（保留首次失败原因）
      */

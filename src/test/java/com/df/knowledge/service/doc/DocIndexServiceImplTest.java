@@ -48,6 +48,13 @@ class DocIndexServiceImplTest {
     private DocEmbeddingService docEmbeddingService;
     @Mock
     private DocChunkIndexService docChunkIndexService;
+    @Mock
+    private com.df.knowledge.dal.mysql.knowledge.KnowledgeBaseMapper knowledgeBaseMapper;
+    @org.junit.jupiter.api.BeforeEach
+    void prepareKnowledgeBase() {
+        lenient().when(knowledgeBaseMapper.selectByDocIdForShare(any())).thenReturn(
+                new com.df.knowledge.dal.dataobject.knowledge.KnowledgeBaseDO());
+    }
     @InjectMocks
     private DocIndexServiceImpl docIndexService;
 

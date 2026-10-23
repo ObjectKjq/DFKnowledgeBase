@@ -126,6 +126,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
             } else {
                 continue;
             }
+            current.setIngestSubmitTime(LocalDateTime.now());
             docMapper.updateById(current);
             pending.add(current.getId());
         }
