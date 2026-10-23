@@ -20,6 +20,14 @@ public interface RagService {
     RagAnswerResult ask(Long userId, RagAskReqVO reqVO);
 
     /**
+     * MCP 无会话只读问答，复用网页授权、检索与最终引用校验，不保存任何会话或消息。
+     * @param userId 当前凭证用户
+     * @param reqVO 问题、范围及模型，忽略会话编号
+     * @return 答案或拒答
+     */
+    RagAnswerResult askReadOnly(Long userId, RagAskReqVO reqVO);
+
+    /**
      * 流式执行问答；增量为暂定内容，以最终返回结果为准
      *
      * @param userId 当前用户编号

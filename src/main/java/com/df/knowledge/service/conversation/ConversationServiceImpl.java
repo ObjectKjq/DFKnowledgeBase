@@ -49,8 +49,19 @@ public class ConversationServiceImpl implements ConversationService {
         conversation.setUserId(userId);
         conversation.setTitle(reqVO.getTitle());
         conversation.setKnowledgeBaseIds(knowledgeBaseIds);
+        conversation.setState(new RetrievalState().setKnowledgeBaseIds(knowledgeBaseIds));
         conversationMapper.insert(conversation);
         return conversation.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateState(Long userId, Long id, RetrievalState state) {
+        var conversation = validateConversationOwner(userId, id);
+        if (state.getKnowledgeBaseIds() != null) state.getKnowledgeBaseIds().forEach(kb ->
+                knowledgeBasePermissionService.checkViewPermission(userId, kb));
+        conversation.setState(state);
+        conversationMapper.updateById(conversation);
     }
 
     @Override

@@ -15,6 +15,14 @@ public interface DocSearchService {
      * @param selectedKnowledgeBaseIds 选择的知识库范围，空表示全部有权知识库
      * @return 融合相关性排序的命中分块
      */
+    /**
+     * 过滤后融合及重排，并按当前内容权限返回分页结果。
+     * @param userId 用户编号
+     * @param request 检索过滤及分页参数
+     * @return 分页结果及索引中提示
+     */
+    DocSearchPage search(Long userId, com.df.knowledge.controller.doc.vo.DocSearchReqVO request);
+
     List<DocChunkResult> search(Long userId, String query, List<Long> selectedKnowledgeBaseIds);
 
     /**
