@@ -12,24 +12,28 @@ import com.df.knowledge.common.ErrorCodeImpl;
  */
 public interface ErrorCodeConstants {
 
-    // ========== 用户模块 1-001-001-0xx ===    ErrorCode USER_NOT_FOUND = new ErrorCodeImpl(1_001_001_001, "用户不存在");
+    // ========== 用户模块 1-001-001-0xx ==========
+    ErrorCode USER_NOT_FOUND = new ErrorCodeImpl(1_001_001_001, "用户不存在");
     ErrorCode USER_USERNAME_DUPLICATE = new ErrorCodeImpl(1_001_001_002, "账号【{}】已存在");
     ErrorCode USER_PASSWORD_ERROR = new ErrorCodeImpl(1_001_001_003, "账号或密码错误");
     ErrorCode USER_IS_DISABLED = new ErrorCodeImpl(1_001_001_004, "账号已停用");
     ErrorCode USER_OLD_PASSWORD_ERROR = new ErrorCodeImpl(1_001_001_005, "旧密码不正确");
 
-    // ========== 角色模块 1-001-001-1xx ===    ErrorCode ROLE_NOT_FOUND = new ErrorCodeImpl(1_001_001_101, "角色不存在");
+    // ========== 角色模块 1-001-001-1xx ==========
+    ErrorCode ROLE_NOT_FOUND = new ErrorCodeImpl(1_001_001_101, "角色不存在");
     ErrorCode ROLE_NAME_DUPLICATE = new ErrorCodeImpl(1_001_001_102, "已经存在该名字的角色");
     ErrorCode ROLE_CODE_DUPLICATE = new ErrorCodeImpl(1_001_001_103, "已经存在该标识的角色");
     ErrorCode ROLE_SYSTEM_TYPE_PROHIBITED = new ErrorCodeImpl(1_001_001_104, "内置角色不允许删除");
     ErrorCode ROLE_HAS_USER = new ErrorCodeImpl(1_001_001_105, "该角色已分配给用户，无法删除");
 
-    // ========== 菜单模块 1-001-001-2xx ===    ErrorCode MENU_NOT_FOUND = new ErrorCodeImpl(1_001_001_201, "菜单不存在");
+    // ========== 菜单模块 1-001-001-2xx ==========
+    ErrorCode MENU_NOT_FOUND = new ErrorCodeImpl(1_001_001_201, "菜单不存在");
     ErrorCode MENU_PARENT_ERROR = new ErrorCodeImpl(1_001_001_202, "父菜单不能是自己");
     ErrorCode MENU_PARENT_NOT_FOUND = new ErrorCodeImpl(1_001_001_203, "父菜单不存在");
     ErrorCode MENU_EXISTS_CHILD = new ErrorCodeImpl(1_001_001_204, "存在子菜单，无法删除");
 
-    // ========== 知识库模块 1-001-002-0xx ===    ErrorCode KB_NOT_FOUND = new ErrorCodeImpl(1_001_002_001, "知识库不存在");
+    // ========== 知识库模块 1-001-002-0xx ==========
+    ErrorCode KB_NOT_FOUND = new ErrorCodeImpl(1_001_002_001, "知识库不存在");
     ErrorCode KB_DEFAULT_NOT_DELETABLE = new ErrorCodeImpl(1_001_002_002, "默认知识库不允许删除");
     ErrorCode KB_NO_PERMISSION = new ErrorCodeImpl(1_001_002_003, "无权操作该知识库");
     ErrorCode KB_PERSONAL_NOT_ALLOW_MEMBER = new ErrorCodeImpl(1_001_002_004, "个人知识库不支持添加成员");
@@ -40,7 +44,8 @@ public interface ErrorCodeConstants {
     ErrorCode KB_RESTORE_EXPIRED = new ErrorCodeImpl(1_001_002_008, "知识库删除超过 30 天，无法恢复");
     ErrorCode KB_PURGE_CONFIRM_REQUIRED = new ErrorCodeImpl(1_001_002_009, "请确认彻底删除知识库");
 
-    // ========== 文档模块 1-001-003-0xx ===    ErrorCode DOC_NOT_FOUND = new ErrorCodeImpl(1_001_003_001, "文档不存在");
+    // ========== 文档模块 1-001-003-0xx ==========
+    ErrorCode DOC_NOT_FOUND = new ErrorCodeImpl(1_001_003_001, "文档不存在");
     ErrorCode DOC_FORMAT_NOT_SUPPORTED = new ErrorCodeImpl(1_001_003_002, "不支持的文件格式，仅支持 PDF、Word、PPT、Excel、TXT、Markdown");
     ErrorCode DOC_RETRY_NOT_ALLOWED = new ErrorCodeImpl(1_001_003_004, "仅失败的文档支持重试");
     ErrorCode DOC_DELETE_NOT_ALLOWED = new ErrorCodeImpl(1_001_003_005, "文档已删除，无法重复删除");
@@ -55,17 +60,21 @@ public interface ErrorCodeConstants {
     ErrorCode DOC_PURGE_NOT_ALLOWED = new ErrorCodeImpl(1_001_003_014, "仅回收站文档支持彻底删除");
     ErrorCode DOC_PURGE_CONFIRM_REQUIRED = new ErrorCodeImpl(1_001_003_015, "请确认彻底删除文档");
 
-    // ========== 会话模块 1-001-004-0xx ===    ErrorCode CONVERSATION_NOT_FOUND = new ErrorCodeImpl(1_001_004_001, "会话不存在");
+    // ========== 会话模块 1-001-004-0xx ==========
+    ErrorCode CONVERSATION_NOT_FOUND = new ErrorCodeImpl(1_001_004_001, "会话不存在");
     ErrorCode RAG_MODEL_UNAVAILABLE = new ErrorCodeImpl(1_001_004_002, "对话模型不可用，请联系管理员检查模型配置后重试");
     ErrorCode RAG_GENERATION_TIMEOUT = new ErrorCodeImpl(1_001_004_003, "答案生成超时，请重试");
 
-    // ========== 文件模块 1-001-005-0xx ===    ErrorCode FILE_NOT_FOUND = new ErrorCodeImpl(1_001_005_001, "文件不存在");
+    // ========== 文件模块 1-001-005-0xx ==========
+    ErrorCode FILE_NOT_FOUND = new ErrorCodeImpl(1_001_005_001, "文件不存在");
     ErrorCode FILE_IS_EMPTY = new ErrorCodeImpl(1_001_005_002, "文件为空");
     ErrorCode FILE_TYPE_NOT_ALLOWED = new ErrorCodeImpl(1_001_005_003, "不支持的文件类型");
     ErrorCode FILE_TOO_LARGE = new ErrorCodeImpl(1_001_005_004, "文件大小超过 50 MB 上限");
     ErrorCode FILE_STORE_FAILED = new ErrorCodeImpl(1_001_005_005, "文件存储失败");
     ErrorCode FILE_IN_USE = new ErrorCodeImpl(1_001_005_006, "文件仍被文档引用，请从文档回收站彻底删除");
-    // ========== 模型与实例设置模块 1-001-010-0xx ===    ErrorCode MODEL_NOT_FOUND = new ErrorCodeImpl(1_001_010_001, "模型配置不存在");
+
+    // ========== 模型与实例设置模块 1-001-010-0xx ==========
+    ErrorCode MODEL_NOT_FOUND = new ErrorCodeImpl(1_001_010_001, "模型配置不存在");
     ErrorCode MODEL_NAME_DUPLICATE = new ErrorCodeImpl(1_001_010_002, "已经存在该名字的模型配置");
     ErrorCode MODEL_NOT_CONFIGURED = new ErrorCodeImpl(1_001_010_003, "未配置对话模型，请联系管理员");
     ErrorCode MODEL_CONNECTION_FAILED = new ErrorCodeImpl(1_001_010_004, "模型服务不可达，请联系管理员");
