@@ -3,6 +3,8 @@ package com.df.knowledge.controller.doc.vo;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 /**
  * 检索命中与原文预览的分块 Response VO
  */
@@ -46,4 +48,28 @@ public class DocChunkRespVO {
     /** 分块是否来自扫描页 OCR */
     @Schema(description = "分块是否来自扫描页 OCR")
     private Boolean ocr;
+    /** 实际命中类型：KEYWORD、SEMANTIC 或 HYBRID */
+    @Schema(description = "实际命中类型：KEYWORD、SEMANTIC 或 HYBRID")
+    private String matchType;
+    /** 实际索引相关性，混合模式为 RRF 得分 */
+    @Schema(description = "实际索引相关性，混合模式为 RRF 得分")
+    private Double score;
+    /** HTML 转义后以 em 标记关键词的原文 */
+    @Schema(description = "HTML 转义后以 em 标记关键词的原文")
+    private String highlight;
+    /** 原始文件编号，下载时仍重新校验授权 */
+    @Schema(description = "原始文件编号，下载时仍重新校验授权")
+    private Long fileId;
+    /** 当前授权文件下载地址 */
+    @Schema(description = "当前授权文件下载地址")
+    private String downloadUrl;
+    /** PDF 原始页面、TEXT 原文、OFFICE 解析内容 */
+    @Schema(description = "PDF 原始页面、TEXT 原文、OFFICE 解析内容")
+    private String previewType;
+    /** 文档格式编码 */
+    @Schema(description = "文档格式编码")
+    private Integer format;
+    /** 文档上传时间 */
+    @Schema(description = "文档上传时间")
+    private LocalDateTime uploadTime;
 }

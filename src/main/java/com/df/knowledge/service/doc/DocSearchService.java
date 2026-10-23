@@ -1,11 +1,21 @@
 package com.df.knowledge.service.doc;
 
+import com.df.knowledge.controller.doc.vo.DocSearchReqVO;
+
 import java.util.List;
 
 /**
  * 混合检索与原文预览 Service 接口
  */
 public interface DocSearchService {
+
+    /**
+     * 过滤后融合及重排，并按当前内容权限返回分页结果。
+     * @param userId 用户编号
+     * @param request 检索过滤及分页参数
+     * @return 分页结果及索引中提示
+     */
+    DocSearchPage search(Long userId, DocSearchReqVO request);
 
     /**
      * 在当前用户有权范围内检索可用文档
@@ -34,4 +44,12 @@ public interface DocSearchService {
      * @return 原文与定位信息
      */
     DocChunkResult getPreview(Long userId, Long chunkId);
+
+    /**
+     * 读取整份解析内容与原命中定位，在返回前再次检查当前授权和可用状态。
+     * @param userId 当前用户
+     * @param chunkId 命中分块编号
+     * @return 全文解析分块及原始文件兜底
+     */
+    DocDocumentPreview getDocumentPreview(Long userId, Long chunkId);
 }

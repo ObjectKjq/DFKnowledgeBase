@@ -4,7 +4,13 @@ import cn.dev33.satoken.stp.StpUtil;
 import cn.hutool.core.bean.BeanUtil;
 import com.df.knowledge.common.CommonResult;
 import com.df.knowledge.controller.doc.vo.DocChunkRespVO;
+import com.df.knowledge.controller.doc.vo.DocDocumentPreviewRespVO;
+import com.df.knowledge.controller.doc.vo.DocGuideReqVO;
+import com.df.knowledge.controller.doc.vo.DocGuideRespVO;
+import com.df.knowledge.controller.doc.vo.DocSearchPageRespVO;
 import com.df.knowledge.controller.doc.vo.DocSearchReqVO;
+import com.df.knowledge.service.doc.DocGuideService;
+import com.df.knowledge.service.doc.DocSearchPage;
 import com.df.knowledge.service.doc.DocSearchService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -18,8 +24,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.util.List;
 
 import static com.df.knowledge.common.CommonResult.success;
 
@@ -35,11 +39,46 @@ public class DocSearchController {
     @Resource
     private DocSearchService docSearchService;
 
+    @Resource
+    private DocGuideService docGuideService;
+
+    @PostMapping("/guide")
+    @Operation(summary = "引导检索", description = "最多两轮澄清；可跳过，模型失败后说明原因并执行混合检索")
+    public CommonResult<DocGuideRespVO> guide(
+            @Valid @RequestBody DocGuideReqVO request) {
+        var result = docGuideService.guide(StpUtil.getLoginIdAsLong(), request);
+        var response = BeanUtil.copyProperties(result, DocGuideRespVO.class);
+        if (result.getSearch() != null) {
+            response.setSearch(toPageResponse(result.getSearch()));
+        }
+        return success(response);
+    }
+
     @PostMapping("/search")
-    @Operation(summary = "混合检索", description = "仅检索当前用户有权范围内的可用文档，返回最多 20 个融合排序分块")
-    public CommonResult<List<DocChunkRespVO>> search(@Valid @RequestBody DocSearchReqVO reqVO) {
-        return success(BeanUtil.copyToList(docSearchService.search(StpUtil.getLoginIdAsLong(),
-                reqVO.getQuery(), reqVO.getKnowledgeBaseIds()), DocChunkRespVO.class));
+    @Operation(summary = "混合或模糊检索", description = "按当前权限和文档过滤返回分页，默认每页 20 条；达到候选上限时显式提示缩小范围")
+    public CommonResult<DocSearchPageRespVO> search(@Valid @RequestBody DocSearchReqVO reqVO) {
+        var result = docSearchService.search(StpUtil.getLoginIdAsLong(), reqVO);
+        return success(toPageResponse(result));
+    }
+
+    private DocSearchPageRespVO toPageResponse(DocSearchPage result) {
+        var response = new DocSearchPageRespVO();
+        response.setTotal(result.getTotal());
+        response.setList(BeanUtil.copyToList(result.getList(), DocChunkRespVO.class));
+        response.setIndexingCount(result.getIndexingCount());
+        response.setCandidateLimitReached(result.isCandidateLimitReached());
+        return response;
+    }
+
+    @GetMapping("/document-preview")
+    @Operation(summary = "预览整份解析文档", description = "重新授权并读取全部解析分块及页码/工作表位置，提供原始文件兜底")
+    @Parameter(name = "chunkId",description = "原命中分块编号",required = true)
+    public CommonResult<DocDocumentPreviewRespVO> getDocumentPreview(@RequestParam("chunkId") Long chunkId) {
+        var result = docSearchService.getDocumentPreview(StpUtil.getLoginIdAsLong(), chunkId);
+        var response = new DocDocumentPreviewRespVO();
+        response.setSource(BeanUtil.copyProperties(result.getSource(), DocChunkRespVO.class));
+        response.setChunks(BeanUtil.copyToList(result.getChunks(), DocChunkRespVO.class));
+        return success(response);
     }
 
     @GetMapping("/preview")

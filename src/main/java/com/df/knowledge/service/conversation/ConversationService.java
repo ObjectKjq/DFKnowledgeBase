@@ -13,6 +13,14 @@ import java.util.List;
 public interface ConversationService {
 
     /**
+     * 保存当前会话的完整检索选择。
+     * @param userId 用户编号
+     * @param id 会话编号
+     * @param state 当前选择
+     */
+    void updateState(Long userId, Long id, RetrievalState state);
+
+    /**
      * 创建当前用户的会话
      *
      * @param userId 当前用户编号

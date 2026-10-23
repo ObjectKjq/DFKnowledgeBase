@@ -36,6 +36,8 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.when;
 
 /**
@@ -138,41 +140,26 @@ class DocChunkIndexServiceImplTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void testSearchHybrid_usesSingleRrfRequestWithBothScopeFilters() throws Exception {
-        // 准备参数：ES 响应按融合相关性返回两个分块
-        SearchResponse<Void> response = mock(SearchResponse.class);
-        HitsMetadata<Void> hits = mock(HitsMetadata.class);
-        Hit<Void> first = mock(Hit.class);
-        Hit<Void> second = mock(Hit.class);
+    void testSearchHybrid_fusesTwoAuthorizedRequestsWithoutPaidRetriever() throws Exception {
+        // 准备参数：语义次序为 101、100，关键词仅命中 100。
+        SearchResponse<Void> semantic = mock(SearchResponse.class), keyword = mock(SearchResponse.class);
+        HitsMetadata<Void> semanticHits = mock(HitsMetadata.class), keywordHits = mock(HitsMetadata.class);
+        Hit<Void> first = mock(Hit.class), second = mock(Hit.class);
         when(first.id()).thenReturn("101");
         when(second.id()).thenReturn("100");
-        when(hits.hits()).thenReturn(List.of(first, second));
-        when(response.hits()).thenReturn(hits);
-        when(elasticsearchClient.search(any(SearchRequest.class), eq(Void.class))).thenReturn(response);
-        float[] vector = new float[512];
-        vector[0] = 1;
-
-        // 调用
-        List<Long> chunkIds = docChunkIndexService.searchHybrid("知识检索", vector, List.of(2L), List.of(5L), 20);
-
-        // 断言：单次请求，根过滤同时作用于 BM25 和 kNN，两路结果保留融合顺序
-        assertEquals(List.of(101L, 100L), chunkIds);
+        when(semanticHits.hits()).thenReturn(List.of(first, second)); when(keywordHits.hits()).thenReturn(List.of(second));
+        when(semantic.hits()).thenReturn(semanticHits); when(keyword.hits()).thenReturn(keywordHits);
+        when(elasticsearchClient.search(any(SearchRequest.class), eq(Void.class))).thenReturn(semantic, keyword);
+        // 调用与断言：共同命中的 100 排在纯语义命中的 101 之前。
+        var hits = docChunkIndexService.search("知识检索", new float[512], List.of(2L), List.of(5L), "HYBRID", 20);
+        assertEquals(List.of(100L, 101L), hits.stream().map(DocIndexHit::chunkId).toList());
+        assertEquals("HYBRID", hits.getFirst().matchType()); assertEquals("SEMANTIC", hits.get(1).matchType());
+        assertEquals(0.032522, hits.getFirst().score(), 0.000001);
         ArgumentCaptor<SearchRequest> captor = ArgumentCaptor.forClass(SearchRequest.class);
-        verify(elasticsearchClient).search(captor.capture(), eq(Void.class));
-        SearchRequest request = captor.getValue();
-        assertEquals(List.of("knowledge_doc_chunk"), request.index());
-        assertEquals(20, request.size());
-        assertEquals(Boolean.FALSE, request.source().fetch());
-        var rrf = request.retriever().rrf();
-        assertEquals(2, rrf.filter().size());
-        assertEquals("kb_id", rrf.filter().get(0).terms().field());
-        assertEquals("2", rrf.filter().get(0).terms().terms().value().getFirst().stringValue());
-        assertEquals("doc_id", rrf.filter().get(1).terms().field());
-        assertEquals("5", rrf.filter().get(1).terms().terms().value().getFirst().stringValue());
-        assertEquals("ik_smart", rrf.retrievers().get(0).retriever().standard().query().match().analyzer());
-        assertEquals("text", rrf.retrievers().get(0).retriever().standard().query().match().field());
-        assertEquals("vector", rrf.retrievers().get(1).retriever().knn().field());
-        assertEquals(512, rrf.retrievers().get(1).retriever().knn().queryVector().size());
+        verify(elasticsearchClient, times(2)).search(captor.capture(), eq(Void.class));
+        assertNull(captor.getAllValues().getFirst().retriever());
+        assertEquals(2, captor.getAllValues().getFirst().knn().getFirst().filter().size());
+        assertEquals(2, captor.getAllValues().get(1).query().bool().filter().size());
     }
 
     private static DocChunkDO chunk() {

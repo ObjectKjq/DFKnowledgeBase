@@ -268,6 +268,7 @@ CREATE TABLE `knowledge_conversation` (
     `user_id`         bigint       NOT NULL COMMENT '所属用户ID（关联 system_user 表）',
     `title`           varchar(100) NOT NULL COMMENT '会话标题',
     `retrieval_scope` json         NOT NULL COMMENT '发起会话时的知识库ID范围，空数组表示全部有权知识库',
+    `state`           json         NULL COMMENT '当前会话检索选择与澄清状态',
     `creator`         varchar(64)  NULL DEFAULT '' COMMENT '创建者',
     `create_time`     datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updater`         varchar(64)  NULL DEFAULT '' COMMENT '更新者',
