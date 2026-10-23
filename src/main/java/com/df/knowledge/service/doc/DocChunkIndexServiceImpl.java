@@ -3,15 +3,15 @@ package com.df.knowledge.service.doc;
 import cn.hutool.core.util.StrUtil;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._types.Conflicts;
-import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch._types.FieldValue;
-import co.elastic.clients.elasticsearch._types.Retriever;
+import co.elastic.clients.elasticsearch._types.Refresh;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.core.DeleteByQueryResponse;
 import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.search.Hit;
 import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.dal.dataobject.doc.DocChunkDO;
 import com.df.knowledge.enums.ErrorCodeConstants;
@@ -100,7 +100,9 @@ public class DocChunkIndexServiceImpl implements DocChunkIndexService {
     @Override
     public List<DocIndexHit> search(String query, float[] vector, Collection<Long> knowledgeBaseIds,
                                     Collection<Long> docIds, String mode, int limit) {
-        if (knowledgeBaseIds.isEmpty() || docIds.isEmpty()) return List.of();
+        if (knowledgeBaseIds.isEmpty() || docIds.isEmpty()) {
+            return List.of();
+        }
         Query kbFilter = Query.of(q -> q.terms(t -> t.field("kb_id").terms(v -> v.value(
                 knowledgeBaseIds.stream().map(id -> FieldValue.of(id.toString())).toList()))));
         Query docFilter = Query.of(q -> q.terms(t -> t.field("doc_id").terms(v -> v.value(
@@ -113,8 +115,10 @@ public class DocChunkIndexServiceImpl implements DocChunkIndexService {
                     .source(source -> source.fetch(false)).knn(k -> k.field("vector").queryVector(queryVector)
                             .k(limit).numCandidates(Math.min(10000, Math.max(limit, 100))).filter(filters)));
             var semanticHits = checkedSearch(semantic);
-            if ("FUZZY".equals(mode)) return semanticHits.stream().map(h ->
-                    new DocIndexHit(Long.valueOf(h.id()), h.score() == null ? 0 : h.score(), "SEMANTIC")).toList();
+            if ("FUZZY".equals(mode)) {
+                return semanticHits.stream().map(h -> new DocIndexHit(Long.valueOf(h.id()),
+                        h.score() == null ? 0 : h.score(), "SEMANTIC")).toList();
+            }
             SearchRequest keyword = SearchRequest.of(s -> s.index(indexName).size(limit)
                     .source(source -> source.fetch(false)).query(q -> q.bool(b -> b.filter(filters)
                             .must(m -> m.match(match -> match.field("text").query(query).analyzer("ik_smart"))))));
@@ -123,7 +127,8 @@ public class DocChunkIndexServiceImpl implements DocChunkIndexService {
             Map<Long, String> types = new LinkedHashMap<>();
             for (int rank = 0; rank < keywordHits.size(); rank++) {
                 Long id = Long.valueOf(keywordHits.get(rank).id());
-                scores.merge(id, 1.0 / (61 + rank), Double::sum); types.put(id, "KEYWORD");
+                scores.merge(id, 1.0 / (61 + rank), Double::sum);
+                types.put(id, "KEYWORD");
             }
             for (int rank = 0; rank < semanticHits.size(); rank++) {
                 Long id = Long.valueOf(semanticHits.get(rank).id());
@@ -133,17 +138,19 @@ public class DocChunkIndexServiceImpl implements DocChunkIndexService {
             return scores.entrySet().stream().sorted(Map.Entry.<Long, Double>comparingByValue().reversed()
                     .thenComparing(Map.Entry.comparingByKey())).limit(limit)
                     .map(e -> new DocIndexHit(e.getKey(), e.getValue(), types.get(e.getKey()))).toList();
-        } catch (ServiceException ex) { throw ex;
+        } catch (ServiceException ex) {
+            throw ex;
         } catch (IOException | RuntimeException ex) {
             log.warn("[search][分块检索失败]", ex);
             throw new ServiceException(ErrorCodeConstants.DOC_SEARCH_FAILED);
         }
     }
 
-    private List<co.elastic.clients.elasticsearch.core.search.Hit<Void>> checkedSearch(SearchRequest request) throws IOException {
+    private List<Hit<Void>> checkedSearch(SearchRequest request) throws IOException {
         SearchResponse<Void> response = elasticsearchClient.search(request, Void.class);
-        if (response.timedOut() || (response.shards() != null && response.shards().failed().intValue() > 0))
+        if (response.timedOut() || (response.shards() != null && response.shards().failed().intValue() > 0)) {
             throw new ServiceException(ErrorCodeConstants.DOC_SEARCH_FAILED);
+        }
         return response.hits().hits();
     }
 

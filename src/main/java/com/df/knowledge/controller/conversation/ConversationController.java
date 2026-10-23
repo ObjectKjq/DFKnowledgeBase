@@ -6,6 +6,7 @@ import com.df.knowledge.common.CommonResult;
 import com.df.knowledge.controller.conversation.vo.ConversationCreateReqVO;
 import com.df.knowledge.controller.conversation.vo.ConversationDetailRespVO;
 import com.df.knowledge.controller.conversation.vo.ConversationRespVO;
+import com.df.knowledge.controller.conversation.vo.ConversationStateReqVO;
 import com.df.knowledge.controller.conversation.vo.MessageCreateReqVO;
 import com.df.knowledge.controller.conversation.vo.MessageRespVO;
 import com.df.knowledge.dal.dataobject.conversation.ConversationDO;
@@ -19,6 +20,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -66,9 +68,9 @@ public class ConversationController {
         return success(response);
     }
 
-    @org.springframework.web.bind.annotation.PutMapping("/state/update")
+    @PutMapping("/state/update")
     @Operation(summary = "修改会话当前选择", description = "保存范围、过滤、模式、模型和所选上下文；只影响后续消息")
-    public CommonResult<Boolean> updateState(@Valid @RequestBody com.df.knowledge.controller.conversation.vo.ConversationStateReqVO request) {
+    public CommonResult<Boolean> updateState(@Valid @RequestBody ConversationStateReqVO request) {
         conversationService.updateState(StpUtil.getLoginIdAsLong(), request.getId(), request.getState());
         return success(true);
     }

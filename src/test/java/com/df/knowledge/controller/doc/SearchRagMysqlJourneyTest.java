@@ -112,10 +112,42 @@ class SearchRagMysqlJourneyTest {
   } finally {try(var c=connection()){c.createStatement().execute("DELETE FROM system_model_configuration WHERE id="+model);}}
  }
 
+ @Test void testSearch_restoresConversationFiltersAndPreservesMessageSnapshot() throws Exception {
+  // 准备参数：会话保存模糊检索和格式过滤，省略本轮选择时恢复自身状态。
+  long id=call("POST","/knowledge/conversation/create",Map.of("title","恢复检索")).path("data").asLong();
+  call("PUT","/knowledge/conversation/state/update",Map.of("id",id,"state",Map.of("mode","FUZZY","knowledgeBaseIds",List.of(1),"formats",List.of(1))));
+  var searched=call("POST","/knowledge/search/search",Map.of("conversationId",id,"query","沸点")).path("data");
+  assertEquals(1,searched.path("total").asInt());assertEquals(1,searched.path("indexingCount").asInt());
+  verify(index).search(anyString(),any(),eq(List.of(1L)),eq(List.of(5L)),eq("FUZZY"),anyInt());
+  // 调用与断言：后续选择不改写历史消息状态。
+  call("PUT","/knowledge/conversation/state/update",Map.of("id",id,"state",Map.of("mode","HYBRID","knowledgeBaseIds",List.of(1),"formats",List.of(2))));
+  var detail=call("GET","/knowledge/conversation/get?id="+id,null).path("data");
+  assertEquals("HYBRID",detail.path("state").path("mode").asText());
+  assertEquals("FUZZY",detail.path("messages").get(0).path("content").path("state").path("mode").asText());
+ }
+ @Test void testPreview_documentContainsAllParsedPositionsButRejectsOtherUser() throws Exception {
+  // 准备参数：同份文档第二个分块位于后续原始页。
+  try(var c=connection()){c.createStatement().execute("INSERT INTO knowledge_doc_chunk(id,doc_id,chunk_index,text,start_offset,end_offset,page_number) VALUES(102,5,1,'后续页面解析内容',16,24,3)");}
+  try(var c=connection()){
+   c.createStatement().execute("INSERT INTO knowledge_doc(id,knowledge_base_id,title,file_name,format,file_size,status) VALUES(8,1,'成绩','成绩.xlsx',4,10,4)");
+   c.createStatement().execute("INSERT INTO knowledge_doc_chunk(id,doc_id,chunk_index,text,start_offset,end_offset,sheet_name) VALUES(103,8,0,'姓名=张三\\n分数=95',0,11,'成绩')");
+  }
+  try{
+   var document=call("GET","/knowledge/search/document-preview?chunkId=100",null).path("data");
+   assertEquals("PDF",document.path("source").path("previewType").asText());
+   assertEquals(2,document.path("chunks").size());assertEquals(3,document.path("chunks").get(1).path("pageNumber").asInt());
+   assertEquals("后续页面解析内容",document.path("chunks").get(1).path("text").asText());
+   var office=call("GET","/knowledge/search/document-preview?chunkId=103",null).path("data");
+   assertEquals("OFFICE",office.path("source").path("previewType").asText());assertEquals("成绩",office.path("chunks").get(0).path("sheetName").asText());
+   assertTrue(office.path("chunks").get(0).path("text").asText().contains("姓名=张三"));
+   assertNotEquals(0,call("GET","/knowledge/search/document-preview?chunkId=101",null).path("code").asInt());
+  }finally{try(var c=connection()){c.createStatement().execute("DELETE FROM knowledge_doc_chunk WHERE id IN (102,103)");c.createStatement().execute("DELETE FROM knowledge_doc WHERE id=8");}}
+ }
+
  JsonNode call(String method,String path,Object body) throws Exception{
   var b=HttpRequest.newBuilder(URI.create("http://localhost:"+port+path)).header("Content-Type","application/json");if(token!=null)b.header("Authorization","Bearer "+token);
   b.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body)));
-  try(var client=HttpClient.newHttpClient()){var response=json.readTree(client.send(b.build(),HttpResponse.BodyHandlers.ofString()).body());if(!path.contains("/preview"))assertEquals(0,response.path("code").asInt(),response.toString());return response;}
+  try(var client=HttpClient.newHttpClient()){var response=json.readTree(client.send(b.build(),HttpResponse.BodyHandlers.ofString()).body());if(!path.contains("/preview") && !path.contains("document-preview?chunkId=101"))assertEquals(0,response.path("code").asInt(),response.toString());return response;}
  }
  @SpringBootConfiguration @EnableAutoConfiguration
  @MapperScan({"com.df.knowledge.dal.mysql.doc","com.df.knowledge.dal.mysql.knowledge","com.df.knowledge.dal.mysql.conversation","com.df.knowledge.dal.mysql.model","com.df.knowledge.dal.mysql.permission"})

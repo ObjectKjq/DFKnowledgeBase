@@ -1,18 +1,20 @@
 package com.df.knowledge.service.rag;
 
 import cn.hutool.core.util.StrUtil;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.controller.conversation.vo.MessageCreateReqVO;
+import com.df.knowledge.controller.doc.vo.DocSearchReqVO;
 import com.df.knowledge.controller.rag.vo.RagAskReqVO;
 import com.df.knowledge.dal.dataobject.conversation.ConversationDO;
 import com.df.knowledge.dal.dataobject.conversation.MessageDO;
 import com.df.knowledge.service.conversation.ConversationService;
+import com.df.knowledge.service.conversation.RetrievalState;
 import com.df.knowledge.service.doc.DocChunkResult;
 import com.df.knowledge.service.doc.DocSearchService;
 import com.df.knowledge.service.knowledge.KnowledgeBasePermissionService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -21,15 +23,17 @@ import org.springframework.validation.annotation.Validated;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
-import static com.df.knowledge.enums.ErrorCodeConstants.DOC_SEARCH_QUERY_EMPTY;
 import static com.df.knowledge.enums.ErrorCodeConstants.DOC_NOT_FOUND;
-import static com.df.knowledge.enums.ErrorCodeConstants.RAG_MODEL_UNAVAILABLE;
+import static com.df.knowledge.enums.ErrorCodeConstants.DOC_SEARCH_QUERY_EMPTY;
 import static com.df.knowledge.enums.ErrorCodeConstants.RAG_GENERATION_TIMEOUT;
+import static com.df.knowledge.enums.ErrorCodeConstants.RAG_MODEL_UNAVAILABLE;
 
 /**
  * RAG 检索 Service 实现类
@@ -91,24 +95,40 @@ public class RagServiceImpl implements RagService {
         }
         String question = reqVO.getQuestion().trim();
         ConversationDO conversation = readOnly ? new ConversationDO() : conversationService.getConversation(userId, reqVO.getConversationId());
-        var state = conversation.getState() == null ? new com.df.knowledge.service.conversation.RetrievalState()
+        var state = conversation.getState() == null ? new RetrievalState()
                 .setKnowledgeBaseIds(conversation.getKnowledgeBaseIds() == null ? List.of() : conversation.getKnowledgeBaseIds())
                 : conversation.getState();
-        if (reqVO.getKnowledgeBaseIds() != null) state.setKnowledgeBaseIds(reqVO.getKnowledgeBaseIds());
-        if (reqVO.getSelectedChunkIds() != null) state.setSelectedChunkIds(reqVO.getSelectedChunkIds());
-        if (reqVO.getModelId() != null) state.setModelId(reqVO.getModelId());
-        if (reqVO.getFormats() != null) state.setFormats(reqVO.getFormats());
-        if (reqVO.getUploadedFrom() != null) state.setUploadedFrom(reqVO.getUploadedFrom());
-        if (reqVO.getUploadedTo() != null) state.setUploadedTo(reqVO.getUploadedTo());
+        if (reqVO.getKnowledgeBaseIds() != null) {
+            state.setKnowledgeBaseIds(reqVO.getKnowledgeBaseIds());
+        }
+        if (reqVO.getSelectedChunkIds() != null) {
+            state.setSelectedChunkIds(reqVO.getSelectedChunkIds());
+        }
+        if (reqVO.getModelId() != null) {
+            state.setModelId(reqVO.getModelId());
+        }
+        if (reqVO.getFormats() != null) {
+            state.setFormats(reqVO.getFormats());
+        }
+        if (reqVO.getUploadedFrom() != null) {
+            state.setUploadedFrom(reqVO.getUploadedFrom());
+        }
+        if (reqVO.getUploadedTo() != null) {
+            state.setUploadedTo(reqVO.getUploadedTo());
+        }
         state.setMode("RAG");
         List<Long> scope = resolveCurrentScope(userId, state.getKnowledgeBaseIds());
         // 保留用户选择的范围；每轮重新授权，避免失权后空集合被解释为全部知识库。
-        if (!readOnly) conversationService.updateState(userId, conversation.getId(), state);
+        if (!readOnly) {
+            conversationService.updateState(userId, conversation.getId(), state);
+        }
         List<Long> selected = state.getSelectedChunkIds() == null ? List.of() : state.getSelectedChunkIds();
         List<RagGenerationPort.ChatMessage> history = readOnly || !selected.isEmpty() ? List.of()
                 : loadHistory(userId, conversation.getId(), Set.copyOf(scope));
         // 问题先持久化：模型失败时仍可重试，状态快照不随后续选择改变。
-        if (!readOnly) saveUserMessage(userId, conversation.getId(), question, scope, state);
+        if (!readOnly) {
+            saveUserMessage(userId, conversation.getId(), question, scope, state);
+        }
         if (scope.isEmpty()) {
             return refuse(userId, conversation.getId(), question, EMPTY_SCOPE, EMPTY_SCOPE_SUGGESTIONS);
         }
@@ -123,12 +143,14 @@ public class RagServiceImpl implements RagService {
                         return refuse(userId, conversation.getId(), question, "所选上下文当前不可用，请调整或清空后重试。", List.of("调整所选上下文", "清空所选上下文"));
                     chunks.add(chunk);
                 } catch (ServiceException ex) {
-                    if (ex.getErrorCode().getCode() != DOC_NOT_FOUND.getCode()) throw ex;
+                    if (ex.getErrorCode().getCode() != DOC_NOT_FOUND.getCode()) {
+                        throw ex;
+                    }
                     return refuse(userId, conversation.getId(), question, "所选上下文当前不可用，请调整或清空后重试。", List.of("调整所选上下文", "清空所选上下文"));
                 }
             }
         } else {
-            var search = new com.df.knowledge.controller.doc.vo.DocSearchReqVO().setQuery(question)
+            var search = new DocSearchReqVO().setQuery(question)
                     .setKnowledgeBaseIds(scope).setFormats(state.getFormats())
                     .setUploadedFrom(state.getUploadedFrom()).setUploadedTo(state.getUploadedTo());
             chunks = docSearchService.search(userId, search).getList();
@@ -199,7 +221,7 @@ public class RagServiceImpl implements RagService {
         return result;
     }
 
-    private boolean matchesSelection(DocChunkResult chunk, com.df.knowledge.service.conversation.RetrievalState state) {
+    private boolean matchesSelection(DocChunkResult chunk, RetrievalState state) {
         return (state.getFormats() == null || state.getFormats().isEmpty() || state.getFormats().contains(chunk.getFormat()))
                 && (state.getUploadedFrom() == null || chunk.getUploadTime() != null && !chunk.getUploadTime().isBefore(state.getUploadedFrom()))
                 && (state.getUploadedTo() == null || chunk.getUploadTime() != null && !chunk.getUploadTime().isAfter(state.getUploadedTo()));
@@ -208,13 +230,17 @@ public class RagServiceImpl implements RagService {
     private boolean stillAuthorized(Long userId, List<DocChunkResult> chunks, List<Long> scope) {
         Set<Long> current = Set.copyOf(resolveCurrentScope(userId, scope));
         for (DocChunkResult chunk : chunks) {
-            if (!current.contains(chunk.getKnowledgeBaseId())) return false;
+            if (!current.contains(chunk.getKnowledgeBaseId())) {
+                return false;
+            }
             try {
                 var preview = docSearchService.getPreview(userId, chunk.getChunkId());
-                if (preview == null || !java.util.Objects.equals(preview.getDocId(), chunk.getDocId())
-                        || !java.util.Objects.equals(preview.getText(), chunk.getText())) return false;
+                if (preview == null || !Objects.equals(preview.getDocId(), chunk.getDocId())
+                        || !Objects.equals(preview.getText(), chunk.getText())) return false;
             } catch (ServiceException ex) {
-                if (ex.getErrorCode().getCode() == DOC_NOT_FOUND.getCode()) return false;
+                if (ex.getErrorCode().getCode() == DOC_NOT_FOUND.getCode()) {
+                    return false;
+                }
                 throw ex;
             }
         }
@@ -326,7 +352,7 @@ public class RagServiceImpl implements RagService {
             return false;
         }
         Set<Integer> mappedNumbers = citations.stream().map(RagCitation::getNumber)
-                .collect(java.util.stream.Collectors.toSet());
+                .collect(Collectors.toSet());
         Set<Integer> inlineNumbers = new LinkedHashSet<>();
         Matcher matcher = INLINE_CITATION_PATTERN.matcher(answer);
         while (matcher.find()) {
@@ -348,7 +374,7 @@ public class RagServiceImpl implements RagService {
     }
 
     private void saveUserMessage(Long userId, Long conversationId, String question, List<Long> scope,
-                                 com.df.knowledge.service.conversation.RetrievalState state) {
+                                 RetrievalState state) {
         ObjectNode content = objectMapper.createObjectNode();
         content.put("text", question);
         content.put("mode", "RAG");
@@ -369,7 +395,9 @@ public class RagServiceImpl implements RagService {
     }
 
     private void saveMessage(Long userId, Long conversationId, String type, JsonNode content) {
-        if (conversationId == null) return;
+        if (conversationId == null) {
+            return;
+        }
         MessageCreateReqVO message = new MessageCreateReqVO();
         message.setConversationId(conversationId);
         message.setType(type);
