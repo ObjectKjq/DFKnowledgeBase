@@ -59,6 +59,7 @@ class DocIngestMysqlJourneyTest {
         new ResourceDatabasePopulator(new org.springframework.core.io.ByteArrayResource(legacySchema.getBytes(StandardCharsets.UTF_8)))
                 .execute(dataSource("df_knowledge_base_p0_21_test"));
         var legacy = new JdbcTemplate(dataSource("df_knowledge_base_p0_21_test"));
+        legacy.update("INSERT INTO knowledge_base (id,name,type,owner_id) VALUES (1,'资料',1,7)");
         legacy.update("INSERT INTO knowledge_doc (id, knowledge_base_id, title, file_name, format, file_size, file_id, status) VALUES (1,1,?,?,?,?,10,?)",
                 "存量.txt", "存量.txt", com.df.knowledge.enums.doc.DocFormatEnum.TXT.getCode(), 12,
                 DocStatusEnum.AVAILABLE.getCode());

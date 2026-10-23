@@ -41,6 +41,7 @@ class ModelConfigurationControllerTest {
     @LocalServerPort int port;
     private final ObjectMapper json = new ObjectMapper();
     private HttpServer modelServer;
+    private java.util.concurrent.ExecutorService modelExecutor;
     private final AtomicInteger status = new AtomicInteger(200);
     private String adminToken;
     private String userToken;
@@ -84,12 +85,16 @@ class ModelConfigurationControllerTest {
                 // 客户端超时后连接关闭是本场景预期行为
             } finally { exchange.close(); }
         });
+        // 超时请求不能占住单个测试服务线程，阻塞本应立即成功的其他连接。
+        modelExecutor = java.util.concurrent.Executors.newCachedThreadPool();
+        modelServer.setExecutor(modelExecutor);
         modelServer.start();
         adminToken = call("POST", "/system/auth/login?id=1", null, null).path("data").asText();
         userToken = call("POST", "/system/auth/login?id=2", null, null).path("data").asText();
     }
     @AfterAll void stop() throws Exception {
         if (modelServer != null) modelServer.stop(0);
+        if (modelExecutor != null) modelExecutor.shutdownNow();
         try (Connection connection = DriverManager.getConnection(DB_ROOT, "root", "root")) {
             connection.createStatement().execute("DROP DATABASE " + DATABASE);
         }

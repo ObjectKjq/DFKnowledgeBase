@@ -230,6 +230,7 @@ CREATE TABLE `knowledge_doc` (
     `deleted`           bit(1)       NOT NULL DEFAULT b'0' COMMENT '是否删除',
     PRIMARY KEY (`id`) USING BTREE,
     KEY `idx_knowledge_base_id` (`knowledge_base_id`) USING BTREE,
+    KEY `idx_ingest_schedule` (`status`, `ingest_submit_time`, `id`) USING BTREE,
     KEY `idx_status` (`status`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '文档表';
 

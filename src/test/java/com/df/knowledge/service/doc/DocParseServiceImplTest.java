@@ -65,6 +65,8 @@ class DocParseServiceImplTest {
     private DocEmbeddingService docEmbeddingService;
     @Mock
     private DocChunkIndexService docChunkIndexService;
+    @Mock
+    private com.df.knowledge.dal.mysql.knowledge.KnowledgeBaseMapper knowledgeBaseMapper;
     @InjectMocks
     private DocParseServiceImpl docParseService;
 
@@ -72,6 +74,8 @@ class DocParseServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        when(knowledgeBaseMapper.selectByDocIdForShare(anyLong())).thenReturn(
+                new com.df.knowledge.dal.dataobject.knowledge.KnowledgeBaseDO());
         when(docChunkMapper.selectListByDocId(anyLong())).thenAnswer(invocation -> storedChunks.stream()
                 .filter(chunk -> chunk.getDocId().equals(invocation.getArgument(0))).toList());
         when(docChunkMapper.insert(any(DocChunkDO.class))).thenAnswer(invocation -> {
@@ -338,6 +342,7 @@ class DocParseServiceImplTest {
         ReflectionTestUtils.setField(ingest, "docParseService", docParseService);
         DocIndexServiceImpl index = new DocIndexServiceImpl();
         ReflectionTestUtils.setField(index, "docMapper", docMapper);
+        ReflectionTestUtils.setField(index, "knowledgeBaseMapper", knowledgeBaseMapper);
         ReflectionTestUtils.setField(index, "docChunkMapper", docChunkMapper);
         ReflectionTestUtils.setField(index, "docEmbeddingService", docEmbeddingService);
         ReflectionTestUtils.setField(index, "docChunkIndexService", docChunkIndexService);

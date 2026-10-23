@@ -28,6 +28,17 @@ public interface KnowledgeBaseMapper extends BaseMapper<KnowledgeBaseDO> {
         return selectOne(new LambdaQueryWrapper<KnowledgeBaseDO>().eq(KnowledgeBaseDO::getId, id).last("FOR UPDATE"));
     }
 
+    /**
+     * 按文档取得知识库共享锁，入库与删除遵循知识库在前、文档在后的锁顺序。
+     * @param docId 文档编号
+     * @return 所属知识库，不存在时为空
+     */
+    default KnowledgeBaseDO selectByDocIdForShare(Long docId) {
+        return selectOne(new LambdaQueryWrapper<KnowledgeBaseDO>()
+                .apply("id = (SELECT knowledge_base_id FROM knowledge_doc WHERE id = {0} AND deleted = 0)", docId)
+                .last("LOCK IN SHARE MODE"));
+    }
+
     /** 查询原所有者回收站。
      * @param ownerId 原所有者编号
      * @return 已删除知识库

@@ -2,6 +2,8 @@ package com.df.knowledge.service.doc;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
+import lombok.extern.slf4j.Slf4j;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -12,6 +14,8 @@ import java.util.concurrent.TimeUnit;
 
 /** 通过 Tesseract 标准命令行执行本地 OCR，不将文档内容发送到远程服务。 */
 @Service
+@Validated
+@Slf4j
 public class DocOcrServiceImpl implements DocOcrService {
     @Value("${knowledge.ocr.binary:tesseract}")
     private String binary = "tesseract";
@@ -70,7 +74,7 @@ public class DocOcrServiceImpl implements DocOcrService {
                 try {
                     Files.deleteIfExists(path);
                 } catch (IOException ex) {
-                    org.slf4j.LoggerFactory.getLogger(DocOcrServiceImpl.class).warn("[recognize][OCR 临时文件清理失败]");
+                    log.warn("[recognize][OCR 临时文件清理失败]");
                 }
             }
         }

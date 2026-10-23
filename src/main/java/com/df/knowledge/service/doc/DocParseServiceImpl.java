@@ -6,6 +6,7 @@ import com.df.knowledge.dal.dataobject.doc.DocChunkDO;
 import com.df.knowledge.dal.dataobject.doc.DocDO;
 import com.df.knowledge.dal.mysql.doc.DocChunkMapper;
 import com.df.knowledge.dal.mysql.doc.DocMapper;
+import com.df.knowledge.dal.mysql.knowledge.KnowledgeBaseMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
 import com.df.knowledge.enums.doc.DocConstants;
 import com.df.knowledge.enums.doc.DocFormatEnum;
@@ -60,6 +61,9 @@ public class DocParseServiceImpl implements DocParseService {
     private DocMapper docMapper;
 
     @Resource
+    private KnowledgeBaseMapper knowledgeBaseMapper;
+
+    @Resource
     private DocChunkMapper docChunkMapper;
 
     @Resource
@@ -72,9 +76,14 @@ public class DocParseServiceImpl implements DocParseService {
     @Transactional(rollbackFor = Exception.class)
     public void parse(Long docId) {
         // 文档行锁使同文档重试与彻底删除串行，避免清理后又写回孤立分块；不同文档互不加锁
+        // 共享知识库锁允许同库并行，同时等待删除/恢复的独占生命周期事务结束。
+        var knowledgeBase = knowledgeBaseMapper.selectByDocIdForShare(docId);
         DocDO doc = docMapper.selectByIdForUpdate(docId);
         if (doc == null) {
             throw new ServiceException(ErrorCodeConstants.DOC_NOT_FOUND);
+        }
+        if (knowledgeBase == null || knowledgeBase.getDeleteTime() != null) {
+            return;
         }
         // 旧任务等待行锁期间可能已完成索引，不能再替换 ES 正在引用的分块主键
         if (!DocStatusEnum.PARSING.getCode().equals(doc.getStatus())) {

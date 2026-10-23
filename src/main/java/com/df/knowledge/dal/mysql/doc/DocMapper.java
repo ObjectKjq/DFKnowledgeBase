@@ -106,6 +106,8 @@ public interface DocMapper extends BaseMapper<DocDO> {
      */
     default List<DocDO> selectListByStatuses(Collection<Integer> statuses) {
         return selectList(new LambdaQueryWrapper<DocDO>().in(DocDO::getStatus, statuses)
+                .apply("EXISTS (SELECT 1 FROM knowledge_base kb WHERE kb.id = knowledge_doc.knowledge_base_id"
+                        + " AND kb.deleted = 0 AND kb.delete_time IS NULL)")
                 .orderByAsc(DocDO::getIngestSubmitTime, DocDO::getId));
     }
 

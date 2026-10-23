@@ -91,6 +91,7 @@ public class DocServiceImpl implements DocService {
         doc.setFileId(file.getId());
         doc.setFileUrl(fileService.buildDownloadUrl(file.getId()));
         doc.setStatus(DocStatusEnum.QUEUED.getCode());
+        doc.setIngestSubmitTime(LocalDateTime.now());
         docMapper.insert(doc);
         // 5. 提交入库任务（异步执行骨架，ADR-0007）
         submitAfterCommit(doc.getId());
@@ -141,6 +142,7 @@ public class DocServiceImpl implements DocService {
         }
         // 3. 回到排队重新执行完整入库流程；失败原因保留首次值（PRD FR-3「重试再次失败保留首次原因」）
         doc.setStatus(DocStatusEnum.QUEUED.getCode());
+        doc.setIngestSubmitTime(LocalDateTime.now());
         docMapper.updateById(doc);
         // 4. 重新提交入库任务
         submitAfterCommit(id);
@@ -188,6 +190,9 @@ public class DocServiceImpl implements DocService {
         doc.setStatus(DocStatusEnum.AVAILABLE.getCode().equals(doc.getPrevStatus())
                 ? DocStatusEnum.INDEXING.getCode()
                 : DocStatusEnum.isInFlight(doc.getPrevStatus()) ? DocStatusEnum.QUEUED.getCode() : doc.getPrevStatus());
+        if (DocStatusEnum.isInFlight(doc.getStatus())) {
+            doc.setIngestSubmitTime(LocalDateTime.now());
+        }
         doc.setPrevStatus(null);
         doc.setDeleteTime(null);
         docMapper.restoreDeletedDoc(id, doc.getStatus());

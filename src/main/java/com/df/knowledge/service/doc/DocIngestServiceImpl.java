@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.df.knowledge.dal.dataobject.doc.DocDO;
 import com.df.knowledge.dal.mysql.doc.DocMapper;
 import com.df.knowledge.enums.doc.DocStatusEnum;
+import com.df.knowledge.service.model.InstanceSettingsService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -16,7 +17,6 @@ import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.scheduling.annotation.Scheduled;
-import com.df.knowledge.service.model.InstanceSettingsService;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.annotation.Propagation;
@@ -51,8 +51,12 @@ public class DocIngestServiceImpl implements DocIngestService {
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
     public void submit(Long docId) {
-        // 只持久化提交顺序；上传请求从不执行解析，也不向内存队列提交任务。
-        docMapper.updateIngestSubmitTime(docId);
+        // 提交时间与状态已在文档事务中保存；无锁读取避免回调与解析线程争写同一行。
+        DocDO doc = docMapper.selectById(docId);
+        if (doc != null && DocStatusEnum.isInFlight(doc.getStatus()) && doc.getIngestSubmitTime() == null) {
+            // 兼容尚未写排序时间的旧调用，正常创建、重试与恢复不进入此分支。
+            docMapper.updateIngestSubmitTime(docId);
+        }
     }
 
     /** 定时从 MySQL 的未完成状态领取任务；单实例内同一文档最多一个执行者。 */

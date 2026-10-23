@@ -6,6 +6,7 @@ import com.df.knowledge.dal.dataobject.doc.DocChunkDO;
 import com.df.knowledge.dal.dataobject.doc.DocDO;
 import com.df.knowledge.dal.mysql.doc.DocChunkMapper;
 import com.df.knowledge.dal.mysql.doc.DocMapper;
+import com.df.knowledge.dal.mysql.knowledge.KnowledgeBaseMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
 import com.df.knowledge.enums.doc.DocConstants;
 import com.df.knowledge.enums.doc.DocStatusEnum;
@@ -29,6 +30,9 @@ public class DocIndexServiceImpl implements DocIndexService {
     private DocMapper docMapper;
 
     @Resource
+    private KnowledgeBaseMapper knowledgeBaseMapper;
+
+    @Resource
     private DocChunkMapper docChunkMapper;
 
     @Resource
@@ -41,8 +45,11 @@ public class DocIndexServiceImpl implements DocIndexService {
     @Transactional(rollbackFor = Exception.class)
     public void index(Long docId) {
         // 同文档的解析、索引与删除共用行锁，删除完成后旧任务不能把向量写回
+        // 共享知识库锁允许同库并行，同时等待删除/恢复的独占生命周期事务结束。
+        var knowledgeBase = knowledgeBaseMapper.selectByDocIdForShare(docId);
         DocDO doc = docMapper.selectByIdForUpdate(docId);
-        if (doc == null || !DocStatusEnum.INDEXING.getCode().equals(doc.getStatus())) {
+        if (doc == null || knowledgeBase == null || knowledgeBase.getDeleteTime() != null
+                || !DocStatusEnum.INDEXING.getCode().equals(doc.getStatus())) {
             return;
         }
         List<DocChunkDO> chunks = docChunkMapper.selectListByDocId(docId);

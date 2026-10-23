@@ -329,9 +329,10 @@ class DocIngestJourneyTest {
             var service = new DocServiceImpl();
             var search = new DocSearchServiceImpl();
             var bases = mock(KnowledgeBaseMapper.class);
+            when(bases.selectByDocIdForShare(any())).thenReturn(new KnowledgeBaseDO());
             when(bases.selectById(1L)).thenReturn(new KnowledgeBaseDO().setName("资料"));
             var file = new FileDO().setName(name).setSize((long) content.length); file.setId(10L);
-            when(files.getFile(10L)).thenReturn(file);
+            when(files.getAttachableFile(7L, 10L)).thenReturn(file);
             when(files.getContent(any())).thenReturn(content);
             if (mockingDetails(docs).isMock()) {
             when(docs.insert(any(DocDO.class))).thenAnswer(call -> {
@@ -362,10 +363,10 @@ class DocIngestJourneyTest {
             when(embedding.embedAll(any())).thenAnswer(call -> ((List<?>) call.getArgument(0)).stream().map(x -> {
                 float[] vector = new float[512]; vector[0] = 1; return vector;
             }).toList());
-            wire(parse, "docMapper", docs, "docChunkMapper", chunks, "fileService", files);
-            wire(indexService, "docMapper", docs, "docChunkMapper", chunks, "docEmbeddingService", embedding, "docChunkIndexService", index);
+            wire(parse, "docMapper", docs, "docChunkMapper", chunks, "fileService", files, "knowledgeBaseMapper", bases);
+            wire(indexService, "docMapper", docs, "docChunkMapper", chunks, "docEmbeddingService", embedding, "docChunkIndexService", index, "knowledgeBaseMapper", bases);
             wire(ingest, "docMapper", docs, "docParseService", parse, "docIndexService", indexService, "instanceSettingsService", settings);
-            wire(service, "docMapper", docs, "fileService", files, "docIngestService", ingest, "knowledgeBasePermissionService", permission);
+            wire(service, "docMapper", docs, "fileService", files, "docIngestService", ingest, "knowledgeBasePermissionService", permission, "knowledgeBaseMapper", bases);
             wire(search, "docMapper", docs, "docChunkMapper", chunks, "knowledgeBaseMapper", bases, "permissionService", permission);
             var controller = new DocController(); wire(controller, "docService", service);
             var searchController = new DocSearchController(); wire(searchController, "docSearchService", search);
