@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.df.knowledge.dal.dataobject.conversation.ConversationDO;
 import org.apache.ibatis.annotations.Mapper;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.List;
 
@@ -37,6 +38,6 @@ public interface ConversationMapper extends BaseMapper<ConversationDO> {
         return selectOne(new LambdaQueryWrapper<ConversationDO>()
                 .eq(ConversationDO::getId, id)
                 .eq(ConversationDO::getUserId, userId)
-                .last(org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive() ? "FOR UPDATE" : ""));
+                .last(TransactionSynchronizationManager.isActualTransactionActive() ? "FOR UPDATE" : ""));
     }
 }

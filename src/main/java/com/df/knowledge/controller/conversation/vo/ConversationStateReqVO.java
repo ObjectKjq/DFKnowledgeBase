@@ -11,9 +11,10 @@ import lombok.Data;
 @Data
 public class ConversationStateReqVO {
     @NotNull @Positive
-    @Schema(description="会话编号")
+    @Schema(description = "会话编号")
     private Long id;
-    @NotNull @Valid
-    @Schema(description="完整会话当前选择；新选择只影响后续消息")
+    @NotNull
+    @Valid
+    @Schema(description = "完整会话当前选择；新选择只影响后续消息")
     private RetrievalState state;
 }

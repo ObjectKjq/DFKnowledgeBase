@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.df.knowledge.dal.dataobject.BaseDO;
 import com.df.knowledge.dal.dataobject.knowledge.KnowledgeBaseDO;
 import com.df.knowledge.dal.dataobject.user.UserDO;
+import com.df.knowledge.service.conversation.RetrievalState;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -37,5 +38,5 @@ public class ConversationDO extends BaseDO {
 
     /** 当前会话检索状态，存量会话由 SQL015 补混合模式 */
     @TableField(typeHandler = JacksonTypeHandler.class)
-    private com.df.knowledge.service.conversation.RetrievalState state;
+    private RetrievalState state;
 }

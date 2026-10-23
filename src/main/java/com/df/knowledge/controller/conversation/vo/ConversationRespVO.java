@@ -1,5 +1,6 @@
 package com.df.knowledge.controller.conversation.vo;
 
+import com.df.knowledge.service.conversation.RetrievalState;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
@@ -20,7 +21,7 @@ public class ConversationRespVO {
     private String title;
 
     @Schema(description = "会话当前范围、过滤、模式、模型、所选上下文与引导状态")
-    private com.df.knowledge.service.conversation.RetrievalState state;
+    private RetrievalState state;
 
     @Schema(description = "发起会话时的知识库编号范围，空列表表示全部有权知识库")
     private List<Long> knowledgeBaseIds;

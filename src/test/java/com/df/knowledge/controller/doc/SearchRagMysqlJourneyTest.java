@@ -125,6 +125,25 @@ class SearchRagMysqlJourneyTest {
   assertEquals("HYBRID",detail.path("state").path("mode").asText());
   assertEquals("FUZZY",detail.path("messages").get(0).path("content").path("state").path("mode").asText());
  }
+ @Test void testPreview_documentContainsAllParsedPositionsButRejectsOtherUser() throws Exception {
+  // 准备参数：同份文档第二个分块位于后续原始页。
+  try(var c=connection()){c.createStatement().execute("INSERT INTO knowledge_doc_chunk(id,doc_id,chunk_index,text,start_offset,end_offset,page_number) VALUES(102,5,1,'后续页面解析内容',16,24,3)");}
+  try(var c=connection()){
+   c.createStatement().execute("INSERT INTO knowledge_doc(id,knowledge_base_id,title,file_name,format,file_size,status) VALUES(8,1,'成绩','成绩.xlsx',4,10,4)");
+   c.createStatement().execute("INSERT INTO knowledge_doc_chunk(id,doc_id,chunk_index,text,start_offset,end_offset,sheet_name) VALUES(103,8,0,'姓名=张三\\n分数=95',0,11,'成绩')");
+  }
+  try{
+   var document=call("GET","/knowledge/search/document-preview?chunkId=100",null).path("data");
+   assertEquals("PDF",document.path("source").path("previewType").asText());
+   assertEquals(2,document.path("chunks").size());assertEquals(3,document.path("chunks").get(1).path("pageNumber").asInt());
+   assertEquals("后续页面解析内容",document.path("chunks").get(1).path("text").asText());
+   var office=call("GET","/knowledge/search/document-preview?chunkId=103",null).path("data");
+   assertEquals("OFFICE",office.path("source").path("previewType").asText());assertEquals("成绩",office.path("chunks").get(0).path("sheetName").asText());
+   assertTrue(office.path("chunks").get(0).path("text").asText().contains("姓名=张三"));
+   assertNotEquals(0,call("GET","/knowledge/search/document-preview?chunkId=101",null).path("code").asInt());
+  }finally{try(var c=connection()){c.createStatement().execute("DELETE FROM knowledge_doc_chunk WHERE id IN (102,103)");c.createStatement().execute("DELETE FROM knowledge_doc WHERE id=8");}}
+ }
+
  JsonNode call(String method,String path,Object body) throws Exception{
   var b=HttpRequest.newBuilder(URI.create("http://localhost:"+port+path)).header("Content-Type","application/json");if(token!=null)b.header("Authorization","Bearer "+token);
   b.method(method,body==null?HttpRequest.BodyPublishers.noBody():HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body)));

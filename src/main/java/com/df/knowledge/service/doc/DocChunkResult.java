@@ -2,6 +2,8 @@ package com.df.knowledge.service.doc;
 
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 /**
  * 检索命中与原文预览共用的分块定位结果
  */
@@ -38,5 +40,5 @@ public class DocChunkResult {
     /** 文档格式编码 */
     private Integer format;
     /** 文档上传时间 */
-    private java.time.LocalDateTime uploadTime;
+    private LocalDateTime uploadTime;
 }

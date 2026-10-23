@@ -1,13 +1,49 @@
-### 混合检索（不指定范围时检索全部有权知识库）
+### 混合检索：过滤在融合与分页前执行，默认每页20条
+# total为当前授权候选窗口数量；candidateLimitReached时提示缩小范围。
+# conversationId不传是只读查询；传入则自动保存user/results，前端不要重复写消息。
 POST {{baseUrl}}/knowledge/search/search
 Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "query": "知识检索如何工作",
-  "knowledgeBaseIds": [1]
+  "query": "知识检索 如何工作",
+  "mode": "HYBRID",
+  "knowledgeBaseIds": [1],
+  "formats": [1, 2, 5, 6],
+  "uploadedFrom": "2026-01-01T00:00:00",
+  "uploadedTo": "2026-12-31T23:59:59",
+  "pageNo": 1,
+  "pageSize": 20,
+  "conversationId": 1
 }
 
-### 按命中分块预览原文
+### 模糊检索：只做语义匹配，沿用该会话省略的过滤
+POST {{baseUrl}}/knowledge/search/search
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"query":"查找相似主题", "mode":"FUZZY", "conversationId":1, "pageNo":2}
+
+### 引导：最多两轮；每次query保持原问题，answer可为选项或自由输入
+# 完成后search为真实混合结果，query为组合查询，state为本轮快照，供后续翻页沿用。
+POST {{baseUrl}}/knowledge/search/guide
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"conversationId":1,"query":"查找知识检索资料","answer":"操作步骤","skip":false,"modelId":1}
+
+### 跳过剩余澄清，直接混合检索
+POST {{baseUrl}}/knowledge/search/guide
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{"conversationId":1,"query":"查找知识检索资料","skip":true}
+
+### 按命中分块预览原文与位置
 GET {{baseUrl}}/knowledge/search/preview?chunkId=1
+Authorization: Bearer {{token}}
+
+### 整份解析内容：PDF命中页、TXT/Markdown原文、Office全部解析分块与工作表
+# source提供命中位置与授权下载地址；chunks按原文顺序返回全部解析内容。
+GET {{baseUrl}}/knowledge/search/document-preview?chunkId=1
 Authorization: Bearer {{token}}

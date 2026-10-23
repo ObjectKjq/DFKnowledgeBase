@@ -38,3 +38,22 @@ satoken: {{token}}
 ### 删除会话及其消息
 DELETE {{baseUrl}}/knowledge/conversation/delete?id=1
 satoken: {{token}}
+
+### 修改会话当前完整选择；只影响后续消息
+# 失权的历史选择可继续保留，但每轮读取都重新授权，不扩大访问范围。
+PUT {{baseUrl}}/knowledge/conversation/state/update
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id":1,
+  "state":{
+    "mode":"RAG",
+    "knowledgeBaseIds":[1],
+    "formats":[1,4],
+    "selectedChunkIds":[1,2],
+    "modelId":1,
+    "guideRound":0,
+    "guideAnswers":[]
+  }
+}
