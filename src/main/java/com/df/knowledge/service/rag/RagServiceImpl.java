@@ -102,9 +102,8 @@ public class RagServiceImpl implements RagService {
         if (reqVO.getUploadedTo() != null) state.setUploadedTo(reqVO.getUploadedTo());
         state.setMode("RAG");
         List<Long> scope = resolveCurrentScope(userId, state.getKnowledgeBaseIds());
-        // 持久化当前有效范围，成员移除不能把失权范围重新写回会话。
-        if (!readOnly) conversationService.updateState(userId, conversation.getId(),
-                state.setKnowledgeBaseIds(scope));
+        // 保留用户选择的范围；每轮重新授权，避免失权后空集合被解释为全部知识库。
+        if (!readOnly) conversationService.updateState(userId, conversation.getId(), state);
         List<Long> selected = state.getSelectedChunkIds() == null ? List.of() : state.getSelectedChunkIds();
         List<RagGenerationPort.ChatMessage> history = readOnly || !selected.isEmpty() ? List.of()
                 : loadHistory(userId, conversation.getId(), Set.copyOf(scope));
