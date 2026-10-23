@@ -61,6 +61,13 @@ mvn '-Dmaven.repo.local=G:/maven/repository' '-DargLine=-Xmx512m' '-Dp0.mysql.en
 
 `src/test/java/.../McpProtocolControllerTest` 为无 MySQL 的协议边界测试，数据库接口与时钟使用替身，不作为业务闭环证明。Windows 受限执行环境若 Mockito 动态附加失败，可在测试 JVM 启动时显式添加本地 byte-buddy-agent 的 `-javaagent`，无需修改全局 Mockito 配置。
 
+## 集成后回归与最后修正
+
+- 提交 `c058066` 完成三个工具及官方 SDK 验收脚本后，已在 `7b6e72e` 合入集成分支 `55fe103`，保留 SQL015 与 SQL016。
+- 合入后执行 MCP 协议、检索服务与 RAG 服务针对性回归 **32 项通过，0 失败、0 错误、0 跳过**；日志 `target/mcp-post-integration.log`（01:11:27）。
+- 最后自查修正不支持方法的来源验证：GET/DELETE 及其他不支持方法也先检查 Origin，非法来源返回 403，合法或未携带来源才返回 405。新增 HTTP 红测先观察到 405 与预期 403 不符，修复后 MCP 协议 **13 项全部通过**；日志 `target/mcp-origin-red.log`、`target/mcp-origin-green.log`（01:13:49）。没有把前述 8 项真实数据库结果冒称为覆盖此后的来源处理改动。
+- 新增代码已补中文分层说明、Controller/VO OpenAPI 注解、HTTP 示例及 Javadoc 标签，并通过差异格式检查。
+
 ## 待最终完整旅程验收
 
 本票上述业务测试中外部索引、向量模型与生成端口为替身；它们证明 MCP 复用真实业务及授权规则，不证明真实 ES 的检索质量、真实对话模型答案质量或真实 OCR 效果。用户目前授权的本地模拟模型也不能替代真实模型质量验收。#25 仍需在真实数据库、ES、向量、OCR 和命名模型环境完成从上传、所选上下文 RAG、预览、MCP 到撤权、删除恢复与彻底清理的完整旅程，并记录尚不能验证的部分。

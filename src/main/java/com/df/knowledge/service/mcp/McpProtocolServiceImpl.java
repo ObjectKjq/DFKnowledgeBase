@@ -7,10 +7,13 @@ import com.fasterxml.jackson.databind.*;
 
 import jakarta.servlet.http.HttpServletRequest;
 
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
 
 import java.net.URI;
 import java.time.*;
@@ -18,6 +21,8 @@ import java.util.*;
 
 /** 仅支持明确声明的 2025-11-25 协议，所有调用重新认证。 */
 @Service
+@Slf4j
+@Validated
 public class McpProtocolServiceImpl implements McpProtocolService {
     private static final String VERSION = "2025-11-25";
     private final McpCredentialService credentials;
@@ -42,6 +47,12 @@ public class McpProtocolServiceImpl implements McpProtocolService {
         this.allowedOrigins = new HashSet<>();
         for (String origin : origins.split(","))
             if (!origin.isBlank()) allowedOrigins.add(origin.trim());
+    }
+
+    @Override
+    public ResponseEntity<?> unsupported(HttpServletRequest request) {
+        if (!validOrigin(request)) return error(403, null, 403, "MCP 来源不受信任");
+        return ResponseEntity.status(405).header("Allow", "POST").build();
     }
 
     @Override

@@ -14,10 +14,10 @@ public class McpCallLogDO {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** 来源凭证，无效令牌时为空。 */
+    /** 来源凭证，关联 {@link McpCredentialDO#getId()}，无效令牌时为空。 */
     private Long credentialId;
 
-    /** 凭证创建者，无法认证时为空。 */
+    /** 凭证创建者，关联 {@link com.df.knowledge.dal.dataobject.user.UserDO#getId()}，无法认证时为空。 */
     private Long userId;
 
     /** 调用时间。 */

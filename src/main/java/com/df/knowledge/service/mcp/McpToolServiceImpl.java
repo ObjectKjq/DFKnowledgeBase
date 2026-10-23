@@ -10,14 +10,18 @@ import com.df.knowledge.service.rag.RagService;
 import com.fasterxml.jackson.databind.*;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Service;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDateTime;
 import java.util.*;
 
 /** 三个只读工具复用网页检索、内容权限与最终引用校验。 */
 @Service
+@Slf4j
+@Validated
 @RequiredArgsConstructor
 public class McpToolServiceImpl implements McpToolService {
     private final KnowledgeBaseService knowledgeBases;

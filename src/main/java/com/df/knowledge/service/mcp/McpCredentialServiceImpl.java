@@ -10,6 +10,7 @@ import com.df.knowledge.enums.ErrorCodeConstants;
 import com.df.knowledge.service.model.InstanceSettingsService;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 
 /** 每次调用重新检查当前凭证、用户状态与实例开关。 */
 @Service
+@Slf4j
 @Validated
 @RequiredArgsConstructor
 public class McpCredentialServiceImpl implements McpCredentialService {

@@ -40,10 +40,18 @@ public class McpProtocolController {
     /**
      * @return 本实现不提供服务器主动事件流或协议会话
      */
+    @Operation(summary = "检查来源并拒绝不支持的 MCP HTTP 方法")
     @RequestMapping(
             value = "/mcp",
-            method = {RequestMethod.GET, RequestMethod.DELETE})
-    public ResponseEntity<?> unsupported() {
-        return ResponseEntity.status(405).header("Allow", "POST").build();
+            method = {
+                RequestMethod.GET,
+                RequestMethod.DELETE,
+                RequestMethod.OPTIONS,
+                RequestMethod.HEAD,
+                RequestMethod.PUT,
+                RequestMethod.PATCH
+            })
+    public ResponseEntity<?> unsupported(HttpServletRequest request) {
+        return service.unsupported(request);
     }
 }

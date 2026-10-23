@@ -24,6 +24,22 @@ import java.time.*;
 
 /** MCP 传输边界测试，不替代真实数据库与工具旅程。 */
 class McpProtocolControllerTest {
+    @Test
+    void testTransport_invalidOriginIsRejectedEvenOnUnsupportedMethod() throws Exception {
+        authenticatedMvc()
+                .perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(
+                                        "/mcp")
+                                .header("Origin", "https://untrusted.example.com"))
+                .andExpect(status().isForbidden());
+        authenticatedMvc()
+                .perform(
+                        org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get(
+                                "/mcp"))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(header().string("Allow", "POST"));
+    }
+
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(
             strings = {

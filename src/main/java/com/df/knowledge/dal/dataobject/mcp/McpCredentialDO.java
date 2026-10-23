@@ -14,7 +14,7 @@ public class McpCredentialDO {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** 创建者编号。 */
+    /** 创建者编号，关联 {@link com.df.knowledge.dal.dataobject.user.UserDO#getId()}。 */
     private Long userId;
 
     /** 凭证名称。 */
