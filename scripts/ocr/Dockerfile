@@ -9,4 +9,3 @@ RUN --mount=type=secret,id=apt-ca,mode=0444 \
     rm -rf /var/lib/apt/lists/* /etc/apt/apt.conf.d/99-build-ca
 ENV OMP_THREAD_LIMIT=2
 CMD ["tesseract", "--version"]
-
