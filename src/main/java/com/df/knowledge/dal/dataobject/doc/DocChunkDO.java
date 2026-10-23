@@ -30,4 +30,9 @@ public class DocChunkDO extends BaseDO {
 
     /** 页码，从 1 开始；PDF/PPT 按页切分，其余格式为空 */
     private Integer pageNumber;
+    /** Excel 工作表名称，其他格式为空 */
+    private String sheetName;
+
+    /** 分块是否来自扫描页 OCR */
+    private Boolean ocr;
 }

@@ -190,8 +190,8 @@ class DocIngestServiceImplTest {
         // 调用
         docIngestService.recoverInterruptedDocs();
 
-        // 断言：重新入队（提交到入库线程池）
-        verify(docIngestExecutor, times(3)).execute(any());
+        // 断言：同知识库只领取一个，其余仍由持久状态保留供下次轮询
+        verify(docIngestExecutor, times(1)).execute(any());
     }
 
     /**

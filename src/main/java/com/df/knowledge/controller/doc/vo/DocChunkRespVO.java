@@ -39,4 +39,11 @@ public class DocChunkRespVO {
 
     @Schema(description = "命中分块原文")
     private String text;
+    /** Excel 工作表名称，其他格式为空 */
+    @Schema(description = "Excel 工作表名称")
+    private String sheetName;
+
+    /** 分块是否来自扫描页 OCR */
+    @Schema(description = "分块是否来自扫描页 OCR")
+    private Boolean ocr;
 }

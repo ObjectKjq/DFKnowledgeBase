@@ -18,4 +18,9 @@ public class DocChunkResult {
     private Integer startOffset;
     private Integer endOffset;
     private String text;
+    /** Excel 工作表名称，其他格式为空 */
+    private String sheetName;
+
+    /** 分块是否来自扫描页 OCR */
+    private Boolean ocr;
 }

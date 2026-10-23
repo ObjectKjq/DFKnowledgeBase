@@ -17,7 +17,7 @@ public class DocIngestExecutorConfiguration {
     /**
      * 入库任务线程池
      *
-     * 拒绝策略用 CallerRunsPolicy：队列满时由提交线程执行，任务不丢弃
+     * 待处理任务保存在 MySQL，线程池饱和时拒绝领取，下一次轮询继续
      *
      * @return 入库任务线程池
      */
@@ -25,10 +25,10 @@ public class DocIngestExecutorConfiguration {
     public ThreadPoolTaskExecutor docIngestExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(4);
-        executor.setQueueCapacity(100);
+        executor.setMaxPoolSize(2);
+        executor.setQueueCapacity(0);
         executor.setThreadNamePrefix("doc-ingest-");
-        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         return executor;
     }
 }
