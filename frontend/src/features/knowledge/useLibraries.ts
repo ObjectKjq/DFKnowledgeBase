@@ -14,7 +14,8 @@ export function useLibraries() {
   const query = useQuery({
     queryKey: librariesKey(userId, token),
     queryFn: () => fetchLibraries(userId!),
-    staleTime: 30_000,
+    staleTime: 5_000,
+    refetchInterval: (query) => (query.state.status === 'error' ? false : 5_000),
     enabled: userId !== undefined && !!token,
   })
   useEffect(() => {

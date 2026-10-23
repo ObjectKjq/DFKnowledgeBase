@@ -31,3 +31,13 @@ export function documentUploadError(file: File): string | null {
   if (file.size > MAX_DOCUMENT_SIZE) return `${file.name}：超过单文件 50 MB 上限`
   return null
 }
+
+/** 文档格式编号对齐后端 DocFormatEnum。 */
+export const DOCUMENT_FORMATS: Record<number, string> = {
+  1: 'PDF',
+  2: 'Word',
+  3: 'PPT',
+  4: 'Excel',
+  5: 'TXT',
+  6: 'Markdown',
+}

@@ -8,9 +8,11 @@ import { useLibraries } from '@/features/knowledge/useLibraries'
 import { useKb } from '@/stores/knowledge'
 
 import { MembersModal } from './MembersModal'
+import { LibraryRecycle } from './LibraryRecycle'
 
 /** 知识库与成员管理：所有者管理知识库，成员按角色使用。 */
 export function LibrariesTab() {
+  const [recycle, setRecycle] = useState(false)
   const query = useLibraries()
   const client = useQueryClient()
   const openModal = useKb((s) => s.openModal)
@@ -20,23 +22,35 @@ export function LibrariesTab() {
   const mutation = useMutation({
     mutationFn: (id: string) => deleteKnowledgeBase({ id: Number(id) }),
     onSuccess: () => {
-      toastMsg('知识库已删除')
+      toastMsg('知识库已移至回收站，30 天内可恢复')
       void client.invalidateQueries({ queryKey: ['knowledge-libraries'] })
     },
   })
   const remove = (library: Library) => {
     confirmThen(
       '删除知识库',
-      `确认删除「${library.name}」及其文档？此操作不可恢复。`,
+      `确认删除「${library.name}」及其文档？删除后成员不可访问，30 天内原所有者可从回收站恢复。`,
       '确认删除',
       () => mutation.mutate(library.id),
     )
   }
+  if (recycle)
+    return (
+      <>
+        <button className="btn ghost" onClick={() => setRecycle(false)}>
+          返回知识库列表
+        </button>
+        <LibraryRecycle />
+      </>
+    )
   const selected = query.libs.find((library) => library.id === members?.id)
   return (
     <>
       <div className="manage-toolbar">
         <p>管理个人知识库与共享知识库，分配成员角色。</p>
+        <button className="btn ghost" onClick={() => setRecycle(true)}>
+          知识库回收站
+        </button>
         <button className="btn primary" onClick={() => openModal({ kind: 'library' })}>
           <Icon name="plus" />
           新建知识库

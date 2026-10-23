@@ -66,6 +66,12 @@ declare namespace API {
     data?: FileRespVO
   }
 
+  type CommonResultInstanceSettingsRespVO = {
+    code?: number
+    msg?: string
+    data?: InstanceSettingsRespVO
+  }
+
   type CommonResultKnowledgeBaseRespVO = {
     code?: number
     msg?: string
@@ -90,6 +96,12 @@ declare namespace API {
     data?: KnowledgeBaseMemberRespVO[]
   }
 
+  type CommonResultListKnowledgeBaseRespVO = {
+    code?: number
+    msg?: string
+    data?: KnowledgeBaseRespVO[]
+  }
+
   type CommonResultListLong = {
     code?: number
     msg?: string
@@ -108,6 +120,18 @@ declare namespace API {
     data?: MessageRespVO[]
   }
 
+  type CommonResultListModelConfigurationRespVO = {
+    code?: number
+    msg?: string
+    data?: ModelConfigurationRespVO[]
+  }
+
+  type CommonResultListModelConfigurationSimpleRespVO = {
+    code?: number
+    msg?: string
+    data?: ModelConfigurationSimpleRespVO[]
+  }
+
   type CommonResultListRoleSimpleRespVO = {
     code?: number
     msg?: string
@@ -124,6 +148,12 @@ declare namespace API {
     code?: number
     msg?: string
     data?: MenuRespVO
+  }
+
+  type CommonResultModelConfigurationRespVO = {
+    code?: number
+    msg?: string
+    data?: ModelConfigurationRespVO
   }
 
   type CommonResultPageResultDocRespVO = {
@@ -238,6 +268,11 @@ declare namespace API {
     id: number
   }
 
+  type deleteUsingDELETEParams = {
+    /** 配置编号 */
+    id: number
+  }
+
   type DocChunkRespVO = {
     /** 知识库编号 */
     knowledgeBaseId?: number
@@ -259,6 +294,10 @@ declare namespace API {
     endOffset?: number
     /** 命中分块原文 */
     text?: string
+    /** Excel 工作表名称 */
+    sheetName?: string
+    /** 分块是否来自扫描页 OCR */
+    ocr?: boolean
   }
 
   type DocCreateReqVO = {
@@ -335,6 +374,11 @@ declare namespace API {
     type?: string
   }
 
+  type get1Params = {
+    /** 配置编号 */
+    id: number
+  }
+
   type getConversationParams = {
     /** 会话编号 */
     id: number
@@ -401,6 +445,28 @@ declare namespace API {
     id: number
   }
 
+  type InstanceSettingsRespVO = {
+    /** MCP 总开关 */
+    mcpEnabled?: boolean
+    /** 每凭证每分钟工具调用上限 */
+    mcpRateLimitPerMinute?: number
+    /** 全实例入库并发 */
+    ingestGlobalConcurrency?: number
+    /** 单知识库入库并发 */
+    ingestKnowledgeBaseConcurrency?: number
+  }
+
+  type InstanceSettingsSaveReqVO = {
+    /** MCP 总开关 */
+    mcpEnabled: boolean
+    /** 每凭证每分钟工具调用上限，默认 60 */
+    mcpRateLimitPerMinute: number
+    /** 全实例入库并发，默认 2 */
+    ingestGlobalConcurrency: number
+    /** 单知识库入库并发，默认 1 */
+    ingestKnowledgeBaseConcurrency: number
+  }
+
   type JsonNode = Record<string, any>
 
   type KnowledgeBaseMemberInviteReqVO = {
@@ -464,6 +530,8 @@ declare namespace API {
     description?: string
     /** 创建时间 */
     createTime?: string
+    /** 进入回收站时间 */
+    deleteTime?: string
   }
 
   type KnowledgeBaseSaveReqVO = {
@@ -568,6 +636,57 @@ declare namespace API {
     createTime?: string
   }
 
+  type ModelConfigurationRespVO = {
+    /** 配置编号 */
+    id?: number
+    /** 配置名称 */
+    name?: string
+    /** 用途 */
+    kind?: string
+    /** 服务地址 */
+    baseUrl?: string
+    /** 提供方模型名 */
+    model?: string
+    /** 是否已配置密钥 */
+    hasApiKey?: boolean
+    /** 是否本地模拟，true 不代表真实模型连接 */
+    simulated?: boolean
+    /** 超时秒数 */
+    timeoutSeconds?: number
+    /** 最近测试状态 */
+    testStatus?: string
+    /** 最近测试时间 */
+    lastTestTime?: string
+    /** 安全错误原因 */
+    testError?: string
+  }
+
+  type ModelConfigurationSaveReqVO = {
+    /** 配置编号，创建时为空 */
+    id?: number
+    /** 唯一配置名称 */
+    name: string
+    /** 模型用途 CHAT 或 RERANK */
+    kind: string
+    /** OpenAI 兼容服务根地址，例如 http://localhost:1234/v1 */
+    baseUrl: string
+    /** 密钥，更新不传则保留，空字符串清除 */
+    apiKey?: string
+    /** 提供方模型名 */
+    model: string
+    /** 超时秒数，默认 60 */
+    timeoutSeconds?: number
+  }
+
+  type ModelConfigurationSimpleRespVO = {
+    /** 配置编号 */
+    id?: number
+    /** 配置名称 */
+    name?: string
+    /** 是否本地模拟，非真实生成 */
+    simulated?: boolean
+  }
+
   type PageResultDocRespVO = {
     total?: number
     list?: DocRespVO[]
@@ -586,6 +705,16 @@ declare namespace API {
   type PageResultUserRespVO = {
     total?: number
     list?: UserRespVO[]
+  }
+
+  type purgeDocParams = {
+    id: number
+    confirmed?: boolean
+  }
+
+  type purgeKnowledgeBaseParams = {
+    id: number
+    confirmed?: boolean
   }
 
   type RagAnswerRespVO = {
@@ -640,6 +769,10 @@ declare namespace API {
 
   type restoreDocParams = {
     /** 文档编号 */
+    id: number
+  }
+
+  type restoreKnowledgeBaseParams = {
     id: number
   }
 
@@ -711,6 +844,11 @@ declare namespace API {
 
   type SseEmitter = {
     timeout?: number
+  }
+
+  type testParams = {
+    /** 配置编号 */
+    id: number
   }
 
   type uploadFileParams = {
