@@ -23,6 +23,14 @@ import java.util.List;
 public interface DocMapper extends BaseMapper<DocDO> {
 
     /**
+     * @param filePath 历史磁盘文件路径
+     * @return 仍保留该文件引用的文档数量
+     */
+    default Long countByFilePath(String filePath) {
+        return selectCount(new LambdaQueryWrapper<DocDO>().eq(DocDO::getFilePath, filePath));
+    }
+
+    /**
      * 恢复文档状态并显式清空回收站字段
      *
      * @param id 文档编号

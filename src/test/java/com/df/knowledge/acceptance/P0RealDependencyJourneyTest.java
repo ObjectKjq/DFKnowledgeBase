@@ -233,6 +233,126 @@ class P0RealDependencyJourneyTest {
         checkpoint("撤权即时生效、文档与知识库恢复、彻底删除后真实字节回收通过");
     }
 
+    @Test
+    void testMigration_oldSchema012Through016RetainsHttpDataAndRebuildsRealIndex() throws Exception {
+        // 准备参数：从固定旧基点创建独立实例，包含真实旧文件、分块、会话和答案。
+        var git = new ProcessBuilder("git", "show", "b84b7fd:sql/schema.sql").start();
+        byte[] oldSchema = git.getInputStream().readAllBytes();
+        assertTrue(git.waitFor(10, TimeUnit.SECONDS));
+        assertEquals(0, git.exitValue());
+        byte[] original = "legacy-text\n".getBytes(StandardCharsets.UTF_8);
+        try (var connection = connect(database)) {
+            ScriptUtils.executeSqlScript(connection, new org.springframework.core.io.support.EncodedResource(
+                    new org.springframework.core.io.ByteArrayResource(oldSchema), StandardCharsets.UTF_8));
+            ScriptUtils.executeSqlScript(connection, new FileSystemResource("sql/data.sql"));
+            connection.createStatement().execute("INSERT INTO knowledge_base(id,name,type,owner_id) VALUES(701,'旧知识库',1,1)");
+            connection.createStatement().execute("INSERT INTO system_file(id,name,type,size,creator) VALUES(701,'legacy.txt','text/plain',12,'1')");
+            try (var statement = connection.prepareStatement("INSERT INTO system_file_content(file_id,content,creator) VALUES(701,?,'1')")) {
+                statement.setBytes(1, original);
+                statement.executeUpdate();
+            }
+            connection.createStatement().execute("INSERT INTO knowledge_doc(id,knowledge_base_id,title,file_name,format,file_size,file_id,file_url,status) "
+                    + "VALUES(701,701,'旧文档','legacy.txt',5,12,701,'/api/system/file/download?id=701',4)");
+            connection.createStatement().execute("INSERT INTO knowledge_doc_chunk(id,doc_id,chunk_index,text,start_offset,end_offset) VALUES(701,701,0,'legacy-text',0,11)");
+            connection.createStatement().execute("INSERT INTO knowledge_conversation(id,user_id,title,retrieval_scope) VALUES(701,1,'旧会话','[701]')");
+            connection.createStatement().execute("INSERT INTO knowledge_message(id,conversation_id,type,content) VALUES(701,701,'answer',"
+                    + "'{\"answer\":\"历史答案[1]\",\"citations\":[{\"number\":1,\"knowledgeBaseId\":701,\"docId\":701,\"chunkId\":701}]}')");
+            List<Path> migrations;
+            try (var paths = Files.list(Path.of("sql/upgrade"))) {
+                migrations = paths.filter(path -> path.getFileName().toString().matches("01[2-6]-.*\\.sql")).sorted().toList();
+            }
+            assertEquals(5, migrations.size(), "完整存量验收必须包含SQL012至016");
+            for (Path migration : migrations) {
+                ScriptUtils.executeSqlScript(connection, new FileSystemResource(migration));
+            }
+        }
+        startApplication(100);
+        String admin = login("admin", "admin123");
+        // 调用与断言：迁移后的真实HTTP保留旧文件及会话，恢复文档时经过真实向量和索引链路。
+        var conversation = ok("GET", "/knowledge/conversation/get?id=701", admin, null);
+        assertEquals("HYBRID", conversation.path("state").path("mode").asText());
+        assertEquals(701, conversation.path("state").path("knowledgeBaseIds").get(0).asInt());
+        assertEquals("历史答案[1]", conversation.path("messages").get(0).path("content").path("answer").asText());
+        assertArrayEquals(original, raw("GET", base() + "/system/file/download?id=701", admin, null, null).body());
+        assertEquals("legacy-text", ok("GET", "/knowledge/search/preview?chunkId=701", admin, null).path("text").asText());
+        assertFalse(ok("POST", "/mcp/credential/create", admin, Map.of("name", "迁移后MCP", "tools", List.of("search"))).path("token").asText().isBlank());
+        ok("DELETE", "/knowledge/doc/delete?id=701", admin, null);
+        ok("POST", "/knowledge/doc/restore?id=701", admin, null);
+        awaitAvailable(admin, 701);
+        assertTrue(ok("POST", "/knowledge/search/search", admin,
+                Map.of("query", "legacy", "knowledgeBaseIds", List.of(701))).path("total").asInt() > 0);
+        assertEquals("历史答案[1]", ok("GET", "/knowledge/conversation/get?id=701", admin, null)
+                .path("messages").get(0).path("content").path("answer").asText());
+        checkpoint("旧基点012至016升级后HTTP保留文件/历史会话，真实重建索引与MCP凭证创建通过");
+    }
+
+    @Test
+    void testMcp_officialSdkRealDependenciesAndSameConnectionRevocation() throws Exception {
+        // 准备参数：使用实际应用和真实入库，官方客户端不替代任何业务链路。
+        try (var connection = connect(database)) {
+            ScriptUtils.executeSqlScript(connection, new FileSystemResource("sql/schema.sql"));
+            ScriptUtils.executeSqlScript(connection, new FileSystemResource("sql/data.sql"));
+        }
+        startApplication(100);
+        String admin = login("admin", "admin123");
+        for (String username : List.of("mcp_owner", "mcp_viewer")) {
+            ok("POST", "/system/user/create", admin, Map.of("username", username, "password", "Journey123!",
+                    "nickname", username, "roleIds", List.of(2)));
+        }
+        String owner = login("mcp_owner", "Journey123!");
+        String viewer = login("mcp_viewer", "Journey123!");
+        long knowledgeBaseId = ok("POST", "/knowledge/base/create", owner,
+                Map.of("name", "MCP真实依赖验收", "type", 2)).asLong();
+        ok("POST", "/knowledge/base/member/invite", owner,
+                Map.of("knowledgeBaseId", knowledgeBaseId, "username", "mcp_viewer", "memberRole", 2));
+        ok("PUT", "/system/settings/update", admin, Map.of("mcpEnabled", true, "mcpRateLimitPerMinute", 60,
+                "ingestGlobalConcurrency", 1, "ingestKnowledgeBaseConcurrency", 1));
+        byte[] text = "知识管理用于保存和检索授权文档，答案引用应指向可核对的原文。".repeat(500).getBytes(StandardCharsets.UTF_8);
+        var file = upload(owner, "MCP真实长文.txt", text);
+        long document = ok("POST", "/knowledge/doc/create", owner, Map.of("knowledgeBaseId", knowledgeBaseId,
+                "fileId", file.path("id").asLong(), "fileUrl", file.path("url").asText())).asLong();
+        awaitAvailable(owner, document);
+        long chunk = ok("POST", "/knowledge/search/search", viewer, Map.of("query", "知识管理",
+                "knowledgeBaseIds", List.of(knowledgeBaseId))).path("list").get(0).path("chunkId").asLong();
+        long model = ok("GET", "/system/model/simple-list", viewer, null).get(0).path("id").asLong();
+        long member = 0;
+        for (var item : ok("GET", "/knowledge/base/member/list?knowledgeBaseId=" + knowledgeBaseId, owner, null)) {
+            if ("mcp_viewer".equals(item.path("username").asText())) member = item.path("id").asLong();
+        }
+        assertTrue(member > 0);
+        var credential = ok("POST", "/mcp/credential/create", viewer,
+                Map.of("name", "官方SDK真实链路", "tools", List.of("search", "ask", "list_knowledge_bases")));
+        Path script = Path.of("target/mcp-client/real-dependencies.mjs");
+        Files.copy(Path.of("scripts/mcp-real-dependency-check.mjs"), script, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        var builder = new ProcessBuilder(System.getenv().getOrDefault("P0_NODE_BINARY", "node"), script.toString());
+        var environment = builder.environment();
+        environment.put("MCP_BASE_URL", base() + "/mcp");
+        environment.put("MCP_WEB_BASE_URL", base() + "/");
+        environment.put("MCP_WEB_OWNER_TOKEN", owner);
+        environment.put("MCP_WEB_VIEWER_TOKEN", viewer);
+        environment.put("MCP_TOKEN", credential.path("token").asText());
+        environment.put("MCP_CREDENTIAL_ID", credential.path("id").asText());
+        environment.put("MCP_MEMBER_ID", Long.toString(member));
+        environment.put("MCP_KNOWLEDGE_BASE_ID", Long.toString(knowledgeBaseId));
+        environment.put("MCP_CHUNK_ID", Long.toString(chunk));
+        environment.put("MCP_MODEL_ID", Long.toString(model));
+        // 调用：SDK始终保持同一客户端，网页入口撤权与撤销凭证后继续请求。
+        Process sdk = builder.redirectErrorStream(true).start();
+        try {
+            assertTrue(sdk.waitFor(60, TimeUnit.SECONDS), "真实依赖官方MCP客户端超时");
+            String output = new String(sdk.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+            // 断言：握手、三工具、只读审计与动态授权均由SDK脚本核验。
+            assertEquals(0, sdk.exitValue(), output);
+            assertTrue(output.contains("P0_REAL_MCP_SDK_OK"), output);
+            checkpoint(output.strip());
+        } finally {
+            if (sdk.isAlive()) {
+                sdk.destroyForcibly();
+                assertTrue(sdk.waitFor(10, TimeUnit.SECONDS));
+            }
+        }
+    }
+
     private void startApplication(long pollDelay) throws Exception {
         String testClasspath = System.getProperty("surefire.test.class.path", System.getProperty("java.class.path"));
         // 实际应用不能扫描测试类目录，避免把其他测试装配或替身混入真实验收。

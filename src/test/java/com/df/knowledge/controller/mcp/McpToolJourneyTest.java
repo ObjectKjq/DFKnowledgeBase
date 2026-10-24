@@ -487,6 +487,45 @@ class McpToolJourneyTest {
     }
 
     @Test
+    void testAudit_requestedAuthorizedTargetsSurviveEmptyFailureAndRejection() throws Exception {
+        // 准备参数：范围同时含当前有权和无权知识库，正文与异常细节不得进入审计。
+        String credential = token(owner);
+        Map<String, Object> query = Map.of("query", "审计私密问题", "knowledgeBaseIds", List.of(1, 2));
+        when(index.search(anyString(), any(), any(), any(), anyString(), anyInt())).thenReturn(List.of());
+        tool(credential, "search", query);
+        var empty = web("GET", "/mcp/call-log/page", owner, null).path("data").path("list").get(0);
+        assertEquals("[1]", empty.path("knowledgeBaseIds").asText());
+        assertEquals(0, empty.path("resultCount").asInt());
+
+        // 调用：同一请求范围下两种失败必须能以稳定错误码区分。
+        for (var code : List.of(com.df.knowledge.enums.ErrorCodeConstants.RAG_MODEL_UNAVAILABLE,
+                com.df.knowledge.enums.ErrorCodeConstants.MODEL_TIMEOUT)) {
+            doThrow(new ServiceException(code, "提供方密钥及正文不应存储")).when(generation).generate(any());
+            assertTrue(tool(credential, "ask", Map.of("question", "审计私密问题", "knowledgeBaseIds", List.of(1, 2),
+                    "selectedChunkIds", List.of(100))).path("isError").asBoolean());
+            var failed = web("GET", "/mcp/call-log/page", owner, null).path("data").path("list").get(0);
+            assertEquals("[1]", failed.path("knowledgeBaseIds").asText());
+            assertEquals("BUSINESS_" + code.getCode(), failed.path("reasonCode").asText());
+        }
+        web("PUT", "/system/settings/update", admin, Map.of("mcpEnabled", true, "mcpRateLimitPerMinute", 1,
+                "ingestGlobalConcurrency", 1, "ingestKnowledgeBaseConcurrency", 1));
+        assertEquals(429, rpc(credential, "tools/call", Map.of("name", "search", "arguments", query)).statusCode());
+        var limited = web("GET", "/mcp/call-log/page", owner, null).path("data").path("list").get(0);
+        assertEquals("[1]", limited.path("knowledgeBaseIds").asText());
+        assertEquals("RATE_LIMIT", limited.path("reasonCode").asText());
+        String askOnly = create(owner, List.of("ask"), 1).path("data").path("token").asText();
+        assertEquals(403, rpc(askOnly, "tools/call", Map.of("name", "search", "arguments", query)).statusCode());
+        var denied = web("GET", "/mcp/call-log/page", owner, null).path("data").path("list").get(0);
+        assertEquals("[1]", denied.path("knowledgeBaseIds").asText());
+        assertEquals("TOOL_DENIED", denied.path("reasonCode").asText());
+        // 断言：只保留当前授权目标、固定原因码及计数，不保留敏感输入或异常信息。
+        var records = web("GET", "/mcp/call-log/page", owner, null).path("data").toString();
+        assertFalse(records.contains("审计私密问题"));
+        assertFalse(records.contains("提供方密钥"));
+        assertFalse(records.contains(credential));
+    }
+
+    @Test
     void testFailures_toolToggleUserDisabledAndAuditRemainSafe() throws Exception {
         JsonNode created = create(owner, List.of("search", "ask"), 1).path("data");
         String credential = created.path("token").asText();
