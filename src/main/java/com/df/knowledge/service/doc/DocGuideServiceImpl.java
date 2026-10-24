@@ -15,6 +15,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.ArrayList;
@@ -41,9 +42,9 @@ public class DocGuideServiceImpl implements DocGuideService {
     private ObjectMapper objectMapper;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
     public DocGuideResult guide(Long userId, DocGuideReqVO request) {
-        // 同一会话串行更新澄清轮数，避免重复提交突破两轮上限。
+        // 同一会话串行更新轮数；当前读隔离让外部调用后的授权复查观察已提交撤权。
         var conversation = conversationService.getConversation(userId, request.getConversationId());
         RetrievalState state = conversation.getState() == null ? new RetrievalState()
                 .setKnowledgeBaseIds(conversation.getKnowledgeBaseIds()) : conversation.getState();

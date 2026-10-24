@@ -91,7 +91,8 @@ class McpCredentialHttpTest {
         McpCallLogController.class,
         McpCallLogServiceImpl.class,
         McpProtocolController.class,
-        McpProtocolServiceImpl.class
+        McpProtocolServiceImpl.class,
+        com.df.knowledge.service.knowledge.KnowledgeBasePermissionServiceImpl.class
     })
     static class Application {
         @Bean

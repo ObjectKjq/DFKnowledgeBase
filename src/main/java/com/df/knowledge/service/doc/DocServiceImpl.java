@@ -3,7 +3,6 @@ package com.df.knowledge.service.doc;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.df.knowledge.common.PageResult;
 import com.df.knowledge.common.exception.ServiceException;
@@ -254,8 +253,7 @@ public class DocServiceImpl implements DocService {
             fileService.delete(doc.getFileId());
         } else if (StrUtil.isNotBlank(doc.getFilePath())) {
             // 历史磁盘引用也可能共享，必须在最后一个引用移除后回收。
-            Long remaining = docMapper.selectCount(new LambdaQueryWrapper<DocDO>()
-                    .eq(DocDO::getFilePath, doc.getFilePath()));
+            Long remaining = docMapper.countByFilePath(doc.getFilePath());
             if (remaining == 0) FileUtil.del(doc.getFilePath());
         }
     }

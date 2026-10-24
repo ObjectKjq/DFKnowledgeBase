@@ -1,7 +1,5 @@
 package com.df.knowledge.service.mcp;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.df.knowledge.common.GlobalErrorCodeConstants;
 import com.df.knowledge.common.PageResult;
 import com.df.knowledge.common.exception.ServiceException;
@@ -34,12 +32,7 @@ public class McpCallLogServiceImpl implements McpCallLogService {
                 || request.getPageSize() < 1
                 || request.getPageSize() > 100)
             throw new ServiceException(GlobalErrorCodeConstants.BAD_REQUEST);
-        var page =
-                mapper.selectPage(
-                        new Page<McpCallLogDO>(request.getPageNum(), request.getPageSize()),
-                        new LambdaQueryWrapper<McpCallLogDO>()
-                                .eq(McpCallLogDO::getUserId, userId)
-                                .orderByDesc(McpCallLogDO::getId));
+        var page = mapper.selectPage(userId, request);
         return PageResult.build(page.getTotal(), page.getRecords());
     }
 

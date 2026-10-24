@@ -176,6 +176,8 @@ class McpProtocolControllerTest {
                         mock(McpCallLogMapper.class, withSettings().mockMaker("mock-maker-proxy")),
                         new McpToolServiceImpl(
                                 null, null, null, new ObjectMapper().findAndRegisterModules()),
+                        mock(com.df.knowledge.service.knowledge.KnowledgeBasePermissionService.class,
+                                withSettings().mockMaker("mock-maker-proxy")),
                         new ObjectMapper(),
                         clock,
                         "");
@@ -260,6 +262,8 @@ class McpProtocolControllerTest {
                         mock(McpCallLogMapper.class, withSettings().mockMaker("mock-maker-proxy")),
                         new McpToolServiceImpl(
                                 null, null, null, new ObjectMapper().findAndRegisterModules()),
+                        mock(com.df.knowledge.service.knowledge.KnowledgeBasePermissionService.class,
+                                withSettings().mockMaker("mock-maker-proxy")),
                         new ObjectMapper(),
                         clock,
                         "");

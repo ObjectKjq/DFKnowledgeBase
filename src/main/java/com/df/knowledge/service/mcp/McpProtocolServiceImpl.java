@@ -3,6 +3,7 @@ package com.df.knowledge.service.mcp;
 import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.dal.dataobject.mcp.*;
 import com.df.knowledge.dal.mysql.mcp.McpCallLogMapper;
+import com.df.knowledge.service.knowledge.KnowledgeBasePermissionService;
 import com.fasterxml.jackson.databind.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,6 +30,7 @@ public class McpProtocolServiceImpl implements McpProtocolService {
     private final McpCallLogMapper logs;
     private final McpToolService tools;
     private final ObjectMapper json;
+    private final KnowledgeBasePermissionService permissions;
     private final Clock clock;
     private final Set<String> allowedOrigins;
 
@@ -36,12 +38,14 @@ public class McpProtocolServiceImpl implements McpProtocolService {
             McpCredentialService credentials,
             McpCallLogMapper logs,
             McpToolService tools,
+            KnowledgeBasePermissionService permissions,
             ObjectMapper json,
             Clock mcpClock,
             @Value("${knowledge.mcp.allowed-origins:}") String origins) {
         this.credentials = credentials;
         this.logs = logs;
         this.tools = tools;
+        this.permissions = permissions;
         this.json = json;
         this.clock = mcpClock;
         this.allowedOrigins = new HashSet<>();
@@ -166,13 +170,18 @@ public class McpProtocolServiceImpl implements McpProtocolService {
                     if (!McpToolService.TOOL_NAMES.contains(name))
                         return rejected(audit, 200, id, -32602, "工具不存在", "UNKNOWN_TOOL");
                     audit.setToolName(name);
+                    audit.setKnowledgeBaseIds(json.writeValueAsString(
+                            authorizedTargets(credential.getUserId(), params.path("arguments"))));
                     if (!Arrays.asList(credential.getTools().split(",")).contains(name))
                         return rejected(audit, 403, id, 403, "凭证未开放此工具", "TOOL_DENIED");
                     if (!credentials.claimCall(credential))
                         return rejected(audit, 429, id, 429, "工具调用过于频繁，请稍后重试", "RATE_LIMIT");
                     var outcome =
                             tools.call(credential.getUserId(), name, params.path("arguments"));
-                    audit.setKnowledgeBaseIds(json.writeValueAsString(outcome.knowledgeBaseIds()))
+                    var targets = new LinkedHashSet<Long>();
+                    for (var target : json.readTree(audit.getKnowledgeBaseIds())) targets.add(target.longValue());
+                    targets.addAll(outcome.knowledgeBaseIds());
+                    audit.setKnowledgeBaseIds(json.writeValueAsString(targets))
                             .setResultCount(outcome.count());
                     result =
                             Map.of(
@@ -198,7 +207,7 @@ public class McpProtocolServiceImpl implements McpProtocolService {
             audit.setOutcome("FAILED").setReasonCode("INVALID_PARAMS");
             return toolFailure(id, "工具参数无效，请检查参数范围及格式");
         } catch (ServiceException ex) {
-            audit.setOutcome("FAILED").setReasonCode("BUSINESS_FAILURE");
+            audit.setOutcome("FAILED").setReasonCode("BUSINESS_" + ex.getErrorCode().getCode());
             return toolFailure(id, "操作未完成，请检查内容权限、文档状态及模型配置");
         } catch (Exception ex) {
             audit.setOutcome("FAILED").setReasonCode("INTERNAL_ERROR");
@@ -207,6 +216,20 @@ public class McpProtocolServiceImpl implements McpProtocolService {
             // 协议层不持有业务事务，失败与拒绝记录不会随业务回滚而丢失。
             logs.insert(audit);
         }
+    }
+
+    /** 仅记录当前有权的请求目标；异常参数不能扩大审计范围或带入未授权编号。 */
+    private List<Long> authorizedTargets(Long userId, JsonNode arguments) {
+        JsonNode requested = arguments.path("knowledgeBaseIds");
+        if (!requested.isArray() || requested.size() > 100) return List.of();
+        Set<Long> accessible = Set.copyOf(permissions.getAccessibleKnowledgeBaseIds(userId));
+        Set<Long> targets = new LinkedHashSet<>();
+        for (var value : requested) {
+            if (value.isIntegralNumber() && value.canConvertToLong() && accessible.contains(value.longValue())) {
+                targets.add(value.longValue());
+            }
+        }
+        return List.copyOf(targets);
     }
 
     private ResponseEntity<?> rejected(

@@ -40,6 +40,8 @@ mybatis-plus:
   # Mapper XML 位置
   mapper-locations: classpath*:mapper/**/*.xml
   configuration:
+    # 权限和文档状态复查须真正执行SELECT，不能复用同一事务中外部调用前的查询结果。
+    local-cache-scope: STATEMENT
     # 下划线转驼峰
     map-underscore-to-camel-case: true
   global-config:

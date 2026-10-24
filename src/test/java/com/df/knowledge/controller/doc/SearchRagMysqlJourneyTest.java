@@ -88,6 +88,32 @@ class SearchRagMysqlJourneyTest {
    assertNotEquals(0,call("GET","/knowledge/search/preview?chunkId=100",null).path("code").asInt());
   }finally{token=owner;try(var c=connection()){c.createStatement().execute("UPDATE knowledge_base_member SET deleted=0 WHERE user_id=9");}}
  }
+ @Test void testGuide_searchRevocationDoesNotLeakResultsCountsOrHistory() throws Exception {
+  // 准备参数：外部索引返回期间由独立连接提交成员撤权。
+  String owner=token;
+  token=call("POST","/system/auth/login?id=9",null).path("data").asText();
+  try {
+   long id=call("POST","/knowledge/conversation/create",Map.of("title","引导中撤权")).path("data").asLong();
+   when(index.search(anyString(),any(),any(),any(),anyString(),anyInt())).thenAnswer(invocation->{
+    try(var c=connection()){c.createStatement().execute("UPDATE knowledge_base_member SET deleted=1 WHERE user_id=9");}
+    return List.of(new DocIndexHit(100L,0.03,"HYBRID"));
+   });
+   // 调用：跳过澄清，但仍经过引导事务和真实检索权限复查。
+   var result=call("POST","/knowledge/search/guide",Map.of("conversationId",id,"query","沸点","knowledgeBaseIds",List.of(1),"skip",true)).path("data");
+   // 断言：当前响应及持久历史均不得泄漏已撤权内容和计数。
+   assertEquals(0,result.path("search").path("total").asInt());
+   assertEquals(0,result.path("search").path("list").size());
+   assertEquals(0,result.path("search").path("indexingCount").asInt());
+   var messages=call("GET","/knowledge/conversation/get?id="+id,null).path("data").path("messages");
+   var saved=messages.get(messages.size()-1).path("content").path("search");
+   assertEquals(0,saved.path("total").asInt());
+   assertEquals(0,saved.path("list").size());
+   assertEquals(0,saved.path("indexingCount").asInt());
+  } finally {
+   token=owner;
+   try(var c=connection()){c.createStatement().execute("UPDATE knowledge_base_member SET deleted=0 WHERE user_id=9");}
+  }
+ }
  @Test void testGuide_twoQuestionsThenHybridAndFailureOrSkipCanSearch() throws Exception {
   // 准备参数：使用明确标识的本地模拟配置，验证真实会话持久化与两轮上限。
   long model;
