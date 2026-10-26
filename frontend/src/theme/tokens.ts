@@ -19,8 +19,14 @@ export const palette = {
   oat: '#f4efe4',
   blue: '#eaf0f2',
   danger: '#a04e43',
+  controlBg: '#fcfdf9',
+  controlBorder: '#dfe5d6',
+  controlFocus: '#91a48a44',
   shadow: '0 6px 30px #29392f06',
 } as const
+
+/** 原型表单控件的基础尺寸，与 CSS 变量同步。 */
+export const controlMetrics = { radius: 5, height: 38 } as const
 
 export const fontSans = '"Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
 export const fontSerif =
@@ -57,6 +63,25 @@ export const antdTheme: ThemeConfig = {
       itemColor: palette.text,
       itemSelectedBg: palette.sageTint,
       itemSelectedColor: palette.sageDark,
+    },
+    Input: {
+      colorBgContainer: palette.controlBg,
+      colorBorder: palette.controlBorder,
+      activeBorderColor: palette.sage,
+      hoverBorderColor: palette.sage,
+      activeShadow: `0 0 0 2px ${palette.controlFocus}`,
+      borderRadius: controlMetrics.radius,
+      controlHeight: controlMetrics.height,
+    },
+    Select: {
+      colorBgContainer: palette.controlBg,
+      colorBorder: palette.controlBorder,
+      activeBorderColor: palette.sage,
+      hoverBorderColor: palette.sage,
+      activeOutlineColor: palette.controlFocus,
+      optionSelectedBg: palette.sageTint,
+      borderRadius: controlMetrics.radius,
+      controlHeight: controlMetrics.height,
     },
   },
 }

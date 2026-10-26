@@ -188,3 +188,180 @@
 .preview-hit {
   outline: 2px solid var(--sage);
 }
+
+/* 原生表单控件沿用原型色板，覆盖新增页面与表格内的选择器。 */
+.field input:not([type='checkbox']):not([type='radio']):not([type='file']),
+.field textarea,
+.field select,
+select.select {
+  min-width: 0;
+  min-height: var(--control-height);
+  border-color: var(--control-border);
+  border-radius: var(--control-radius);
+  background-color: var(--control-bg);
+  color: var(--text);
+  line-height: 1.5;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s;
+}
+
+.field select,
+select.select,
+.chip select {
+  appearance: none;
+  padding-right: 30px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    right 14px center,
+    right 10px center;
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.field input::placeholder,
+.field textarea::placeholder,
+.field-search input::placeholder {
+  color: var(--muted);
+  opacity: 0.75;
+}
+
+.field input:not([type='checkbox']):not([type='radio']):hover:not(:disabled),
+.field textarea:hover:not(:disabled),
+.field select:hover:not(:disabled),
+select.select:hover:not(:disabled),
+.field-search:hover {
+  border-color: var(--sage);
+}
+
+.field input:focus-visible,
+.field textarea:focus-visible,
+.field select:focus-visible,
+select.select:focus-visible,
+.field-search:focus-within {
+  border-color: var(--sage);
+  outline: 2px solid var(--control-focus);
+  outline-offset: 1px;
+}
+
+.field-search {
+  min-height: var(--control-height);
+  min-width: 0;
+}
+
+.field-search input {
+  min-width: 0;
+  color: var(--text);
+}
+
+.field-search input:focus {
+  outline: none;
+}
+
+.field input:disabled,
+.field textarea:disabled,
+.field select:disabled,
+select.select:disabled,
+.chip select:disabled {
+  background-color: var(--side);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+/* 勾选项不继承文本框的整行宽度与内边距。 */
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--sage);
+  cursor: pointer;
+}
+
+.field input[type='checkbox'],
+.field input[type='radio'] {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  padding: 0;
+  flex: none;
+}
+
+.check-list label {
+  cursor: pointer;
+  line-height: 1.6;
+}
+
+.settings-card > label:not(.field),
+.form-grid > label:not(.field) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 12px;
+}
+
+/* 模型选择嵌入原型标签，保留原生键盘操作与选项菜单。 */
+.composer .chip {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.chip select {
+  min-width: 0;
+  max-width: 220px;
+  border: 0;
+  border-radius: var(--control-radius);
+  padding-top: 2px;
+  padding-bottom: 2px;
+  background-color: transparent;
+  color: var(--sage-dark);
+  font: inherit;
+  text-overflow: ellipsis;
+}
+
+.chip select:focus-visible {
+  outline: 2px solid var(--sage);
+  outline-offset: 2px;
+}
+
+.form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-actions {
+  flex-wrap: wrap;
+}
+
+.modal-backdrop {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.modal {
+  width: min(560px, 100%);
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .manage-toolbar-left {
+    width: 100%;
+  }
+
+  .field-search {
+    flex: 1 1 160px;
+  }
+
+  .field-search input {
+    width: 100%;
+  }
+
+  .chip select {
+    max-width: 160px;
+  }
+}

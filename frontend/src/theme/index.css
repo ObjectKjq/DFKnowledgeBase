@@ -13,6 +13,11 @@
   --oat: #f4efe4;
   --blue: #eaf0f2;
   --danger: #a04e43;
+  --control-bg: #fcfdf9;
+  --control-border: #dfe5d6;
+  --control-focus: #91a48a44;
+  --control-radius: 5px;
+  --control-height: 38px;
   --shadow: 0 6px 30px #29392f06;
   --serif: Georgia, 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', SimSun, serif;
   --sans: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;

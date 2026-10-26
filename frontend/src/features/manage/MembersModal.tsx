@@ -106,6 +106,7 @@ export function MembersModal({ library, onClose }: { library: Library; onClose: 
                 <td>
                   {canManage ? (
                     <select
+                      className="select"
                       aria-label={`${member.username}的成员角色`}
                       value={member.memberRole}
                       disabled={pending}

@@ -288,6 +288,7 @@ export function Composer() {
           <textarea
             ref={textarea}
             id="query"
+            className="query"
             aria-label="检索问题"
             placeholder={
               mode === 'RAG 检索'

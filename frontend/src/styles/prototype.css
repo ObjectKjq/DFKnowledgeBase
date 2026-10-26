@@ -1887,7 +1887,7 @@
             margin: 14px 0
         }
 
-        .field input, .field textarea, .field select {
+        .field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), .field textarea, .field select {
             display: block;
             width: 100%;
             border: 1px solid #dfe5d6;
