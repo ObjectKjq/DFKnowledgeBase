@@ -20,7 +20,6 @@ export const DOCUMENT_STATUSES: Record<number, string> = {
   3: '索引中',
   4: '可用',
   5: '失败',
-  6: '已删除',
 }
 
 /** 所有上传入口使用同一校验，返回可直接提示的拒绝原因。 */

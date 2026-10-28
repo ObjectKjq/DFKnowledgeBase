@@ -14,7 +14,7 @@ export async function createDoc(body: API.DocCreateReqVO, options?: { [key: stri
   })
 }
 
-/** 删除文档 软删除，30 天内可恢复到删除前状态 DELETE /knowledge/doc/delete */
+/** 删除文档 删除文档、分块和索引，无其他引用时回收文件内容，不可恢复 DELETE /knowledge/doc/delete */
 export async function deleteDoc(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.deleteDocParams,
@@ -56,36 +56,6 @@ export async function getDocPage(
       ...params,
       reqVO: undefined,
       ...params['reqVO'],
-    },
-    ...(options || {}),
-  })
-}
-
-/** 彻底删除回收站文档 需要再次确认，无其他业务引用时回收文件字节 DELETE /knowledge/doc/purge */
-export async function purgeDoc(
-  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.purgeDocParams,
-  options?: { [key: string]: any },
-) {
-  return request<API.CommonResultBoolean>('/knowledge/doc/purge', {
-    method: 'DELETE',
-    params: {
-      ...params,
-    },
-    ...(options || {}),
-  })
-}
-
-/** 恢复文档 仅 30 天保留期内可恢复；原可用文档须重建索引后才可用，原处理中重新排队，原失败保留失败原因 POST /knowledge/doc/restore */
-export async function restoreDoc(
-  // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
-  params: API.restoreDocParams,
-  options?: { [key: string]: any },
-) {
-  return request<API.CommonResultBoolean>('/knowledge/doc/restore', {
-    method: 'POST',
-    params: {
-      ...params,
     },
     ...(options || {}),
   })

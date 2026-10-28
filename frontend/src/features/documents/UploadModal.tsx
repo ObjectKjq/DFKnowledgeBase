@@ -11,12 +11,13 @@ import { useKb } from '@/stores/knowledge'
 
 import { DOCUMENT_ACCEPT } from './documents'
 
-/** 多文件上传：发送真实文件，成功项移出队列，失败项保留供再次上传。 */
+/** 选择文件后立即上传，确认后使用文件引用创建文档。 */
 export function UploadModal() {
   const { libs } = useLibraries()
   const client = useQueryClient()
   const input = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
+  const [uploaded, setUploaded] = useState(new Map<File, { id: number; url: string }>())
   const pending = useKb((s) => s.pendingUpload)
   const target = useKb((s) => s.uploadTarget)
   const started = useKb((s) => s.uploadStarted)
@@ -28,22 +29,49 @@ export function UploadModal() {
   const writable = libs.filter((library) => library.role !== '查看者')
   const canUpload = writable.some((library) => library.id === target)
 
-  const mutation = useMutation({
+  const upload = useMutation({
+    mutationFn: (files: File[]) =>
+      Promise.allSettled(
+        files.map(async (file) => {
+          const data = new FormData()
+          data.append('file', file)
+          // 文件放入 FormData，由浏览器补齐 multipart boundary。
+          const result = await uploadFile({ file: undefined }, data, {
+            headers: { 'Content-Type': undefined },
+          })
+          const reference = result.data
+          if (!reference?.id || !reference.url) throw new Error('文件上传响应缺少文件引用')
+          return { file, id: reference.id, url: reference.url }
+        }),
+      ),
+    onMutate: () => useKb.getState().setUploadStarted(true),
+    onSuccess: (results) => {
+      setUploaded((current) => {
+        const next = new Map(current)
+        for (const result of results) {
+          if (result.status === 'fulfilled') {
+            const { file, id, url } = result.value
+            next.set(file, { id, url })
+          }
+        }
+        return next
+      })
+    },
+    onSettled: () => useKb.getState().setUploadStarted(false),
+  })
+  const selectFiles = (files: File[]) => {
+    if (useKb.getState().uploadStarted) return
+    addFiles(files)
+    const remaining = useKb.getState().pendingUpload.filter((file) => !uploaded.has(file))
+    if (remaining.length) upload.mutate(remaining)
+  }
+
+  const creation = useMutation({
     mutationFn: ({ files, knowledgeBaseId }: { files: File[]; knowledgeBaseId: number }) =>
       Promise.allSettled(
         files.map((file) => {
-          const data = new FormData()
-          data.append('file', file)
-          // openapi2ts 把 file 生成成了 query 参数，这里占位跳过；文件放 FormData 的 file 部分，
-          // 覆盖生成请求的 JSON Content-Type，由浏览器补齐 multipart boundary。
-          return uploadFile({ file: undefined }, data, {
-            headers: { 'Content-Type': undefined },
-          }).then((result) => {
-            // 两步式上传：先传文件拿引用，再保存文档（ADR-0009）。
-            const uploaded = result.data
-            if (!uploaded?.id || !uploaded.url) throw new Error('文件上传响应缺少文件引用')
-            return createDoc({ knowledgeBaseId, fileId: uploaded.id, fileUrl: uploaded.url })
-          })
+          const reference = uploaded.get(file)!
+          return createDoc({ knowledgeBaseId, fileId: reference.id, fileUrl: reference.url })
         }),
       ),
     onMutate: () => useKb.getState().setUploadStarted(true),
@@ -54,7 +82,7 @@ export function UploadModal() {
       }
       if (count) {
         void client.invalidateQueries({ queryKey: ['manage-documents'] })
-        toastMsg(`${count} 份文档已上传，入库状态请在文档管理中查看`)
+        toastMsg(`${count} 份文档已创建，入库状态请在文档管理中查询`)
       }
     },
     onSettled: (results) => {
@@ -66,7 +94,7 @@ export function UploadModal() {
   return (
     <ModalShell
       title="上传文档"
-      description="支持多选与拖拽，单文件上限 50 MB。上传成功后由服务器解析并建立索引。"
+      description="支持多选与拖拽，单文件上限 50 MB。选中文件后立即上传，创建文档后由服务器解析并建立索引。"
     >
       <label className="field">
         保存到
@@ -96,7 +124,7 @@ export function UploadModal() {
         accept={DOCUMENT_ACCEPT}
         disabled={started}
         onChange={(e) => {
-          addFiles([...(e.target.files ?? [])])
+          selectFiles([...(e.target.files ?? [])])
           e.target.value = ''
         }}
       />
@@ -113,7 +141,7 @@ export function UploadModal() {
         onDrop={(e) => {
           e.preventDefault()
           setDragging(false)
-          if (!started) addFiles([...e.dataTransfer.files])
+          if (!started) selectFiles([...e.dataTransfer.files])
         }}
       >
         <Icon name="upload" />
@@ -126,6 +154,14 @@ export function UploadModal() {
             <Icon name="file" />
             <span>{file.name}</span>
             <small>{formatSize(file.size)}</small>
+            <small>
+              {uploaded.has(file) ? '已上传' : upload.isPending ? '上传中…' : '上传失败'}
+            </small>
+            {!started && !uploaded.has(file) && (
+              <button className="btn ghost" onClick={() => upload.mutate([file])}>
+                重试上传
+              </button>
+            )}
             <button
               className="icon-btn"
               disabled={started}
@@ -139,12 +175,12 @@ export function UploadModal() {
       </div>
       {started && (
         <p className="table-note" role="status">
-          正在上传 {pending.length} 份文档，请稍候…
+          {creation.isPending ? '正在创建文档，请稍候…' : '正在上传文件，请稍候…'}
         </p>
       )}
-      {!started && mutation.data?.some((result) => result.status === 'rejected') && (
+      {!started && creation.data?.some((result) => result.status === 'rejected') && (
         <p className="field-hint" role="alert">
-          部分文档上传失败，失败项已保留，请重试。失败原因见接口提示。
+          部分文档创建失败，失败项已保留，请重试。失败原因见接口提示。
         </p>
       )}
       <div className="form-actions">
@@ -153,10 +189,12 @@ export function UploadModal() {
         </button>
         <button
           className="btn primary"
-          disabled={!pending.length || started || !canUpload}
-          onClick={() => mutation.mutate({ files: pending, knowledgeBaseId: Number(target) })}
+          disabled={
+            !pending.length || started || !canUpload || pending.some((file) => !uploaded.has(file))
+          }
+          onClick={() => creation.mutate({ files: pending, knowledgeBaseId: Number(target) })}
         >
-          开始上传{pending.length ? ` · ${pending.length}` : ''}
+          创建文档{pending.length ? ` · ${pending.length}` : ''}
         </button>
       </div>
     </ModalShell>

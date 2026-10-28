@@ -175,7 +175,7 @@ class DocIngestJourneyTest {
                     "docIndexService", org.springframework.test.util.ReflectionTestUtils.getField(journey.ingest, "docIndexService"),
                     "docIngestExecutor", nextExecutor, "instanceSettingsService", journey.settings);
             try {
-                restarted.recoverInterruptedDocs();
+                restarted.dispatchPendingDocs();
             } finally {
                 nextExecutor.getThreadPoolExecutor().shutdown();
                 org.junit.jupiter.api.Assertions.assertTrue(nextExecutor.getThreadPoolExecutor().awaitTermination(20, java.util.concurrent.TimeUnit.SECONDS));
@@ -294,7 +294,7 @@ class DocIngestJourneyTest {
             var next = new com.df.knowledge.config.DocIngestExecutorConfiguration().docIngestExecutor(); next.initialize();
             wire(journey.ingest, "docIngestExecutor", next);
             try {
-                journey.ingest.recoverInterruptedDocs();
+                journey.ingest.dispatchPendingDocs();
             } finally {
                 next.getThreadPoolExecutor().shutdown();
                 org.junit.jupiter.api.Assertions.assertTrue(next.getThreadPoolExecutor().awaitTermination(20, java.util.concurrent.TimeUnit.SECONDS));
@@ -366,7 +366,7 @@ class DocIngestJourneyTest {
             wire(parse, "docMapper", docs, "docChunkMapper", chunks, "fileService", files, "knowledgeBaseMapper", bases);
             wire(indexService, "docMapper", docs, "docChunkMapper", chunks, "docEmbeddingService", embedding, "docChunkIndexService", index, "knowledgeBaseMapper", bases);
             wire(ingest, "docMapper", docs, "docParseService", parse, "docIndexService", indexService, "instanceSettingsService", settings);
-            wire(service, "docMapper", docs, "fileService", files, "docIngestService", ingest, "knowledgeBasePermissionService", permission, "knowledgeBaseMapper", bases);
+            wire(service, "docMapper", docs, "fileService", files, "knowledgeBasePermissionService", permission, "knowledgeBaseMapper", bases);
             wire(search, "docMapper", docs, "docChunkMapper", chunks, "knowledgeBaseMapper", bases, "permissionService", permission);
             var controller = new DocController(); wire(controller, "docService", service);
             var searchController = new DocSearchController(); wire(searchController, "docSearchService", search);

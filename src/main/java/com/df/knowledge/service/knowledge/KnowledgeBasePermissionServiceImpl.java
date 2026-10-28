@@ -9,7 +9,6 @@ import com.df.knowledge.enums.ErrorCodeConstants;
 import com.df.knowledge.enums.knowledge.KnowledgeBaseMemberRoleEnum;
 import com.df.knowledge.enums.knowledge.KnowledgeBaseTypeEnum;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.validation.annotation.Validated;
@@ -25,7 +24,6 @@ import java.util.List;
  */
 @Service
 @Validated
-@Slf4j
 public class KnowledgeBasePermissionServiceImpl implements KnowledgeBasePermissionService {
 
     @Resource
@@ -94,7 +92,7 @@ public class KnowledgeBasePermissionServiceImpl implements KnowledgeBasePermissi
         // 3. 去重后返回
         return knowledgeBaseIds.stream().distinct().filter(id -> {
             KnowledgeBaseDO knowledgeBase = knowledgeBaseMapper.selectById(id);
-            return knowledgeBase != null && knowledgeBase.getDeleteTime() == null;
+            return knowledgeBase != null;
         }).toList();
     }
 
@@ -109,7 +107,7 @@ public class KnowledgeBasePermissionServiceImpl implements KnowledgeBasePermissi
      */
     private KnowledgeBaseDO validateAccessible(Long userId, Long knowledgeBaseId) {
         KnowledgeBaseDO knowledgeBase = knowledgeBaseMapper.selectById(knowledgeBaseId);
-        if (knowledgeBase == null || knowledgeBase.getDeleteTime() != null || (!knowledgeBase.getOwnerId().equals(userId)
+        if (knowledgeBase == null || (!knowledgeBase.getOwnerId().equals(userId)
                 && knowledgeBaseMemberMapper.selectByKnowledgeBaseIdAndUserId(knowledgeBaseId, userId) == null)) {
             throw new ServiceException(ErrorCodeConstants.KB_NOT_FOUND);
         }

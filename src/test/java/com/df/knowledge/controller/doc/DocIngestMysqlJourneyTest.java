@@ -84,7 +84,7 @@ class DocIngestMysqlJourneyTest {
             var executor = new com.df.knowledge.config.DocIngestExecutorConfiguration().docIngestExecutor();
             executor.initialize(); wire(restarted.ingest, "docIngestExecutor", executor);
             try {
-                restarted.ingest.recoverInterruptedDocs();
+                restarted.ingest.dispatchPendingDocs();
             } finally {
                 executor.getThreadPoolExecutor().shutdown();
                 org.junit.jupiter.api.Assertions.assertTrue(executor.getThreadPoolExecutor().awaitTermination(30, java.util.concurrent.TimeUnit.SECONDS));

@@ -166,7 +166,6 @@ CREATE TABLE `system_file_content` (
 DROP TABLE IF EXISTS `knowledge_base`;
 CREATE TABLE `knowledge_base` (
     `id`           bigint       NOT NULL AUTO_INCREMENT COMMENT '知识库ID',
-    `delete_time` datetime NULL DEFAULT NULL COMMENT '回收站删除时间',
     `name`         varchar(50)  NOT NULL COMMENT '知识库名称',
     `type`         tinyint      NOT NULL COMMENT '知识库类型（1 个人 2 共享）',
     `owner_id`     bigint       NOT NULL COMMENT '所有者用户ID（关联 system_user 表）',
@@ -204,8 +203,7 @@ CREATE TABLE `knowledge_base_member` (
 
 -- ----------------------------
 -- 文档表
--- 状态机（PRD §8.2）：1 排队 2 解析中 3 索引中 4 可用 5 失败 6 已删除（软删除）
--- 软删除 30 天保留期：delete_time 为起算点，prev_status 记录删除前状态供恢复
+-- 状态机（PRD §8.2）：1 排队 2 解析中 3 索引中 4 可用 5 失败
 -- ----------------------------
 DROP TABLE IF EXISTS `knowledge_doc`;
 CREATE TABLE `knowledge_doc` (
@@ -218,11 +216,9 @@ CREATE TABLE `knowledge_doc` (
     `file_id`           bigint       NULL DEFAULT NULL COMMENT '文件ID（关联 system_file 表，过渡期存量文档为空）',
     `file_url`          varchar(255) NULL DEFAULT NULL COMMENT '文件下载链接（上传接口返回的 url，过渡期存量文档为空）',
     `file_path`         varchar(500) NULL DEFAULT NULL COMMENT '过渡字段：存量磁盘文件路径，迁移入库后置空，随双读逻辑一并移除',
-    `status`            tinyint      NOT NULL COMMENT '文档状态（1 排队 2 解析中 3 索引中 4 可用 5 失败 6 已删除）',
+    `status`            tinyint      NOT NULL COMMENT '文档状态（1 排队 2 解析中 3 索引中 4 可用 5 失败）',
     `ingest_submit_time` datetime(6) NULL DEFAULT CURRENT_TIMESTAMP(6) COMMENT '本次入库提交时间',
     `fail_reason`       varchar(500) NULL DEFAULT NULL COMMENT '失败原因（保留首次失败原因）',
-    `prev_status`       tinyint      NULL DEFAULT NULL COMMENT '删除前状态（软删除恢复到删除前状态用）',
-    `delete_time`       datetime     NULL DEFAULT NULL COMMENT '删除时间（软删除 30 天保留期起算点）',
     `creator`           varchar(64)  NULL DEFAULT '' COMMENT '创建者',
     `create_time`       datetime     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `updater`           varchar(64)  NULL DEFAULT '' COMMENT '更新者',

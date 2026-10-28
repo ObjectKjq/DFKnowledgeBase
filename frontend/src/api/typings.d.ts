@@ -108,12 +108,6 @@ declare namespace API {
     data?: KnowledgeBaseMemberRespVO[]
   }
 
-  type CommonResultListKnowledgeBaseRespVO = {
-    code?: number
-    msg?: string
-    data?: KnowledgeBaseRespVO[]
-  }
-
   type CommonResultListLong = {
     code?: number
     msg?: string
@@ -436,7 +430,7 @@ declare namespace API {
     knowledgeBaseId?: number
     /** 文档标题（模糊匹配） */
     title?: string
-    /** 文档状态（1 排队 2 解析中 3 索引中 4 可用 5 失败 6 已删除） */
+    /** 文档状态（1 排队 2 解析中 3 索引中 4 可用 5 失败） */
     status?: number
   }
 
@@ -455,12 +449,10 @@ declare namespace API {
     fileSize?: number
     /** 文件下载链接 */
     fileUrl?: string
-    /** 文档状态（1 排队 2 解析中 3 索引中 4 可用 5 失败 6 已删除） */
+    /** 文档状态（1 排队 2 解析中 3 索引中 4 可用 5 失败） */
     status?: number
     /** 失败原因（保留首次失败原因） */
     failReason?: string
-    /** 删除时间（软删除 30 天保留期起算点） */
-    deleteTime?: string
     /** 上传时间 */
     createTime?: string
     /** 最近状态变更时间 */
@@ -676,8 +668,6 @@ declare namespace API {
     description?: string
     /** 创建时间 */
     createTime?: string
-    /** 进入回收站时间 */
-    deleteTime?: string
   }
 
   type KnowledgeBaseSaveReqVO = {
@@ -946,16 +936,6 @@ declare namespace API {
     list?: UserRespVO[]
   }
 
-  type purgeDocParams = {
-    id: number
-    confirmed?: boolean
-  }
-
-  type purgeKnowledgeBaseParams = {
-    id: number
-    confirmed?: boolean
-  }
-
   type RagAnswerRespVO = {
     /** 是否已基于充分依据作答 */
     answered?: boolean
@@ -1013,15 +993,6 @@ declare namespace API {
     /** 知识库编号 */
     knowledgeBaseId: number
     /** 成员编号 */
-    id: number
-  }
-
-  type restoreDocParams = {
-    /** 文档编号 */
-    id: number
-  }
-
-  type restoreKnowledgeBaseParams = {
     id: number
   }
 

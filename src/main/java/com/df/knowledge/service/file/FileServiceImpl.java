@@ -11,7 +11,6 @@ import com.df.knowledge.dal.mysql.doc.DocMapper;
 import com.df.knowledge.dal.mysql.file.FileContentMapper;
 import com.df.knowledge.dal.mysql.file.FileMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
-import com.df.knowledge.enums.doc.DocStatusEnum;
 import com.df.knowledge.enums.file.FileConstants;
 import com.df.knowledge.service.knowledge.KnowledgeBasePermissionService;
 import jakarta.annotation.Resource;
@@ -101,7 +100,7 @@ public class FileServiceImpl implements FileService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void delete(Long id) {
-        // 可恢复的业务引用也需要保留字节；只有最后一个引用移除后物理回收。
+        // 只有最后一个文档引用移除后才回收文件字节。
         fileMapper.selectByIdForUpdate(id);
         if (!docMapper.selectListByFileIdForUpdate(id).isEmpty()) {
             return;
@@ -121,9 +120,6 @@ public class FileServiceImpl implements FileService {
             return file;
         }
         for (var doc : references) {
-            if (DocStatusEnum.DELETED.getCode().equals(doc.getStatus())) {
-                continue;
-            }
             try {
                 knowledgeBasePermissionService.checkViewPermission(userId, doc.getKnowledgeBaseId());
                 return file;
@@ -145,9 +141,6 @@ public class FileServiceImpl implements FileService {
             return file;
         }
         for (var doc : references) {
-            if (DocStatusEnum.DELETED.getCode().equals(doc.getStatus())) {
-                continue;
-            }
             try {
                 knowledgeBasePermissionService.checkContentWritePermission(userId, doc.getKnowledgeBaseId());
                 return file;

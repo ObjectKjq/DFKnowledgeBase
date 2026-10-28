@@ -20,7 +20,6 @@ import com.df.knowledge.service.knowledge.KnowledgeBasePermissionService;
 import com.df.knowledge.service.model.ModelRerankService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -42,7 +41,6 @@ import java.util.stream.Collectors;
  */
 @Service
 @Validated
-@Slf4j
 public class DocSearchServiceImpl implements DocSearchService {
 
     private static final int RESULT_LIMIT = 10000;
@@ -244,7 +242,7 @@ public class DocSearchServiceImpl implements DocSearchService {
             throw new ServiceException(ErrorCodeConstants.DOC_NOT_FOUND);
         }
         KnowledgeBaseDO knowledgeBase = knowledgeBaseMapper.selectById(doc.getKnowledgeBaseId());
-        if (knowledgeBase == null || knowledgeBase.getDeleteTime() != null) {
+        if (knowledgeBase == null) {
             throw new ServiceException(ErrorCodeConstants.DOC_NOT_FOUND);
         }
         return toResult(chunk, doc, knowledgeBase);

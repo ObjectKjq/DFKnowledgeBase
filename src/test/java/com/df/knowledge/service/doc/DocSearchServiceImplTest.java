@@ -107,7 +107,7 @@ class DocSearchServiceImplTest {
     void testGetPreview_deletedDocumentDoesNotExposeOriginalText() {
         // 准备参数
         when(docChunkMapper.selectById(101L)).thenReturn(chunk(101L, 5L, 1));
-        when(docMapper.selectById(5L)).thenReturn(doc(5L, 2L, DocStatusEnum.DELETED.getCode()));
+        when(docMapper.selectById(5L)).thenReturn(null);
 
         // 调用并断言
         ServiceException exception = assertThrows(ServiceException.class, () -> searchService.getPreview(7L, 101L));

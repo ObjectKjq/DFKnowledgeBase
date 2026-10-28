@@ -8,11 +8,9 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.df.knowledge.controller.doc.vo.DocPageReqVO;
 import com.df.knowledge.dal.dataobject.doc.DocDO;
-import com.df.knowledge.enums.doc.DocStatusEnum;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -30,20 +28,7 @@ public interface DocMapper extends BaseMapper<DocDO> {
         return selectCount(new LambdaQueryWrapper<DocDO>().eq(DocDO::getFilePath, filePath));
     }
 
-    /**
-     * 恢复文档状态并显式清空回收站字段
-     *
-     * @param id 文档编号
-     * @param status 恢复后的状态
-     * @return 更新条数
-     */
-    default int restoreDeletedDoc(Long id, Integer status) {
-        return update(null, new LambdaUpdateWrapper<DocDO>()
-                .eq(DocDO::getId, id).set(DocDO::getStatus, status)
-                .set(DocDO::getPrevStatus, null).set(DocDO::getDeleteTime, null));
-    }
-
-    /** 查询全部仍保留的业务引用，包括可恢复的文档。
+    /** 查询全部仍保留的文档引用。
      * @param fileId 文件编号
      * @return 文档列表
      */
@@ -102,12 +87,11 @@ public interface DocMapper extends BaseMapper<DocDO> {
                         .eq(reqVO.getKnowledgeBaseId() != null, DocDO::getKnowledgeBaseId, reqVO.getKnowledgeBaseId())
                         .like(StrUtil.isNotBlank(reqVO.getTitle()), DocDO::getTitle, reqVO.getTitle())
                         .eq(reqVO.getStatus() != null, DocDO::getStatus, reqVO.getStatus())
-                        .ne(reqVO.getStatus() == null, DocDO::getStatus, DocStatusEnum.DELETED.getCode())
                         .orderByDesc(DocDO::getId));
     }
 
     /**
-     * 查询指定状态集合的文档（启动恢复入库任务用）
+     * 查询指定状态集合的文档，供定时任务扫描待处理及中断的入库任务
      *
      * @param statuses 状态集合，枚举 {@link DocStatusEnum}
      * @return 文档列表
@@ -115,7 +99,7 @@ public interface DocMapper extends BaseMapper<DocDO> {
     default List<DocDO> selectListByStatuses(Collection<Integer> statuses) {
         return selectList(new LambdaQueryWrapper<DocDO>().in(DocDO::getStatus, statuses)
                 .apply("EXISTS (SELECT 1 FROM knowledge_base kb WHERE kb.id = knowledge_doc.knowledge_base_id"
-                        + " AND kb.deleted = 0 AND kb.delete_time IS NULL)")
+                        + " AND kb.deleted = 0)")
                 .orderByAsc(DocDO::getIngestSubmitTime, DocDO::getId));
     }
 
@@ -136,31 +120,6 @@ public interface DocMapper extends BaseMapper<DocDO> {
     }
 
     /**
-     * 查询删除时间早于指定时间的软删除文档（超期彻底删除用）
-     *
-     * @param status 文档状态（已删除），枚举 {@link DocStatusEnum}
-     * @param maxDeleteTime 删除时间上限
-     * @return 文档列表
-     */
-    default List<DocDO> selectListByStatusAndDeleteTimeBefore(Integer status, LocalDateTime maxDeleteTime) {
-        return selectList(new LambdaQueryWrapper<DocDO>()
-                .eq(DocDO::getStatus, status)
-                .le(DocDO::getDeleteTime, maxDeleteTime));
-    }
-
-    /**
-     * 查询仍指向磁盘存量文件的文档（file_id 为空且 file_path 非空，存量迁移用）
-     *
-     * @return 文档列表
-     */
-    default List<DocDO> selectListByLegacyFile() {
-        return selectList(new LambdaQueryWrapper<DocDO>()
-                .isNull(DocDO::getFileId)
-                .isNotNull(DocDO::getFilePath)
-                .ne(DocDO::getFilePath, ""));
-    }
-
-    /**
      * 状态迁移（CAS）：仅当当前状态为 fromStatus 时迁移到 toStatus，避免与用户操作并发时把已删除文档拉回流程
      *
      * @param id 文档编号
@@ -177,30 +136,4 @@ public interface DocMapper extends BaseMapper<DocDO> {
                 .set(StrUtil.isNotBlank(failReason), DocDO::getFailReason, failReason));
     }
 
-    /**
-     * 持久保存本次提交的排序时间；状态仍是权威任务状态。
-     * @param id 文档编号
-     * @return 更新条数
-     */
-    default int updateIngestSubmitTime(Long id) {
-        return update(null, new LambdaUpdateWrapper<DocDO>().eq(DocDO::getId, id)
-                .in(DocDO::getStatus, DocStatusEnum.IN_FLIGHT_STATUS_CODES)
-                .set(DocDO::getIngestSubmitTime, LocalDateTime.now()));
-    }
-
-    /**
-     * 改写文件引用（存量磁盘文件迁移入库后落 file_id / file_url 并清空过渡字段 file_path）
-     *
-     * @param id 文档编号
-     * @param fileId 文件编号
-     * @param fileUrl 文件下载链接
-     * @return 更新条数
-     */
-    default int updateFileRef(Long id, Long fileId, String fileUrl) {
-        return update(null, new LambdaUpdateWrapper<DocDO>()
-                .eq(DocDO::getId, id)
-                .set(DocDO::getFileId, fileId)
-                .set(DocDO::getFileUrl, fileUrl)
-                .set(DocDO::getFilePath, null));
-    }
 }

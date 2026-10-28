@@ -6,7 +6,7 @@ import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.controller.knowledge.vo.knowledgebase.KnowledgeBasePageReqVO;
 import com.df.knowledge.controller.knowledge.vo.knowledgebase.KnowledgeBaseSaveReqVO;
 import com.df.knowledge.dal.dataobject.knowledge.KnowledgeBaseDO;
-import com.df.knowledge.dal.mysql.doc.DocMapper;
+import com.df.knowledge.service.doc.DocService;
 import com.df.knowledge.dal.mysql.knowledge.KnowledgeBaseMapper;
 import com.df.knowledge.dal.mysql.knowledge.KnowledgeBaseMemberMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
@@ -47,7 +47,7 @@ class KnowledgeBaseServiceImplTest {
     private KnowledgeBasePermissionService knowledgeBasePermissionService;
 
     @Mock
-    private DocMapper docMapper;
+    private DocService docService;
 
     @InjectMocks
     private KnowledgeBaseServiceImpl knowledgeBaseService;
@@ -128,11 +128,10 @@ class KnowledgeBaseServiceImplTest {
         // 调用
         knowledgeBaseService.deleteKnowledgeBase(10L, 5L);
 
-        // 断言：进入回收站且保留成员关系。
-        ArgumentCaptor<KnowledgeBaseDO> captor = ArgumentCaptor.forClass(KnowledgeBaseDO.class);
-        verify(knowledgeBaseMapper).updateById(captor.capture());
-        org.junit.jupiter.api.Assertions.assertNotNull(captor.getValue().getDeleteTime());
-        Mockito.verifyNoInteractions(knowledgeBaseMemberMapper);
+        // 断言：同步删除内容、成员关系和知识库。
+        verify(docService).deleteKnowledgeBaseDocs(5L);
+        verify(knowledgeBaseMemberMapper).purgeByKnowledgeBaseId(5L);
+        verify(knowledgeBaseMapper).purgeById(5L);
     }
 
     @Test

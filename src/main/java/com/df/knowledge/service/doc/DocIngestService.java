@@ -8,13 +8,6 @@ package com.df.knowledge.service.doc;
 public interface DocIngestService {
 
     /**
-     * 提交入库任务（上传、重试、恢复后调用，异步执行）
-     *
-     * @param docId 文档编号
-     */
-    void submit(Long docId);
-
-    /**
      * 执行单个文档的入库状态机：排队/解析中/索引中 → 解析中 → 索引中 → 可用，异常时迁移失败并记录原因
      *
      * @param docId 文档编号
@@ -22,7 +15,7 @@ public interface DocIngestService {
     void processDoc(Long docId);
 
     /**
-     * 启动恢复：停留在排队/解析中/索引中的文档重新入队，服务重启后不丢任务（ADR-0007）
+     * 扫描排队、解析中和索引中的文档，按全局与知识库并发限制执行入库任务
      */
-    void recoverInterruptedDocs();
+    void dispatchPendingDocs();
 }

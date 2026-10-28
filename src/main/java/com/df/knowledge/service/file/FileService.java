@@ -39,7 +39,7 @@ public interface FileService {
     void delete(Long userId, Long id);
 
     /**
-     * 按字节内容新增文件（存量磁盘文件迁移入库用）
+     * 按字节内容新增文件
      *
      * @param content 文件内容
      * @param name 原始文件名

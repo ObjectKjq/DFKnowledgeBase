@@ -4,7 +4,6 @@ import cn.dev33.satoken.filter.SaTokenContextFilterForJakartaServlet;
 import com.df.knowledge.controller.auth.AuthController;
 import com.df.knowledge.controller.knowledge.KnowledgeBaseMemberController;
 import com.df.knowledge.controller.user.UserController;
-import com.df.knowledge.job.DocPurgeJob;
 import com.df.knowledge.service.auth.AuthServiceImpl;
 import com.df.knowledge.service.permission.PermissionServiceImpl;
 import com.df.knowledge.service.permission.StpInterfaceImpl;
@@ -49,7 +48,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** 文件授权及回收站的 HTTP 完整旅程，真实 MySQL 与业务服务。 */
+/** 文件授权及删除的 HTTP 完整旅程，真实 MySQL 与业务服务。 */
 @EnabledIfSystemProperty(named = "p0.mysql.enabled", matches = "true")
 @SpringBootTest(classes = ContentLifecycleHttpTest.Application.class, properties = {
         "spring.datasource.url=jdbc:mysql://127.0.0.1:3306/df_knowledge_base_p0_19_test?allowPublicKeyRetrieval=true&useSSL=false",
@@ -96,7 +95,7 @@ class ContentLifecycleHttpTest {
             AuthServiceImpl.class,
             PermissionServiceImpl.class,
             StpInterfaceImpl.class,
-            KnowledgeBaseMemberServiceImpl.class, DocPurgeJob.class})
+            KnowledgeBaseMemberServiceImpl.class})
     static class Application {
         @Bean DocChunkIndexService docChunkIndexService() { return mock(DocChunkIndexService.class); }
         @Bean DocEmbeddingService docEmbeddingService() { return texts -> texts.stream().map(text -> vector()).toList(); }
@@ -115,7 +114,6 @@ class ContentLifecycleHttpTest {
     String admin;
     String memberName;
     @Resource JdbcTemplate jdbc;
-    @Resource DocPurgeJob purgeJob;
     private final ObjectMapper json = new ObjectMapper();
 
     @BeforeEach
@@ -172,14 +170,6 @@ class ContentLifecycleHttpTest {
                 .andExpect(jsonPath("$.code").value(code));
     }
 
-    private void awaitStatus(String token, long id, int status) throws Exception {
-        for (int attempt = 0; attempt < 100; attempt++) {
-            if (getJson(token, "/knowledge/doc/get?id=" + id).path("data").path("status").asInt() == status) return;
-            Thread.sleep(50);
-        }
-        fail("文档未到达预期状态：" + getJson(token, "/knowledge/doc/get?id=" + id));
-    }
-
     @Test
     void testFile_unassociatedUploadIsPrivate() throws Exception {
         // 准备参数：用户上传未关联文件。
@@ -224,73 +214,69 @@ class ContentLifecycleHttpTest {
     }
 
     @Test
-    void testKnowledgeBase_recycleRestorePreservesMembersAndPurgeNeedsConfirmation() throws Exception {
-        // 准备参数：共享知识库与成员、可用文档。
-        long shared = base(owner, 2);
-        postJson(owner, "/knowledge/base/member/invite", "{\"knowledgeBaseId\":" + shared
-                + ",\"username\":\"" + memberName + "\",\"memberRole\":2}", 0);
-        long file = upload(owner, "restore evidence");
-        long doc = document(owner, shared, file, 0);
-        awaitStatus(owner, doc, 4);
-        // 调用与断言：软删除即时隐藏，只有原所有者能看到回收站与恢复。
-        action(owner, "/knowledge/base/delete?id=" + shared, true, 0);
-        assertEquals(1001002001, getJson(stranger, "/knowledge/base/get?id=" + shared).path("code").asInt());
-        assertEquals(1001005001, getJson(owner, "/system/file/download?id=" + file).path("code").asInt());
-        assertEquals(0, getJson(stranger, "/knowledge/base/recycle-list").path("data").size());
-        action(stranger, "/knowledge/base/restore?id=" + shared, false, 1001002001);
-        action(owner, "/knowledge/base/restore?id=" + shared, false, 0);
-        awaitStatus(owner, doc, 4);
-        assertEquals(1, getJson(owner, "/knowledge/base/member/list?knowledgeBaseId=" + shared).path("data").size());
-        mvc.perform(get("/system/file/download?id=" + file).header("Authorization", "Bearer " + stranger))
-                .andExpect(content().string("restore evidence"));
-        action(owner, "/knowledge/base/delete?id=" + shared, true, 0);
-        action(owner, "/knowledge/base/purge?id=" + shared, true, 1001002009);
-        action(owner, "/knowledge/base/purge?id=" + shared + "&confirmed=true", true, 0);
-        assertEquals(1001005001, getJson(owner, "/system/file/download?id=" + file).path("code").asInt());
-    }
-
-    @Test
-    void testDocuments_sharedBytesSurviveUntilLastRetainedReference() throws Exception {
+    void testDocuments_sharedBytesSurviveUntilLastReference() throws Exception {
         // 准备参数：同一文件被两个业务文档引用。
         long knowledgeBase = base(owner, 1);
         long file = upload(owner, "retained evidence");
         long first = document(owner, knowledgeBase, file, 0);
         long second = document(owner, knowledgeBase, file, 0);
-        awaitStatus(owner, first, 4);
-        awaitStatus(owner, second, 4);
-        // 调用与断言：清理首个引用不会破坏第二个，回收站引用也保留字节。
+        context.getBean(DocIngestService.class).processDoc(first);
+        context.getBean(DocIngestService.class).processDoc(second);
+        // 调用与断言：删除首个引用不会破坏第二个，最后一个引用移除后回收字节。
         action(owner, "/knowledge/doc/delete?id=" + first, true, 0);
-        action(owner, "/knowledge/doc/purge?id=" + first, true, 1001003015);
-        action(owner, "/knowledge/doc/purge?id=" + first + "&confirmed=true", true, 0);
         mvc.perform(get("/system/file/download?id=" + file).header("Authorization", "Bearer " + owner))
                 .andExpect(content().string("retained evidence"));
         action(owner, "/knowledge/doc/delete?id=" + second, true, 0);
-        action(owner, "/knowledge/doc/restore?id=" + second, false, 0);
-        awaitStatus(owner, second, 4);
-        mvc.perform(get("/system/file/download?id=" + file).header("Authorization", "Bearer " + owner))
-                .andExpect(content().string("retained evidence"));
-        action(owner, "/knowledge/doc/delete?id=" + second, true, 0);
-        action(owner, "/knowledge/doc/purge?id=" + second + "&confirmed=true", true, 0);
         assertEquals(1001005001, getJson(owner, "/system/file/download?id=" + file).path("code").asInt());
     }
 
     @Test
-    void testRetention_expiredDocumentsAndKnowledgeBasesCannotRestore() throws Exception {
-        long knowledgeBase = base(owner, 1);
-        long file = upload(owner, "expired evidence");
-        long doc = document(owner, knowledgeBase, file, 0);
-        awaitStatus(owner, doc, 4);
-        action(owner, "/knowledge/doc/delete?id=" + doc, true, 0);
-        // 时间边界是外部输入；只以 HTTP 验证结果，不断言数据库实现。
-        jdbc.update("UPDATE knowledge_doc SET delete_time = DATE_SUB(NOW(), INTERVAL 30 DAY) WHERE id = ?", doc);
-        action(owner, "/knowledge/doc/restore?id=" + doc, false, 1001003007);
-        purgeJob.execute();
+    void testKnowledgeBase_deleteRemovesDocumentsMembersAndFiles() throws Exception {
+        // 准备参数：具有成员和待解析文档的共享知识库。
+        long shared = base(owner, 2);
+        postJson(owner, "/knowledge/base/member/invite", "{\"knowledgeBaseId\":" + shared
+                + ",\"username\":\"" + memberName + "\",\"memberRole\":2}", 0);
+        long file = upload(owner, "deleted knowledge base evidence");
+        long doc = document(owner, shared, file, 0);
+
+        // 调用
+        action(owner, "/knowledge/base/delete?id=" + shared, true, 0);
+
+        // 断言：删除后业务内容不可见，文档和成员关系均已清理。
+        assertEquals(1001002001, getJson(owner, "/knowledge/base/get?id=" + shared).path("code").asInt());
+        assertEquals(1001003001, getJson(owner, "/knowledge/doc/get?id=" + doc).path("code").asInt());
         assertEquals(1001005001, getJson(owner, "/system/file/download?id=" + file).path("code").asInt());
-        action(owner, "/knowledge/base/delete?id=" + knowledgeBase, true, 0);
-        jdbc.update("UPDATE knowledge_base SET delete_time = DATE_SUB(NOW(), INTERVAL 30 DAY) WHERE id = ?", knowledgeBase);
-        action(owner, "/knowledge/base/restore?id=" + knowledgeBase, false, 1001002008);
-        purgeJob.execute();
-        assertEquals(0, getJson(owner, "/knowledge/base/recycle-list").path("data").size());
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM knowledge_base_member WHERE knowledge_base_id = ?", Integer.class, shared));
+    }
+
+    @Test
+    void testMigration_removesLegacyFieldsAndKeepsSharedFiles() throws Exception {
+        // 准备参数：模拟旧版回收站文档、已删除知识库和仍然有效的共享引用。
+        long retainedBase = base(owner, 1);
+        long removedBase = base(owner, 1);
+        long sharedFile = upload(owner, "shared migration evidence");
+        long removedFile = upload(owner, "removed migration evidence");
+        long removedDoc = document(owner, retainedBase, sharedFile, 0);
+        long retainedDoc = document(owner, retainedBase, sharedFile, 0);
+        long removedBaseDoc = document(owner, removedBase, removedFile, 0);
+        jdbc.execute("ALTER TABLE knowledge_base ADD COLUMN delete_time datetime NULL");
+        jdbc.execute("ALTER TABLE knowledge_doc ADD COLUMN prev_status tinyint NULL, ADD COLUMN delete_time datetime NULL");
+        jdbc.update("UPDATE knowledge_doc SET status = 6, delete_time = NOW() WHERE id = ?", removedDoc);
+        jdbc.update("UPDATE knowledge_base SET delete_time = NOW() WHERE id = ?", removedBase);
+
+        // 调用：仅对隔离测试库执行历史数据清理及字段移除。
+        try (var connection = jdbc.getDataSource().getConnection()) {
+            ScriptUtils.executeSqlScript(connection, new FileSystemResource("sql/upgrade/017-remove-recycle-bin.sql"));
+        }
+
+        // 断言：有效共享引用保留，旧删除对象及无引用文件不再存在。
+        assertEquals(0, getJson(owner, "/knowledge/doc/get?id=" + retainedDoc).path("code").asInt());
+        assertEquals(1001003001, getJson(owner, "/knowledge/doc/get?id=" + removedDoc).path("code").asInt());
+        assertEquals(1001003001, getJson(owner, "/knowledge/doc/get?id=" + removedBaseDoc).path("code").asInt());
+        mvc.perform(get("/system/file/download?id=" + sharedFile).header("Authorization", "Bearer " + owner))
+                .andExpect(content().string("shared migration evidence"));
+        assertEquals(1001005001, getJson(owner, "/system/file/download?id=" + removedFile).path("code").asInt());
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name IN ('knowledge_base', 'knowledge_doc') AND column_name IN ('delete_time', 'prev_status')", Integer.class));
     }
 
     @Test
@@ -313,101 +299,6 @@ class ContentLifecycleHttpTest {
         long doc = document(owner, knowledgeBase, file, 0);
         assertEquals(getJson(stranger, "/knowledge/doc/get?id=9223372036854775807").path("code"),
                 getJson(stranger, "/knowledge/doc/get?id=" + doc).path("code"));
-    }
-
-    @Test
-    void testRestore_indexFailureDoesNotPublishAvailableAndFailedStateSurvives() throws Exception {
-        long knowledgeBase = base(owner, 1);
-        long file = upload(owner, "reindex evidence");
-        long doc = document(owner, knowledgeBase, file, 0);
-        awaitStatus(owner, doc, 4);
-        action(owner, "/knowledge/doc/delete?id=" + doc, true, 0);
-        // 外部 ES 在恢复时不可用，不能假称文档已可检索。
-        var index = context.getBean(DocChunkIndexService.class);
-        Mockito.doThrow(new IllegalStateException("外部索引不可用"))
-                .when(index).writeBatch(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.anyList());
-        try {
-            action(owner, "/knowledge/doc/restore?id=" + doc, false, 0);
-            awaitStatus(owner, doc, 5);
-            String failure = getJson(owner, "/knowledge/doc/get?id=" + doc).path("data").path("failReason").asText();
-            action(owner, "/knowledge/doc/delete?id=" + doc, true, 0);
-            action(owner, "/knowledge/doc/restore?id=" + doc, false, 0);
-            assertEquals(5, getJson(owner, "/knowledge/doc/get?id=" + doc).path("data").path("status").asInt());
-            assertEquals(failure, getJson(owner, "/knowledge/doc/get?id=" + doc).path("data").path("failReason").asText());
-        } finally {
-            Mockito.reset(index);
-        }
-        action(owner, "/knowledge/doc/retry?id=" + doc, false, 0);
-        awaitStatus(owner, doc, 4);
-    }
-
-    @Test
-    void testMigration_legacyUploadOwnershipAndKnowledgeBaseRecycleRemainUsable() throws Exception {
-        // 准备参数：模拟 011 的可信 creator、旧逻辑删除知识库及保留成员。
-        long knowledgeBase = base(owner, 2);
-        postJson(owner, "/knowledge/base/member/invite", "{\"knowledgeBaseId\":" + knowledgeBase
-                + ",\"username\":\"" + memberName + "\",\"memberRole\":2}", 0);
-        long privateFile = upload(owner, "legacy private upload");
-        long unknownFile = upload(owner, "legacy unknown owner");
-        jdbc.update("UPDATE system_file SET creator = '' WHERE id = ?", unknownFile);
-        jdbc.update("UPDATE knowledge_base SET deleted = b'1' WHERE id = ?", knowledgeBase);
-        jdbc.execute("ALTER TABLE system_file DROP COLUMN uploader_id");
-        jdbc.execute("ALTER TABLE knowledge_base DROP COLUMN delete_time");
-        try (var connection = jdbc.getDataSource().getConnection()) {
-            ScriptUtils.executeSqlScript(connection,
-                    new FileSystemResource("sql/upgrade/012-content-lifecycle.sql"));
-        }
-        // 断言：迁移不会公开无归属文件，原所有者可恢复旧库及仍然存在的成员关系。
-        mvc.perform(get("/system/file/download?id=" + privateFile).header("Authorization", "Bearer " + owner))
-                .andExpect(content().string("legacy private upload"));
-        assertEquals(1001005001, getJson(stranger, "/system/file/download?id=" + privateFile).path("code").asInt());
-        assertEquals(1001005001, getJson(owner, "/system/file/download?id=" + unknownFile).path("code").asInt());
-        action(owner, "/knowledge/base/restore?id=" + knowledgeBase, false, 0);
-        assertEquals(1, getJson(owner, "/knowledge/base/member/list?knowledgeBaseId=" + knowledgeBase).path("data").size());
-    }
-
-    @Test
-    void testRestore_keepsDocumentIndexingUntilExternalIndexCompletes() throws Exception {
-        long knowledgeBase = base(owner, 1);
-        long file = upload(owner, "pending reindex evidence");
-        long doc = document(owner, knowledgeBase, file, 0);
-        awaitStatus(owner, doc, 4);
-        action(owner, "/knowledge/doc/delete?id=" + doc, true, 0);
-        var entered = new java.util.concurrent.CountDownLatch(1);
-        var release = new java.util.concurrent.CountDownLatch(1);
-        var index = context.getBean(DocChunkIndexService.class);
-        Mockito.doAnswer(invocation -> {
-            entered.countDown();
-            if (!release.await(30, java.util.concurrent.TimeUnit.SECONDS)) throw new IllegalStateException("索引替身等待超时");
-            return null;
-        }).when(index).writeBatch(org.mockito.ArgumentMatchers.anyLong(), org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.anyList());
-        try {
-            action(owner, "/knowledge/doc/restore?id=" + doc, false, 0);
-            assertTrue(entered.await(30, java.util.concurrent.TimeUnit.SECONDS));
-            // 只有外部索引真正完成后，HTTP 才能呈现「可用」。
-            assertEquals(3, getJson(owner, "/knowledge/doc/get?id=" + doc).path("data").path("status").asInt());
-        } finally {
-            release.countDown();
-        }
-        awaitStatus(owner, doc, 4);
-        Mockito.reset(index);
-    }
-
-    @Test
-    void testKnowledgeBase_restoreRetainsFailureAndRequeuesInterruptedDocument() throws Exception {
-        long knowledgeBase = base(owner, 2);
-        long failed = document(owner, knowledgeBase, upload(owner, "   "), 0);
-        long interrupted = document(owner, knowledgeBase, upload(owner, "interrupted evidence"), 0);
-        awaitStatus(owner, failed, 5);
-        awaitStatus(owner, interrupted, 4);
-        String failure = getJson(owner, "/knowledge/doc/get?id=" + failed).path("data").path("failReason").asText();
-        // 模拟上次进程在解析阶段停止的持久状态，恢复必须重新处理。
-        jdbc.update("UPDATE knowledge_doc SET status = 2 WHERE id = ?", interrupted);
-        action(owner, "/knowledge/base/delete?id=" + knowledgeBase, true, 0);
-        action(owner, "/knowledge/base/restore?id=" + knowledgeBase, false, 0);
-        assertEquals(5, getJson(owner, "/knowledge/doc/get?id=" + failed).path("data").path("status").asInt());
-        assertEquals(failure, getJson(owner, "/knowledge/doc/get?id=" + failed).path("data").path("failReason").asText());
-        awaitStatus(owner, interrupted, 4);
     }
 
 }

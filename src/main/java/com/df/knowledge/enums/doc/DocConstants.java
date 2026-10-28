@@ -13,6 +13,4 @@ public interface DocConstants {
     int EMBEDDING_DIMENSION = 512; // 内置 bge-small-zh-v15 的向量维度（ADR-0008）
     int INDEX_BATCH_SIZE = 32; // 单批向量化及 ES 写入的分块上限
 
-    // ========== 软删除 ==========
-    int SOFT_DELETE_RETENTION_DAYS = 30; // 软删除保留天数（期内可恢复，超期自动彻底删除，PRD §8.2）
 }

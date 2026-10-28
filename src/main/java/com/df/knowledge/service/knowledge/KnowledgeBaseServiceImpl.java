@@ -2,33 +2,23 @@ package com.df.knowledge.service.knowledge;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollUtil;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.df.knowledge.common.PageResult;
 import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.controller.knowledge.vo.knowledgebase.KnowledgeBasePageReqVO;
 import com.df.knowledge.controller.knowledge.vo.knowledgebase.KnowledgeBaseSaveReqVO;
 import com.df.knowledge.dal.dataobject.knowledge.KnowledgeBaseDO;
-import com.df.knowledge.dal.mysql.doc.DocMapper;
 import com.df.knowledge.dal.mysql.knowledge.KnowledgeBaseMapper;
 import com.df.knowledge.dal.mysql.knowledge.KnowledgeBaseMemberMapper;
 import com.df.knowledge.enums.ErrorCodeConstants;
-import com.df.knowledge.enums.doc.DocStatusEnum;
 import com.df.knowledge.enums.knowledge.KnowledgeBaseConstants;
 import com.df.knowledge.enums.knowledge.KnowledgeBaseTypeEnum;
-import com.df.knowledge.service.doc.DocChunkIndexService;
-import com.df.knowledge.service.doc.DocIngestService;
 import com.df.knowledge.service.doc.DocService;
 import jakarta.annotation.Resource;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.validation.annotation.Validated;
 
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -36,7 +26,6 @@ import java.util.List;
  */
 @Service
 @Validated
-@Slf4j
 public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
 
     @Resource
@@ -49,16 +38,7 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     private KnowledgeBasePermissionService knowledgeBasePermissionService;
 
     @Resource
-    private DocMapper docMapper;
-
-    @Resource
     private DocService docService;
-
-    @Resource
-    private DocChunkIndexService docChunkIndexService;
-
-    @Resource
-    private DocIngestService docIngestService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -88,91 +68,11 @@ public class KnowledgeBaseServiceImpl implements KnowledgeBaseService {
     public void deleteKnowledgeBase(Long userId, Long id) {
         // 1. 权限判定：仅所有者可删除，默认知识库不可删除（非成员统一按不存在拒绝）
         knowledgeBasePermissionService.checkDeletePermission(userId, id);
-        // 同时隐藏知识库及内容，保留成员关系与文档原状态供恢复。
         KnowledgeBaseDO knowledgeBase = knowledgeBaseMapper.selectByIdForUpdate(id);
-        if (knowledgeBase == null || knowledgeBase.getDeleteTime() != null) {
+        if (knowledgeBase == null) {
             throw new ServiceException(ErrorCodeConstants.KB_NOT_FOUND);
         }
-        for (var doc : docMapper.selectListByKnowledgeBaseId(id)) {
-            docChunkIndexService.deleteByDocId(doc.getId());
-        }
-        knowledgeBase.setDeleteTime(LocalDateTime.now());
-        knowledgeBaseMapper.updateById(knowledgeBase);
-    }
-
-    @Override
-    public List<KnowledgeBaseDO> getDeletedKnowledgeBases(Long userId) {
-        return knowledgeBaseMapper.selectDeletedByOwnerId(userId);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void restoreKnowledgeBase(Long userId, Long id) {
-        KnowledgeBaseDO knowledgeBase = validateDeletedOwner(userId, id);
-        if (!knowledgeBase.getDeleteTime().plusDays(30).isAfter(LocalDateTime.now())) {
-            throw new ServiceException(ErrorCodeConstants.KB_RESTORE_EXPIRED);
-        }
-        // 显式置空不受 MyBatis-Plus 非空字段更新策略影响。
-        knowledgeBaseMapper.update(null, new LambdaUpdateWrapper<KnowledgeBaseDO>()
-                .eq(KnowledgeBaseDO::getId, id).set(KnowledgeBaseDO::getDeleteTime, null));
-        var pending = new ArrayList<Long>();
-        for (var doc : docMapper.selectListByKnowledgeBaseId(id)) {
-            var current = docMapper.selectByIdForUpdate(doc.getId());
-            if (current == null) continue;
-            if (DocStatusEnum.AVAILABLE.getCode().equals(current.getStatus())) {
-                current.setStatus(DocStatusEnum.INDEXING.getCode());
-            } else if (DocStatusEnum.isInFlight(current.getStatus())) {
-                current.setStatus(DocStatusEnum.QUEUED.getCode());
-            } else {
-                continue;
-            }
-            current.setIngestSubmitTime(LocalDateTime.now());
-            docMapper.updateById(current);
-            pending.add(current.getId());
-        }
-        TransactionSynchronizationManager.registerSynchronization(
-                new TransactionSynchronization() {
-                    @Override public void afterCommit() { pending.forEach(docIngestService::submit); }
-                });
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void purgeKnowledgeBase(Long userId, Long id, boolean confirmed) {
-        validateDeletedOwner(userId, id);
-        if (!confirmed) {
-            throw new ServiceException(ErrorCodeConstants.KB_PURGE_CONFIRM_REQUIRED);
-        }
-        purgeContent(id);
-    }
-
-    @Override
-    @Transactional(rollbackFor = Exception.class)
-    public void purgeExpiredKnowledgeBases() {
-        var deadline = LocalDateTime.now().minusDays(30);
-        for (var knowledgeBase : knowledgeBaseMapper.selectExpired(deadline)) {
-            var current = knowledgeBaseMapper.selectByIdForUpdate(knowledgeBase.getId());
-            if (current != null && current.getDeleteTime() != null && !current.getDeleteTime().isAfter(deadline)) {
-                purgeContent(current.getId());
-            }
-        }
-    }
-
-    /** 生命周期锁内验证原所有者，已删除知识库不向其他成员透露存在性。 */
-    private KnowledgeBaseDO validateDeletedOwner(Long userId, Long id) {
-        var knowledgeBase = knowledgeBaseMapper.selectByIdForUpdate(id);
-        if (knowledgeBase == null || !userId.equals(knowledgeBase.getOwnerId())) {
-            throw new ServiceException(ErrorCodeConstants.KB_NOT_FOUND);
-        }
-        if (knowledgeBase.getDeleteTime() == null) {
-            throw new ServiceException(ErrorCodeConstants.KB_RESTORE_NOT_ALLOWED);
-        }
-        return knowledgeBase;
-    }
-
-    /** 仅在确认手动清理或超期复核之后调用。 */
-    private void purgeContent(Long id) {
-        docService.purgeKnowledgeBaseDocs(id);
+        docService.deleteKnowledgeBaseDocs(id);
         knowledgeBaseMemberMapper.purgeByKnowledgeBaseId(id);
         knowledgeBaseMapper.purgeById(id);
     }

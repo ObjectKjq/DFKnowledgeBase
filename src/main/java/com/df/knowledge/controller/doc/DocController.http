@@ -21,14 +21,6 @@ Authorization: Bearer {{token}}
 POST {{baseUrl}}/knowledge/doc/retry?id=1
 Authorization: Bearer {{token}}
 
-### 删除文档（软删除，30 天内可恢复）
+### 删除文档（不可恢复）
 DELETE {{baseUrl}}/knowledge/doc/delete?id=1
-Authorization: Bearer {{token}}
-
-### 恢复文档（恢复到删除前状态）
-POST {{baseUrl}}/knowledge/doc/restore?id=1
-Authorization: Bearer {{token}}
-
-### 彻底删除回收站对象（再次确认后，不可恢复）
-DELETE {{baseUrl}}/knowledge/doc/purge?id=1&confirmed=true
 Authorization: Bearer {{token}}

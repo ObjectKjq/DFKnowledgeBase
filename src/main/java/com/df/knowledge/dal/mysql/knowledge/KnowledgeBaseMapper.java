@@ -10,7 +10,6 @@ import com.df.knowledge.dal.dataobject.knowledge.KnowledgeBaseDO;
 import org.apache.ibatis.annotations.Delete;
 import org.apache.ibatis.annotations.Mapper;
 
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -39,23 +38,6 @@ public interface KnowledgeBaseMapper extends BaseMapper<KnowledgeBaseDO> {
                 .last("LOCK IN SHARE MODE"));
     }
 
-    /** 查询原所有者回收站。
-     * @param ownerId 原所有者编号
-     * @return 已删除知识库
-     */
-    default List<KnowledgeBaseDO> selectDeletedByOwnerId(Long ownerId) {
-        return selectList(new LambdaQueryWrapper<KnowledgeBaseDO>().eq(KnowledgeBaseDO::getOwnerId, ownerId)
-                .isNotNull(KnowledgeBaseDO::getDeleteTime).orderByDesc(KnowledgeBaseDO::getId));
-    }
-
-    /** 查询保留期已到的知识库。
-     * @param deadline 保留截止时间
-     * @return 待清理知识库
-     */
-    default List<KnowledgeBaseDO> selectExpired(LocalDateTime deadline) {
-        return selectList(new LambdaQueryWrapper<KnowledgeBaseDO>().le(KnowledgeBaseDO::getDeleteTime, deadline));
-    }
-
     /** 物理删除知识库。
      * @param id 知识库编号
      * @return 删除条数
@@ -70,7 +52,7 @@ public interface KnowledgeBaseMapper extends BaseMapper<KnowledgeBaseDO> {
      * @return 知识库列表
      */
     default List<KnowledgeBaseDO> selectListByOwnerId(Long ownerId) {
-        return selectList(new LambdaQueryWrapper<KnowledgeBaseDO>().eq(KnowledgeBaseDO::getOwnerId, ownerId).isNull(KnowledgeBaseDO::getDeleteTime));
+        return selectList(new LambdaQueryWrapper<KnowledgeBaseDO>().eq(KnowledgeBaseDO::getOwnerId, ownerId));
     }
 
     /**
@@ -88,7 +70,7 @@ public interface KnowledgeBaseMapper extends BaseMapper<KnowledgeBaseDO> {
         return selectPage(new Page<>(reqVO.getPageNum(), reqVO.getPageSize()),
                 new LambdaQueryWrapper<KnowledgeBaseDO>()
                         .in(KnowledgeBaseDO::getId, ids)
-                        .isNull(KnowledgeBaseDO::getDeleteTime)
+
                         .like(StrUtil.isNotBlank(reqVO.getName()), KnowledgeBaseDO::getName, reqVO.getName())
                         .eq(reqVO.getType() != null, KnowledgeBaseDO::getType, reqVO.getType())
                         .orderByDesc(KnowledgeBaseDO::getId));

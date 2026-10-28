@@ -54,7 +54,7 @@ public class DocDO extends BaseDO {
     private String fileUrl;
 
     /**
-     * 过渡字段：存量磁盘文件路径，迁移入库后置空，随双读逻辑一并移除
+     * 历史文件的磁盘路径，用于兼容读取
      */
     private String filePath;
 
@@ -63,7 +63,7 @@ public class DocDO extends BaseDO {
      */
     private Integer status;
 
-    /** 本次入库提交时间，重试与恢复时更新，服务重启保留 */
+    /** 本次入库提交时间，重试时更新，服务重启保留 */
     private LocalDateTime ingestSubmitTime;
 
     /**
@@ -71,13 +71,4 @@ public class DocDO extends BaseDO {
      */
     private String failReason;
 
-    /**
-     * 删除前状态，枚举 {@link DocStatusEnum}（软删除恢复到删除前状态用）
-     */
-    private Integer prevStatus;
-
-    /**
-     * 删除时间（软删除 30 天保留期起算点）
-     */
-    private LocalDateTime deleteTime;
 }

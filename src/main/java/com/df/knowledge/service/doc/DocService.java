@@ -8,7 +8,7 @@ import com.df.knowledge.dal.dataobject.doc.DocDO;
 /**
  * 文档 Service 接口
  *
- * 文档生命周期操作（PRD §8.2）：创建、分页/详情、重试、软删除与恢复、超期彻底删除
+ * 文档生命周期操作（PRD §8.2）：创建、分页/详情、重试、删除
  */
 public interface DocService {
 
@@ -48,34 +48,15 @@ public interface DocService {
     void retryDoc(Long userId, Long id);
 
     /**
-     * 删除文档（软删除，30 天内可恢复到删除前状态）
+     * 删除文档并清理分块、索引和无其他引用的文件
      *
      * @param userId 操作者用户编号
      * @param id 文档编号
      */
     void deleteDoc(Long userId, Long id);
 
-    /**
-     * 恢复文档（原先可用的文档先重建索引；入库进行中的文档重新入队）
-     *
-     * @param userId 操作者用户编号
-     * @param id 文档编号
-     */
-    void restoreDoc(Long userId, Long id);
-
-    /**
-     * 彻底删除超过保留期的软删除文档（移除记录与文件引用，PRD §8.2）
-     */
-    void purgeExpiredDeletedDocs();
-    /** 彻底删除回收站文档。
-     * @param userId 操作者
-     * @param id 文档编号
-     * @param confirmed 是否再次确认
-     */
-    void purgeDoc(Long userId, Long id, boolean confirmed);
-
-    /** 清理已授权彻底删除的知识库内容，仅供知识库生命周期使用。
+    /** 清理已授权删除的知识库内容，仅供知识库生命周期使用。
      * @param knowledgeBaseId 知识库编号
      */
-    void purgeKnowledgeBaseDocs(Long knowledgeBaseId);
+    void deleteKnowledgeBaseDocs(Long knowledgeBaseId);
 }

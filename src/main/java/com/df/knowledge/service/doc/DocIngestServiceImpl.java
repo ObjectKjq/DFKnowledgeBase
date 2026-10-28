@@ -7,24 +7,19 @@ import com.df.knowledge.enums.doc.DocStatusEnum;
 import com.df.knowledge.service.model.InstanceSettingsService;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.core.task.TaskRejectedException;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.annotation.Propagation;
 
 /**
  * 文档入库 Service 实现类
  *
- * 状态迁移唯一依据 PRD §8.2 文档生命周期；迁移用 CAS 条件更新，避免与删除/恢复并发时把已删除文档拉回流程
+ * 状态迁移唯一依据 PRD §8.2 文档生命周期；迁移用 CAS 条件更新，避免与删除并发时把已删除文档拉回流程
  */
 @Service
 @Validated
@@ -48,19 +43,8 @@ public class DocIngestServiceImpl implements DocIngestService {
     @Resource
     private InstanceSettingsService instanceSettingsService;
 
+    /** 由定时任务从 MySQL 的未完成状态领取任务；单实例内同一文档最多一个执行者。 */
     @Override
-    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
-    public void submit(Long docId) {
-        // 提交时间与状态已在文档事务中保存；无锁读取避免回调与解析线程争写同一行。
-        DocDO doc = docMapper.selectById(docId);
-        if (doc != null && DocStatusEnum.isInFlight(doc.getStatus()) && doc.getIngestSubmitTime() == null) {
-            // 兼容尚未写排序时间的旧调用，正常创建、重试与恢复不进入此分支。
-            docMapper.updateIngestSubmitTime(docId);
-        }
-    }
-
-    /** 定时从 MySQL 的未完成状态领取任务；单实例内同一文档最多一个执行者。 */
-    @Scheduled(fixedDelayString = "${knowledge.ingest.poll-delay-ms:500}")
     public synchronized void dispatchPendingDocs() {
         var settings = instanceSettingsService.get();
         int globalConcurrency = settings.getIngestGlobalConcurrency();
@@ -95,7 +79,7 @@ public class DocIngestServiceImpl implements DocIngestService {
                     }
                 });
             } catch (TaskRejectedException ex) {
-                // 线程池正在关停或调整：任务仍在数据库中，下次轮询继续，不由调度线程代跑。
+                // 线程池正在关停或调整：任务仍在数据库中，下次定时扫描继续，不由调度线程代跑。
                 runningDocs.remove(doc.getId());
                 break;
             }
@@ -104,7 +88,7 @@ public class DocIngestServiceImpl implements DocIngestService {
 
     @Override
     public void processDoc(Long docId) {
-        // 1. 仅处理入库进行中的文档（已删除或已结束的任务直接退出）
+        // 1. 仅处理入库进行中的文档（不存在或已结束的任务直接退出）
         DocDO doc = docMapper.selectById(docId);
         if (doc == null || !DocStatusEnum.isInFlight(doc.getStatus())) {
             return;
@@ -139,13 +123,6 @@ public class DocIngestServiceImpl implements DocIngestService {
         // 4. 索引服务在同一文档行锁内完成「索引中 → 可用」，本层不重复发布状态
     }
 
-    @Override
-    @EventListener(ApplicationReadyEvent.class)
-    public void recoverInterruptedDocs() {
-        // 数据库保留排队及中断状态；不重写提交时间，避免重启改变先后顺序。
-        dispatchPendingDocs();
-    }
-
     /**
      * 迁移到失败并记录失败原因
      *
@@ -157,7 +134,7 @@ public class DocIngestServiceImpl implements DocIngestService {
      * @param ex 失败异常
      */
     private void markFailed(Long docId, DocDO doc, Integer fromStatus, Exception ex) {
-        // 正常关停打断的任务保持未完成状态，启动时继续，而非要求用户手动重试。
+        // 正常关停打断的任务保持未完成状态，下次定时扫描继续，而非要求用户手动重试。
         if (Thread.currentThread().isInterrupted()) {
             log.info("[markFailed][文档({})处理因关停中断，保留状态供重启恢复]", docId);
             return;

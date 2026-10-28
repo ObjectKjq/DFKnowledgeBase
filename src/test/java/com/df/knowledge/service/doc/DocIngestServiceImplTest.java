@@ -139,20 +139,6 @@ class DocIngestServiceImplTest {
     }
 
     @Test
-    void testProcessDoc_docDeleted_skip() {
-        // 准备参数：文档已被软删除
-        DocDO doc = buildDoc(5L, DocStatusEnum.DELETED, null);
-        when(docMapper.selectById(5L)).thenReturn(doc);
-
-        // 调用
-        docIngestService.processDoc(5L);
-
-        // 断言：已删除文档不回到入库流程
-        verify(docMapper, never()).updateStatus(any(), any(), any(), any());
-        verifyNoInteractions(docParseService, docIndexService);
-    }
-
-    @Test
     void testProcessDoc_statusChangedBeforeParse_skip() {
         // 准备参数：提交后状态被并发变更（如删除），CAS 迁移失败
         DocDO doc = buildDoc(5L, DocStatusEnum.QUEUED, null);
@@ -183,7 +169,7 @@ class DocIngestServiceImplTest {
     }
 
     @Test
-    void testRecoverInterruptedDocs_success() {
+    void testDispatchPendingDocs_respectsKnowledgeBaseConcurrency() {
         // 准备参数：重启后停留在入库进行中的文档
         DocDO queued = buildDoc(5L, DocStatusEnum.QUEUED, null);
         DocDO parsing = buildDoc(6L, DocStatusEnum.PARSING, null);
@@ -193,9 +179,10 @@ class DocIngestServiceImplTest {
         // 调用
         when(instanceSettingsService.get()).thenReturn(new com.df.knowledge.dal.dataobject.model.InstanceSettingsDO()
                 .setIngestGlobalConcurrency(2).setIngestKnowledgeBaseConcurrency(1));
-        docIngestService.recoverInterruptedDocs();
+        docIngestService.dispatchPendingDocs();
+        docIngestService.dispatchPendingDocs();
 
-        // 断言：同知识库只领取一个，其余仍由持久状态保留供下次轮询
+        // 断言：重复扫描不会重复领取，同知识库只运行一个，其余等待后续定时扫描。
         verify(docIngestExecutor, times(1)).execute(any());
     }
 

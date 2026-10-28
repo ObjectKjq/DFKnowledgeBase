@@ -1,7 +1,6 @@
 package com.df.knowledge.config;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import com.df.knowledge.job.FileMigrationRunner;
 import com.df.knowledge.service.doc.DocIngestServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,10 +13,13 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
  * 验证 ES starter 在完整应用上下文中创建客户端与 Spring Data 操作接口。
@@ -26,9 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
         properties = {"knowledge.doc.storage-path=./data/docs", "knowledge.model.mock-enabled=false",
                 "knowledge.rag.base-url="})
 class DocIndexConfigurationTest {
-
-    @MockitoBean
-    private FileMigrationRunner fileMigrationRunner;
 
     @MockitoBean
     private com.df.knowledge.service.model.LegacyModelConfigurationMigration legacyModelConfigurationMigration;
@@ -61,6 +60,12 @@ class DocIndexConfigurationTest {
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             assertEquals(200, response.statusCode());
             assertTrue(response.body().contains("\"openapi\""));
+            assertFalse(response.body().contains("/recycle-list"));
+            assertFalse(response.body().contains("/knowledge/doc/restore"));
+            assertFalse(response.body().contains("/knowledge/doc/purge"));
+            assertFalse(response.body().contains("deleteTime"));
+            // 由当前后端契约生成前端 API，避免手工维护已删除的接口和字段。
+            Files.writeString(Path.of("target/openapi.json"), response.body());
         }
     }
 }

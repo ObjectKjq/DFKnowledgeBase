@@ -15,15 +15,13 @@ beforeEach(() => {
   useKb.setState({ modal: null })
 })
 
-it('知识库回收站保留成员恢复，并要求再次确认彻底删除', async () => {
-  let deleted = [
-    { id: 7, name: '旧共享知识库', type: 2, ownerId: 1, deleteTime: new Date().toISOString() },
-  ]
+it('确认删除后直接移除知识库', async () => {
+  let libraries = [{ id: 7, name: '课题知识库', type: 2, ownerId: 1 }]
   vi.mocked(request).mockImplementation(async (url) => {
-    if (url.endsWith('/page')) return { code: 0, data: { list: [], total: 0 } } as never
-    if (url.endsWith('/recycle-list')) return { code: 0, data: deleted } as never
-    if (url.endsWith('/purge')) {
-      deleted = []
+    if (url === '/knowledge/base/page')
+      return { code: 0, data: { list: libraries, total: libraries.length } } as never
+    if (url === '/knowledge/base/delete') {
+      libraries = []
       return { code: 0, data: true } as never
     }
     throw new Error(`意外请求 ${url}`)
@@ -36,15 +34,13 @@ it('知识库回收站保留成员恢复，并要求再次确认彻底删除', a
       <ModalHost />
     </QueryClientProvider>,
   )
-  fireEvent.click(await screen.findByRole('button', { name: '知识库回收站' }))
-  expect(await screen.findByText('旧共享知识库')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '恢复' })).toBeEnabled()
-  fireEvent.click(screen.getByRole('button', { name: '彻底删除' }))
-  expect(request).not.toHaveBeenCalledWith('/knowledge/base/purge', expect.anything())
-  fireEvent.click(await screen.findByRole('button', { name: '确认彻底删除' }))
-  await waitFor(() => expect(screen.queryByText('旧共享知识库')).not.toBeInTheDocument())
+  expect(await screen.findByText('课题知识库')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: '删除' }))
+  expect(request).not.toHaveBeenCalledWith('/knowledge/base/delete', expect.anything())
+  fireEvent.click(await screen.findByRole('button', { name: '确认删除' }))
+  await waitFor(() => expect(screen.queryByText('课题知识库')).not.toBeInTheDocument())
   expect(request).toHaveBeenCalledWith(
-    '/knowledge/base/purge',
-    expect.objectContaining({ params: { id: 7, confirmed: true } }),
+    '/knowledge/base/delete',
+    expect.objectContaining({ params: { id: 7 } }),
   )
 })

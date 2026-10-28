@@ -45,10 +45,10 @@ public class DocIndexServiceImpl implements DocIndexService {
     @Transactional(rollbackFor = Exception.class)
     public void index(Long docId) {
         // 同文档的解析、索引与删除共用行锁，删除完成后旧任务不能把向量写回
-        // 共享知识库锁允许同库并行，同时等待删除/恢复的独占生命周期事务结束。
+        // 共享知识库锁允许同库并行，同时等待删除的独占生命周期事务结束。
         var knowledgeBase = knowledgeBaseMapper.selectByDocIdForShare(docId);
         DocDO doc = docMapper.selectByIdForUpdate(docId);
-        if (doc == null || knowledgeBase == null || knowledgeBase.getDeleteTime() != null
+        if (doc == null || knowledgeBase == null
                 || !DocStatusEnum.INDEXING.getCode().equals(doc.getStatus())) {
             return;
         }

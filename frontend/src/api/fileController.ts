@@ -2,7 +2,7 @@
 /* eslint-disable */
 import request from '@/lib/http'
 
-/** 删除文件 仅上传者可删除未关联文件；业务引用须从文档回收站彻底删除 DELETE /system/file/delete */
+/** 删除文件 仅上传者可删除未关联文件；已关联文件须通过删除文档回收 DELETE /system/file/delete */
 export async function deleteFile(
   // 叠加生成的Param类型 (非body参数swagger默认没有生成对象)
   params: API.deleteFileParams,

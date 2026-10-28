@@ -73,7 +73,7 @@ public class FileController {
     }
 
     @DeleteMapping("/delete")
-    @Operation(summary = "删除文件", description = "仅上传者可删除未关联文件；业务引用须从文档回收站彻底删除")
+    @Operation(summary = "删除文件", description = "仅上传者可删除未关联文件；已关联文件须通过删除文档回收")
     @Parameter(name = "id", description = "文件编号", required = true, example = "1")
     public CommonResult<Boolean> deleteFile(@RequestParam("id") Long id) {
         fileService.delete(StpUtil.getLoginIdAsLong(), id);

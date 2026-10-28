@@ -201,11 +201,12 @@ class DocIndexServiceImplTest {
     void testIndex_deletedOrCompletedDocumentSkipped() {
         // 准备参数：排队后文档被删除，或重复任务处理已完成文档
         DocDO doc = prepareDoc(1);
-        doc.setStatus(DocStatusEnum.DELETED.getCode());
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(null);
 
         // 调用
         docIndexService.index(5L);
         doc.setStatus(DocStatusEnum.AVAILABLE.getCode());
+        when(docMapper.selectByIdForUpdate(5L)).thenReturn(doc);
         docIndexService.index(5L);
 
         // 断言：不能把已删除文档重新写回，也不能清理已成功文档的索引
