@@ -1,12 +1,13 @@
 import { UploadModal } from '@/features/documents/UploadModal'
 import { CreateLibraryModal } from '@/features/knowledge/CreateLibraryModal'
 import type { ReactNode } from 'react'
+import { Modal } from 'antd'
 
 import { useKb } from '@/stores/knowledge'
 
 import { Icon } from './Icon'
 
-/** 弹窗外壳：默认用 store 的关闭动作，功能页的表单弹窗可传自己的 `onClose`。 */
+/** 统一弹窗外壳，由 Ant Design 处理焦点、键盘与滚动锁定。 */
 export function ModalShell({
   title,
   description,
@@ -21,25 +22,21 @@ export function ModalShell({
   const closeModal = useKb((s) => s.closeModal)
   const close = onClose ?? closeModal
   return (
-    <div className="modal-backdrop">
-      <section
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-        tabIndex={-1}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="modal-head">
-          <h2 id="modal-title">{title}</h2>
-          <button className="icon-btn" onClick={close} aria-label="关闭对话框">
-            <Icon name="close" />
-          </button>
-        </div>
-        {description && <p className="modal-description">{description}</p>}
-        {children}
-      </section>
-    </div>
+    <Modal
+      open
+      centered
+      width={560}
+      title={title}
+      footer={null}
+      onCancel={close}
+      mask={{ closable: false }}
+      closable={{ closeIcon: <Icon name="close" />, 'aria-label': '关闭对话框' }}
+      className="app-modal"
+      classNames={{ container: 'app-dialog', mask: 'app-dialog-mask' }}
+    >
+      {description && <p className="modal-description">{description}</p>}
+      {children}
+    </Modal>
   )
 }
 

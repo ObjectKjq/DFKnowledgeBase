@@ -1,6 +1,7 @@
 package com.df.knowledge.config;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import com.df.knowledge.dal.elasticsearch.doc.DocChunkRepository;
 import com.df.knowledge.service.doc.DocIngestServiceImpl;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
 /**
- * 验证 ES starter 在完整应用上下文中创建客户端与 Spring Data 操作接口。
+ * 验证 ES starter 在完整应用上下文中创建客户端、操作接口与 Repository。
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
         properties = {"knowledge.doc.storage-path=./data/docs", "knowledge.model.mock-enabled=false",
@@ -41,14 +42,18 @@ class DocIndexConfigurationTest {
     @Autowired
     private ElasticsearchOperations elasticsearchOperations;
 
+    @Autowired
+    private DocChunkRepository docChunkRepository;
+
     @LocalServerPort
     private int port;
 
     @Test
-    void testElasticsearchStarter_createsClientAndOperations() {
+    void testElasticsearchStarter_createsClientOperationsAndRepository() {
         // 断言
         assertNotNull(elasticsearchClient);
         assertNotNull(elasticsearchOperations);
+        assertNotNull(docChunkRepository);
     }
 
     @Test

@@ -39,6 +39,25 @@ public class ConversationServiceImpl implements ConversationService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public ConversationDO beginTurn(Long userId, Long id, String title, RetrievalState state) {
+        if (id == null) {
+            id = createConversation(userId, new ConversationCreateReqVO()
+                    .setTitle(title).setKnowledgeBaseIds(state.getKnowledgeBaseIds()));
+        }
+        var conversation = validateConversationOwner(userId, id);
+        conversation.setState(state);
+        conversationMapper.updateById(conversation);
+        return conversation;
+    }
+
+    @Override
+    public List<MessageDO> getMessageListAfter(Long userId, Long conversationId, Long afterId) {
+        validateConversationOwner(userId, conversationId);
+        return messageMapper.selectListAfter(conversationId, afterId);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public Long createConversation(Long userId, ConversationCreateReqVO reqVO) {
         // 1. 固化创建时的检索范围，并拒绝无权知识库
         List<Long> knowledgeBaseIds = reqVO.getKnowledgeBaseIds() == null

@@ -76,6 +76,31 @@ describe('UsersTab', () => {
     expect(screen.getByText('爱丽丝')).toBeInTheDocument()
   })
 
+  it('下拉筛选保留开启状态的数值 0，选择全部后清除条件', async () => {
+    vi.mocked(getUserPage).mockResolvedValue(PAGE)
+    renderTab()
+    await screen.findByText('alice')
+    const status = screen.getByRole('combobox', { name: '用户状态' })
+    fireEvent.mouseDown(status)
+    await screen.findByRole('listbox')
+    fireEvent.keyDown(status, { key: 'ArrowDown', keyCode: 40 })
+    fireEvent.keyDown(status, { key: 'Enter', keyCode: 13 })
+    fireEvent.click(screen.getByRole('button', { name: '查询' }))
+    await waitFor(() =>
+      expect(getUserPage).toHaveBeenLastCalledWith({
+        reqVO: { pageNum: 1, pageSize: 10, status: 0 },
+      }),
+    )
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: '用户状态' }))
+    fireEvent.click(await screen.findByText('全部状态'))
+    fireEvent.click(screen.getByRole('button', { name: '查询' }))
+    await waitFor(() =>
+      expect(getUserPage).toHaveBeenLastCalledWith({
+        reqVO: { pageNum: 1, pageSize: 10, status: undefined },
+      }),
+    )
+  })
+
   it('停用用户前弹出确认', async () => {
     vi.mocked(getUserPage).mockResolvedValue(PAGE)
     vi.mocked(updateUserStatus).mockResolvedValue({ code: 0, msg: '', data: true })

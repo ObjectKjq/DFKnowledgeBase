@@ -5,23 +5,19 @@ import co.elastic.clients.elasticsearch._types.FieldValue;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.dal.dataobject.doc.DocChunkDO;
+import com.df.knowledge.dal.dataobject.doc.DocChunkDocument;
+import com.df.knowledge.dal.elasticsearch.doc.DocChunkRepository;
 import com.df.knowledge.enums.ErrorCodeConstants;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.elasticsearch.BulkFailureException;
 import org.springframework.data.elasticsearch.client.elc.NativeQuery;
 import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
 import org.springframework.data.elasticsearch.core.RefreshPolicy;
 import org.springframework.data.elasticsearch.core.SearchHit;
-import org.springframework.data.elasticsearch.core.document.Document;
-import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
-import org.springframework.data.elasticsearch.core.query.BulkOptions;
 import org.springframework.data.elasticsearch.core.query.ByQueryResponse;
 import org.springframework.data.elasticsearch.core.query.DeleteQuery;
 import org.springframework.data.elasticsearch.core.query.FetchSourceFilter;
-import org.springframework.data.elasticsearch.core.query.IndexQuery;
-import org.springframework.data.elasticsearch.core.query.IndexQueryBuilder;
 import org.springframework.data.elasticsearch.core.query.types.ConflictsType;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
@@ -43,24 +39,19 @@ public class DocChunkIndexServiceImpl implements DocChunkIndexService {
     @Resource
     private ElasticsearchOperations elasticsearchOperations;
 
-    @Value("${knowledge.elasticsearch.index-name}")
-    private String indexName;
+    @Resource
+    private DocChunkRepository docChunkRepository;
 
     @Override
     public void writeBatch(Long knowledgeBaseId, List<DocChunkDO> chunks, List<float[]> vectors) {
         if (chunks.isEmpty()) {
             return;
         }
-        List<IndexQuery> queries = IntStream.range(0, chunks.size()).mapToObj(i -> {
-            DocChunkDO chunk = chunks.get(i);
-            // 显式提供 source，保留自管 mapping，避免额外写入 _class 字段。
-            return new IndexQueryBuilder().withId(chunk.getId().toString())
-                    .withSource(Document.from(convertChunk(knowledgeBaseId, chunk, vectors.get(i))).toJson()).build();
-        }).toList();
-        BulkOptions options = BulkOptions.builder().withRefreshPolicy(RefreshPolicy.WAIT_UNTIL).build();
+        List<DocChunkDocument> documents = IntStream.range(0, chunks.size())
+                .mapToObj(i -> convertChunk(knowledgeBaseId, chunks.get(i), vectors.get(i))).toList();
         try {
-            // Spring Data 对逐条写入失败抛出 BulkFailureException，不能发布为可用。
-            elasticsearchOperations.bulkIndex(queries, options, IndexCoordinates.of(indexName));
+            // 等待检索可见后才能发布为可用；逐条写入失败仍由 Spring Data 抛出异常。
+            docChunkRepository.saveAll(documents, RefreshPolicy.WAIT_UNTIL);
         } catch (BulkFailureException ex) {
             String reason = ex.getFailedDocuments().values().stream()
                     .map(BulkFailureException.FailureDetails::errorMessage)
@@ -75,14 +66,14 @@ public class DocChunkIndexServiceImpl implements DocChunkIndexService {
     @Override
     public void deleteByDocId(Long docId) {
         try {
-            IndexCoordinates index = IndexCoordinates.of(indexName);
             // 删除查询使用可检索快照，先刷新可覆盖上一次中断时尚未刷新的部分写入。
-            elasticsearchOperations.indexOps(index).refresh();
+            elasticsearchOperations.indexOps(DocChunkDocument.class).refresh();
             NativeQuery query = NativeQuery.builder()
                     .withQuery(q -> q.term(t -> t.field("doc_id").value(docId.toString()))).build();
             DeleteQuery deletion = DeleteQuery.builder(query).withRefresh(true)
                     .withConflicts(ConflictsType.Abort).build();
-            ByQueryResponse response = elasticsearchOperations.delete(deletion, Document.class, index);
+            // 保留完整响应以检查超时和部分删除失败，不使用仅返回数量的派生删除方法。
+            ByQueryResponse response = elasticsearchOperations.delete(deletion, DocChunkDocument.class);
             if (response.getTimedOut() || !response.getFailures().isEmpty()
                     || !response.getSearchFailures().isEmpty() || response.getVersionConflicts() > 0
                     || response.getReasonCancelled() != null) {
@@ -155,8 +146,8 @@ public class DocChunkIndexServiceImpl implements DocChunkIndexService {
     }
 
     /** 检索超时由传输配置拒绝部分结果，返回后再检查分片失败。 */
-    private List<SearchHit<Document>> checkedSearch(NativeQuery query) {
-        var response = elasticsearchOperations.search(query, Document.class, IndexCoordinates.of(indexName));
+    private List<SearchHit<DocChunkDocument>> checkedSearch(NativeQuery query) {
+        var response = elasticsearchOperations.search(query, DocChunkDocument.class);
         var shards = response.getSearchShardStatistics();
         if (shards != null && shards.getFailed().intValue() > 0) {
             throw new ServiceException(ErrorCodeConstants.DOC_SEARCH_FAILED);
@@ -167,18 +158,12 @@ public class DocChunkIndexServiceImpl implements DocChunkIndexService {
     /**
      * 字段与 es/create-doc-chunk-index.http 的 mapping 一致，编号按 keyword 写入字符串
      */
-    private Map<String, Object> convertChunk(Long knowledgeBaseId, DocChunkDO chunk, float[] vector) {
-        Map<String, Object> source = new LinkedHashMap<>();
-        source.put("kb_id", knowledgeBaseId.toString());
-        source.put("doc_id", chunk.getDocId().toString());
-        source.put("chunk_id", chunk.getId().toString());
-        source.put("chunk_index", chunk.getChunkIndex());
-        source.put("text", chunk.getText());
-        source.put("start_offset", chunk.getStartOffset());
-        source.put("end_offset", chunk.getEndOffset());
-        source.put("page_number", chunk.getPageNumber());
-        source.put("vector", vector);
-        return source;
+    private DocChunkDocument convertChunk(Long knowledgeBaseId, DocChunkDO chunk, float[] vector) {
+        return new DocChunkDocument().setKnowledgeBaseId(knowledgeBaseId.toString())
+                .setDocId(chunk.getDocId().toString()).setChunkId(chunk.getId().toString())
+                .setChunkIndex(chunk.getChunkIndex()).setText(chunk.getText())
+                .setStartOffset(chunk.getStartOffset()).setEndOffset(chunk.getEndOffset())
+                .setPageNumber(chunk.getPageNumber()).setVector(vector);
     }
 
     /**

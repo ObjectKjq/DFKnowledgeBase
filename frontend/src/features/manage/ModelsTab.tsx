@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { Select } from 'antd'
 
 import { create, deleteUsingDelete, list, test, update1 } from '@/api/modelConfigurationController'
 import { useAuthStore } from '@/stores/auth'
@@ -38,6 +39,7 @@ function ModelManagement() {
     mutationFn: (id: number) => deleteUsingDelete({ id }),
     onSuccess: () => {
       void refresh()
+      void client.invalidateQueries({ queryKey: ['chat-models'] })
     },
   })
   return (
@@ -175,10 +177,15 @@ function ModelForm({
         </label>
         <label className="field">
           用途
-          <select value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
-            <option value="CHAT">对话模型</option>
-            <option value="RERANK">重排模型</option>
-          </select>
+          <Select
+            aria-label="用途"
+            value={form.kind}
+            onChange={(kind) => setForm({ ...form, kind })}
+            options={[
+              { value: 'CHAT', label: '对话模型' },
+              { value: 'RERANK', label: '重排模型' },
+            ]}
+          />
         </label>
         <label className="field">
           服务地址

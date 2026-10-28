@@ -26,6 +26,7 @@ beforeEach(() => {
     conversationId: null,
     scope: [],
     mode: '混合检索',
+    modelId: undefined,
     restoreScope: false,
     busy: false,
     pending: null,
@@ -68,11 +69,17 @@ it('输入区仅提供四种检索模式并选择命名模型', async () => {
   expect(screen.queryByRole('button', { name: /精确检索/ })).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: /模糊检索/ }))
   expect(screen.getByRole('button', { name: '模糊检索' })).toBeInTheDocument()
-  expect(
-    await screen.findByRole('option', { name: '我的对话模型（本地模拟）' }),
-  ).toBeInTheDocument()
-  fireEvent.change(screen.getByLabelText('对话模型'), { target: { value: '8' } })
-  expect(screen.getByLabelText('对话模型')).toHaveValue('8')
+  const picker = screen.getByRole('button', { name: '对话模型' })
+  await waitFor(() => expect(picker).not.toBeDisabled())
+  fireEvent.click(picker)
+  fireEvent.click(await screen.findByRole('menuitem', { name: /我的对话模型/ }))
+  expect(useChat.getState().modelId).toBe(8)
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: '对话模型' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    ),
+  )
 })
 
 it('格式与上传时间可以叠加过滤并在新检索时重置', () => {
@@ -118,8 +125,25 @@ it('勾选检索分块作为所选上下文，并能清空', async () => {
   expect(screen.getByRole('checkbox', { name: '选择学习笔记分块1' })).not.toBeChecked()
 })
 
-it('模糊检索发送过滤快照，分页结果落库并展示真实命中信息', async () => {
-  const messages: object[] = []
+function turnStream(messages: object[], state: API.RetrievalState) {
+  const conversation = { id: 9, title: '研究会话', state }
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      for (const [event, data] of [
+        ['conversation', conversation],
+        ['done', { conversation, messages }],
+      ])
+        controller.enqueue(
+          new TextEncoder().encode(
+            `event: ${event}\ndata: ${JSON.stringify({ code: 0, data })}\n\n`,
+          ),
+        )
+      controller.close()
+    },
+  })
+}
+
+it('模糊检索一次发送过滤快照并显示结果，主动翻页才请求下一页', async () => {
   useChat.setState({
     mode: '模糊检索',
     scope: ['7'],
@@ -131,11 +155,7 @@ it('模糊检索发送过滤快照，分页结果落库并展示真实命中信�
         code: 0,
         data: { list: [{ id: 7, name: '研究知识库', type: 1, ownerId: 1 }], total: 1 },
       } as never
-    if (url.endsWith('/conversation/create')) return { code: 0, data: 9 } as never
-    if (url.endsWith('/state/update')) return { code: 0, data: true } as never
-
-    if (url.endsWith('/conversation/get')) return { code: 0, data: { id: 9, messages } } as never
-    if (url.endsWith('/search') && (options?.data as API.DocSearchReqVO)?.pageNo === 2)
+    if (url.endsWith('/search'))
       return {
         code: 0,
         data: {
@@ -144,8 +164,8 @@ it('模糊检索发送过滤快照，分页结果落库并展示真实命中信�
           indexingCount: 2,
         },
       } as never
-    if (url.endsWith('/search')) {
-      const body = options?.data as API.DocSearchReqVO
+    if (url.endsWith('/send-stream')) {
+      const body = options?.data as API.ConversationSendReqVO
       const data = {
         list: [
           {
@@ -161,15 +181,17 @@ it('模糊检索发送过滤快照，分页结果落库并展示真实命中信�
         total: 23,
         indexingCount: 2,
       }
-      messages.push(
-        { id: 1, type: 'user', content: { text: body.query, state: { ...body, mode: 'FUZZY' } } },
-        {
-          id: 2,
-          type: 'results',
-          content: { query: body.query, state: { ...body, mode: 'FUZZY' }, search: data },
-        },
-      )
-      return { code: 0, data } as never
+      return turnStream(
+        [
+          { id: 1, type: 'user', content: { text: body.question, state: body.state } },
+          {
+            id: 2,
+            type: 'results',
+            content: { query: body.question, state: body.state, search: data },
+          },
+        ],
+        body.state,
+      ) as never
     }
     if (url.endsWith('/simple-list') || url.endsWith('/conversation/list'))
       return { code: 0, data: [] } as never
@@ -178,22 +200,29 @@ it('模糊检索发送过滤快照，分页结果落库并展示真实命中信�
   renderComposer()
   fireEvent.change(screen.getByLabelText('检索问题'), { target: { value: '神经网络' } })
   fireEvent.click(screen.getByRole('button', { name: '发送检索' }))
-  await waitFor(() => expect(screen.getByText('实验记录')).toBeInTheDocument())
+  expect(await screen.findByText('实验记录')).toBeInTheDocument()
   expect(screen.getByText('语义命中')).toBeInTheDocument()
   expect(screen.getByText('OCR 文本')).toBeInTheDocument()
   expect(screen.getByText(/2 份文档正在入库/)).toBeInTheDocument()
   expect(request).toHaveBeenCalledWith(
-    '/knowledge/search/search',
+    '/knowledge/conversation/send-stream',
     expect.objectContaining({
       data: expect.objectContaining({
-        mode: 'FUZZY',
-        formats: [1],
-        pageNo: 1,
-        pageSize: 20,
-        uploadedFrom: '2026-10-01T10:00:00',
+        question: '神经网络',
+        afterMessageId: 0,
+        state: expect.objectContaining({
+          mode: 'FUZZY',
+          formats: [1],
+          uploadedFrom: '2026-10-01T10:00:00',
+        }),
       }),
     }),
   )
+  expect(
+    vi
+      .mocked(request)
+      .mock.calls.some(([url]) => /conversation\/(create|get)|state\/update/.test(url)),
+  ).toBe(false)
   fireEvent.click(screen.getByRole('button', { name: '下一页' }))
   expect(await screen.findByText('第二页记录')).toBeInTheDocument()
   expect(request).toHaveBeenCalledWith(
@@ -229,7 +258,7 @@ it('恢复会话自己的模式、模型、过滤和所选上下文，编辑后�
   renderComposer()
   fireEvent.click(await screen.findByRole('button', { name: '研究会话' }))
   expect(await screen.findByRole('button', { name: '模糊检索' })).toBeInTheDocument()
-  expect(screen.getByLabelText('对话模型')).toHaveValue('8')
+  expect(await screen.findByText('我的对话模型')).toBeInTheDocument()
   expect(screen.getByText('所选上下文：1 个分块')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: '过滤条件' }))
   expect(screen.getByLabelText('Markdown')).toBeChecked()
@@ -243,15 +272,8 @@ it('恢复会话自己的模式、模型、过滤和所选上下文，编辑后�
 })
 
 it('引导推荐选项与自由输入保持原问题，可随时跳过', async () => {
-  const messages: object[] = []
+  const messages: { id: number; type: string; content: object }[] = []
   let guideRound = 0
-  let state: API.RetrievalState = {
-    mode: 'GUIDED',
-    knowledgeBaseIds: [7],
-    modelId: 8,
-    guideQuestion: '找学习材料',
-    guideRound: 0,
-  }
   useChat.setState({ mode: '引导检索', scope: ['7'], modelId: 8, guideState: {} })
   vi.mocked(request).mockImplementation(async (url, options) => {
     if (url.endsWith('/base/page'))
@@ -259,22 +281,19 @@ it('引导推荐选项与自由输入保持原问题，可随时跳过', async (
         code: 0,
         data: { list: [{ id: 7, name: '学习知识库', ownerId: 1, type: 1 }], total: 1 },
       } as never
-    if (url.endsWith('/conversation/create')) return { code: 0, data: 9 } as never
-    if (url.endsWith('/state/update')) {
-      state = (options?.data as API.ConversationStateReqVO).state
-      return { code: 0, data: true } as never
-    }
-    if (url.endsWith('/guide')) {
-      const body = options?.data as API.DocGuideReqVO
-      messages.push({
-        id: messages.length + 1,
-        type: 'user',
-        content: { text: body.answer || body.query, state },
-      })
-      const response = body.skip
+    if (url.endsWith('/send-stream')) {
+      const body = options?.data as API.ConversationSendReqVO
+      const state = {
+        ...body.state,
+        guideQuestion: body.guideQuestion,
+        guideRound: body.skipGuide ? guideRound : ++guideRound,
+        mode: body.skipGuide ? 'HYBRID' : 'GUIDED',
+      }
+      const response = body.skipGuide
         ? {
             stage: 'RESULTS',
             round: guideRound,
+            state,
             search: {
               list: [{ chunkId: 21, docTitle: '引导找到的笔记', text: '学习资料' }],
               total: 1,
@@ -282,25 +301,24 @@ it('引导推荐选项与自由输入保持原问题，可随时跳过', async (
           }
         : {
             stage: 'CLARIFY',
-            round: ++guideRound,
+            round: guideRound,
+            state,
             question: guideRound === 1 ? '想看哪方面？' : '希望什么格式？',
             options: ['机器学习', '知识检索'],
           }
-      state = {
-        ...state,
-        guideQuestion: body.query,
-        guideRound,
-        mode: body.skip ? 'HYBRID' : 'GUIDED',
-      }
-      messages.push({
-        id: messages.length + 1,
-        type: body.skip ? 'results' : 'guide',
-        content: response,
-      })
-      return { code: 0, data: response } as never
+      messages.push(
+        {
+          id: messages.length + 1,
+          type: 'user',
+          content: { text: body.question, state: body.state },
+        },
+        { id: messages.length + 2, type: body.skipGuide ? 'results' : 'guide', content: response },
+      )
+      return turnStream(
+        messages.filter((message) => message.id > body.afterMessageId),
+        state,
+      ) as never
     }
-    if (url.endsWith('/conversation/get'))
-      return { code: 0, data: { id: 9, state, messages } } as never
     if (url.endsWith('/simple-list') || url.endsWith('/conversation/list'))
       return { code: 0, data: [] } as never
     throw new Error(`意外请求 ${url}`)
@@ -312,32 +330,38 @@ it('引导推荐选项与自由输入保持原问题，可随时跳过', async (
   fireEvent.click(screen.getByRole('button', { name: '机器学习' }))
   expect(await screen.findByText('希望什么格式？')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: '跳过引导，直接混合检索' }))
-  await waitFor(() => expect(screen.getByText('引导找到的笔记')).toBeInTheDocument())
+  expect(await screen.findByText('引导找到的笔记')).toBeInTheDocument()
   expect(request).toHaveBeenCalledWith(
-    '/knowledge/search/guide',
+    '/knowledge/conversation/send-stream',
     expect.objectContaining({
-      data: expect.objectContaining({ query: '找学习材料', skip: true, conversationId: 9 }),
+      data: expect.objectContaining({
+        guideQuestion: '找学习材料',
+        skipGuide: true,
+        conversationId: 9,
+      }),
     }),
   )
+  expect(
+    vi.mocked(request).mock.calls.filter(([url]) => url.endsWith('/send-stream')),
+  ).toHaveLength(3)
 })
 
 it('RAG 使用所选上下文，最终拒答完整替换暂定答案和引用', async () => {
   let packets: ReadableStreamDefaultController<Uint8Array> | undefined
-  let messages: object[] = []
+  let sent: API.ConversationSendReqVO | undefined
   useChat.setState({ mode: 'RAG 检索', selectedChunkIds: [21], modelId: 8 })
-  vi.mocked(request).mockImplementation(async (url) => {
+  vi.mocked(request).mockImplementation(async (url, options) => {
     if (url.endsWith('/base/page')) return { code: 0, data: { list: [], total: 0 } } as never
-    if (url.endsWith('/conversation/create')) return { code: 0, data: 9 } as never
-    if (url.endsWith('/state/update')) return { code: 0, data: true } as never
-    if (url.endsWith('/conversation/get')) return { code: 0, data: { id: 9, messages } } as never
     if (url.endsWith('/simple-list') || url.endsWith('/conversation/list'))
       return { code: 0, data: [] } as never
-    if (url.endsWith('/ask-stream'))
+    if (url.endsWith('/send-stream')) {
+      sent = options?.data as API.ConversationSendReqVO
       return new ReadableStream<Uint8Array>({
         start(controller) {
           packets = controller
         },
       }) as never
+    }
     throw new Error(`意外请求 ${url}`)
   })
   renderComposer()
@@ -348,6 +372,8 @@ it('RAG 使用所选上下文，最终拒答完整替换暂定答案和引用', 
     packets!.enqueue(
       new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify({ code: 0, data })}\n\n`),
     )
+  const conversation = { id: 9, title: '解释实验结果', state: sent!.state }
+  emit('conversation', conversation)
   emit('delta', '暂定结论[1]')
   emit('citations', [{ number: 1, chunkId: 21, docTitle: '已撤回证据' }])
   expect(await screen.findByText('生成中 · 暂定内容')).toBeInTheDocument()
@@ -358,21 +384,23 @@ it('RAG 使用所选上下文，最终拒答完整替换暂定答案和引用', 
     citations: [],
     suggestions: ['重新检索'],
   }
-  messages = [
-    { id: 1, type: 'user', content: { text: '解释实验结果', mode: 'RAG 检索' } },
-    { id: 2, type: 'answer', content: final },
-  ]
-  emit('done', final)
+  emit('done', {
+    conversation,
+    messages: [
+      { id: 1, type: 'user', content: { text: '解释实验结果', state: sent!.state } },
+      { id: 2, type: 'empty', content: final },
+    ],
+  })
   packets!.close()
-  await waitFor(() =>
-    expect(screen.getByText('依据已失效，请重新选择上下文。')).toBeInTheDocument(),
-  )
+  expect(await screen.findByText('依据已失效，请重新选择上下文。')).toBeInTheDocument()
   expect(screen.queryByText(/暂定结论/)).not.toBeInTheDocument()
   expect(screen.queryByText('已撤回证据')).not.toBeInTheDocument()
   expect(request).toHaveBeenCalledWith(
-    '/knowledge/rag/ask-stream',
+    '/knowledge/conversation/send-stream',
     expect.objectContaining({
-      data: expect.objectContaining({ modelId: 8, selectedChunkIds: [21] }),
+      data: expect.objectContaining({
+        state: expect.objectContaining({ modelId: 8, selectedChunkIds: [21] }),
+      }),
     }),
   )
 })

@@ -14,6 +14,19 @@ import java.util.List;
 public interface MessageMapper extends BaseMapper<MessageDO> {
 
     /**
+     * 按编号增量查询会话消息。
+     * @param conversationId 会话编号
+     * @param afterId 已展示的最大消息编号
+     * @return 新增消息
+     */
+    default List<MessageDO> selectListAfter(Long conversationId, Long afterId) {
+        return selectList(new LambdaQueryWrapper<MessageDO>()
+                .eq(MessageDO::getConversationId, conversationId)
+                .gt(MessageDO::getId, afterId)
+                .orderByAsc(MessageDO::getCreateTime, MessageDO::getId));
+    }
+
+    /**
      * 查询会话消息
      *
      * @param conversationId 会话编号

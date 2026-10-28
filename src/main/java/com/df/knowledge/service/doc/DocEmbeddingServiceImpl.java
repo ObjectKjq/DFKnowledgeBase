@@ -3,6 +3,7 @@ package com.df.knowledge.service.doc;
 import cn.hutool.core.util.StrUtil;
 import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.enums.ErrorCodeConstants;
+import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import jakarta.annotation.Resource;
@@ -29,7 +30,7 @@ public class DocEmbeddingServiceImpl implements DocEmbeddingService {
     public List<float[]> embedAll(List<String> texts) {
         try {
             return docEmbeddingModel.embedAll(texts.stream().map(TextSegment::from).toList()).content().stream()
-                    .map(embedding -> embedding.vector()).toList();
+                    .map(Embedding::vector).toList();
         } catch (RuntimeException | LinkageError ex) {
             log.warn("[embedAll][内置向量模型批量推理失败]", ex);
             throw new ServiceException(ErrorCodeConstants.DOC_EMBEDDING_FAILED,

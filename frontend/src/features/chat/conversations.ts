@@ -5,6 +5,9 @@ import { getConversation, getConversationList } from '@/api/conversationControll
 import { useAuthStore } from '@/stores/auth'
 import { useChat } from '@/stores/chat'
 import { modeLabel } from './selection'
+import { conversationKey, conversationsKey } from './conversationKeys'
+
+export { conversationKey, conversationsKey } from './conversationKeys'
 
 export interface MessageContent extends API.RagAnswerRespVO {
   text?: string
@@ -29,13 +32,6 @@ export type Conversation = Omit<API.ConversationDetailRespVO, 'messages'> & {
   messages: ChatMessage[]
 }
 
-export const conversationKey = (token: string | null, id: number | null) => [
-  'chat-conversation',
-  token,
-  id,
-]
-export const conversationsKey = (token: string | null) => ['chat-conversations', token]
-
 /** JsonNode 在生成契约中是不透明类型，在消息边界解释为后端结构化内容。 */
 export async function fetchConversation(id: number, signal?: AbortSignal): Promise<Conversation> {
   const { data } = await getConversation({ id }, { signal, silent: true })
@@ -43,16 +39,20 @@ export async function fetchConversation(id: number, signal?: AbortSignal): Promi
   const messages = (data.messages ?? []) as unknown as ChatMessage[]
   return {
     ...data,
-    messages: messages
-      .map((message) => ({
-        ...message,
-        content: normalizeContent(message.content),
-      }))
-      .sort(
-        (a, b) =>
-          (a.createTime ?? '').localeCompare(b.createTime ?? '') || (a.id ?? 0) - (b.id ?? 0),
-      ),
+    messages: normalizeMessages(messages),
   }
+}
+
+/** 消息列表查询与发送响应共用同一结构化内容边界。 */
+export function normalizeMessages(messages: ChatMessage[]): ChatMessage[] {
+  return messages
+    .map((message) => ({
+      ...message,
+      content: normalizeContent(message.content),
+    }))
+    .sort(
+      (a, b) => (a.createTime ?? '').localeCompare(b.createTime ?? '') || (a.id ?? 0) - (b.id ?? 0),
+    )
 }
 
 function normalizeContent(content: MessageContent): MessageContent {
@@ -75,6 +75,7 @@ export function useConversations() {
     queryKey: conversationsKey(token),
     queryFn: async () => (await getConversationList()).data ?? [],
     enabled: !!token,
+    staleTime: Infinity,
   })
 }
 
@@ -83,10 +84,12 @@ export function useConversation() {
   const token = useAuthStore((s) => s.token)
   const id = useChat((s) => s.conversationId)
   const restoreScope = useChat((s) => s.restoreScope)
+  const busy = useChat((s) => s.busy)
   const query = useQuery({
     queryKey: conversationKey(token, id),
     queryFn: ({ signal }) => fetchConversation(id!, signal),
-    enabled: !!token && id !== null,
+    enabled: !!token && id !== null && !busy,
+    staleTime: restoreScope ? 0 : Infinity,
   })
   useEffect(() => {
     if (!restoreScope || !query.data || query.isFetching || query.isError) return

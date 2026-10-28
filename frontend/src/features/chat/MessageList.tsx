@@ -357,7 +357,7 @@ export function MessageList() {
             }}
           />
           <div className="message">
-            {currentPending.error && !currentPending.completed ? (
+            {currentPending.error ? (
               <div className="empty-result" role="alert">
                 <h3>提问未完成</h3>
                 <p>{currentPending.error}</p>
@@ -371,50 +371,16 @@ export function MessageList() {
                   重新提问
                 </button>
               </div>
-            ) : currentPending.mode === 'RAG 检索' &&
-              (currentPending.text || currentPending.result) ? (
+            ) : currentPending.mode === 'RAG 检索' && currentPending.text ? (
               <Answer
-                provisional={!currentPending.result}
-                content={
-                  currentPending.result ?? {
-                    answer: currentPending.text,
-                    citations: currentPending.citations,
-                  }
-                }
-              />
-            ) : currentPending.results ? (
-              <MessageView
-                message={{
-                  type: currentPending.results.length ? 'results' : 'empty',
-                  content: {
-                    results: currentPending.results,
-                    answer: currentPending.results.length
-                      ? undefined
-                      : '当前范围内未找到相关资料，请调整范围或补充文档。',
-                  },
-                }}
+                provisional
+                content={{ answer: currentPending.text, citations: currentPending.citations }}
               />
             ) : (
               <div className="typing" role="status" aria-label="正在检索与生成">
                 <i />
                 <i />
                 <i />
-              </div>
-            )}
-            {currentPending.completed && currentPending.error && (
-              <div className="info-banner" role="alert">
-                <span>{currentPending.error}</span>
-                <button
-                  disabled={busy}
-                  className="text-btn"
-                  onClick={() =>
-                    void query.refetch().then((result) => {
-                      if (result.isSuccess) useChat.setState({ pending: null })
-                    })
-                  }
-                >
-                  刷新历史
-                </button>
               </div>
             )}
           </div>

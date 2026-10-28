@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
+import { Select } from 'antd'
 
 import {
   getMemberList,
@@ -74,10 +75,15 @@ export function MembersModal({ library, onClose }: { library: Library; onClose: 
           </label>
           <label className="field">
             成员角色
-            <select value={role} onChange={(e) => setRole(Number(e.target.value))}>
-              <option value={1}>编辑者</option>
-              <option value={2}>查看者</option>
-            </select>
+            <Select
+              aria-label="成员角色"
+              value={role}
+              onChange={setRole}
+              options={[
+                { value: 1, label: '编辑者' },
+                { value: 2, label: '查看者' },
+              ]}
+            />
           </label>
           <div className="form-actions">
             <button className="btn primary" disabled={pending}>
@@ -105,22 +111,23 @@ export function MembersModal({ library, onClose }: { library: Library; onClose: 
                 </td>
                 <td>
                   {canManage ? (
-                    <select
-                      className="select"
+                    <Select
+                      size="small"
                       aria-label={`${member.username}的成员角色`}
                       value={member.memberRole}
                       disabled={pending}
-                      onChange={(e) =>
+                      onChange={(memberRole) =>
                         update.mutate({
                           knowledgeBaseId,
                           id: member.id!,
-                          memberRole: Number(e.target.value),
+                          memberRole,
                         })
                       }
-                    >
-                      <option value={1}>编辑者</option>
-                      <option value={2}>查看者</option>
-                    </select>
+                      options={[
+                        { value: 1, label: '编辑者' },
+                        { value: 2, label: '查看者' },
+                      ]}
+                    />
                   ) : member.memberRole === 1 ? (
                     '编辑者'
                   ) : (

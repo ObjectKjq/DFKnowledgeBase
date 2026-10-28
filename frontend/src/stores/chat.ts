@@ -17,11 +17,7 @@ export interface PendingTurn {
   modelId?: number
   text: string
   citations: API.RagCitationRespVO[]
-  result?: API.RagAnswerRespVO
-  results?: API.DocChunkRespVO[]
-  searchPage?: API.DocSearchPageRespVO
   selection?: API.RetrievalState
-  completed?: boolean
   error?: string
   guideOriginalQuestion?: string
   guideAnswer?: string

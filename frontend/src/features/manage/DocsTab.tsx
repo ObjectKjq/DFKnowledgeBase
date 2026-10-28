@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
+import { Select } from 'antd'
 
 import { deleteDoc, getDocPage, retryDoc } from '@/api/docController'
 import { Icon } from '@/components/Icon'
@@ -79,36 +80,31 @@ export function DocsTab() {
               onChange={(e) => setKeyword(e.target.value)}
             />
           </label>
-          <select
-            className="select"
+          <Select
+            className="library-filter"
             aria-label="所属知识库"
             value={filters.knowledgeBaseId ?? ''}
-            onChange={(e) =>
-              changeFilter({ knowledgeBaseId: e.target.value ? Number(e.target.value) : undefined })
+            showSearch={{ optionFilterProp: 'label' }}
+            options={[
+              { value: '', label: '全部有权知识库' },
+              ...libs.map((library) => ({ value: Number(library.id), label: library.name })),
+            ]}
+            onChange={(value) =>
+              changeFilter({ knowledgeBaseId: value === '' ? undefined : Number(value) })
             }
-          >
-            <option value="">全部有权知识库</option>
-            {libs.map((library) => (
-              <option key={library.id} value={library.id}>
-                {library.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className="select"
+          />
+          <Select
             aria-label="文档状态"
             value={filters.status ?? ''}
-            onChange={(e) =>
-              changeFilter({ status: e.target.value ? Number(e.target.value) : undefined })
-            }
-          >
-            <option value="">全部文档</option>
-            {Object.entries(DOCUMENT_STATUSES).map(([status, label]) => (
-              <option key={status} value={status}>
-                {label}
-              </option>
-            ))}
-          </select>
+            options={[
+              { value: '', label: '全部文档' },
+              ...Object.entries(DOCUMENT_STATUSES).map(([status, label]) => ({
+                value: Number(status),
+                label,
+              })),
+            ]}
+            onChange={(value) => changeFilter({ status: value === '' ? undefined : Number(value) })}
+          />
           <button className="btn ghost">查询</button>
         </form>
         <button

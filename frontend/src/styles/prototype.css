@@ -1,22 +1,3 @@
-        :root {
-            --bg: #fafaf8;
-            --paper: #fff;
-            --side: #f2f3ee;
-            --ink: #29392f;
-            --text: #475249;
-            --muted: #65725e;
-            --line: #e5e8df;
-            --sage: #657d62;
-            --sage-dark: #435c42;
-            --sage-tint: #e7ecdf;
-            --oat: #f4efe4;
-            --blue: #eaf0f2;
-            --danger: #a04e43;
-            --shadow: 0 6px 30px #29392f06;
-            --serif: Georgia, "Noto Serif SC", "Source Han Serif SC", "Songti SC", SimSun, serif;
-            --sans: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
-        }
-
         * {
             box-sizing: border-box
         }
@@ -166,7 +147,7 @@
 
         .shortcut-key {
             font-size: 11px;
-            color: #65725e;
+            color: var(--muted);
             margin-left: auto;
             font-weight: 400;
             border: 1px solid #ccd5c5;
@@ -183,7 +164,7 @@
         .section-label {
             font-size: 11px;
             letter-spacing: 1px;
-            color: #65725e;
+            color: var(--muted);
             padding: 0 13px;
             margin: 0 0 9px;
             display: flex;
@@ -218,7 +199,7 @@
         .nav-item svg {
             width: 17px;
             height: 17px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .nav-item:hover {
@@ -232,7 +213,7 @@
 
         .nav-item .count {
             margin-left: auto;
-            color: #65725e;
+            color: var(--muted);
             font-size: 11px
         }
 
@@ -240,7 +221,7 @@
             font-size: 10px;
             letter-spacing: .8px;
             padding: 17px 13px 5px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .history-label {
@@ -278,49 +259,6 @@
             padding-top: 20px
         }
 
-        .local-note {
-            padding: 15px 13px;
-            background: #ebeee5;
-            border: 1px solid #e1e6d9;
-            border-radius: 7px;
-            margin-bottom: 15px
-        }
-
-        .local-note strong {
-            font-size: 11px;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            color: #5e7055
-        }
-
-        .local-note svg {
-            width: 14px;
-            height: 14px
-        }
-
-        .local-note p {
-            font-size: 10px;
-            color: #65725e;
-            line-height: 1.8;
-            margin-top: 5px
-        }
-
-        .storage-track {
-            height: 3px;
-            background: #dde3d5;
-            margin-top: 10px;
-            border-radius: 8px
-        }
-
-        .storage-track span {
-            display: block;
-            width: 19%;
-            height: 100%;
-            background: #a9b899
-        }
-
         .settings-nav {
             display: flex;
             align-items: center;
@@ -342,7 +280,7 @@
 
         .settings-nav small {
             font-size: 10px;
-            color: #65725e;
+            color: var(--muted);
             padding-right: 9px
         }
 
@@ -374,11 +312,11 @@
         }
 
         .breadcrumb span:first-of-type {
-            color: #65725e
+            color: var(--muted)
         }
 
         .breadcrumb .slash {
-            color: #65725e
+            color: var(--muted)
         }
 
         .breadcrumb svg {
@@ -397,7 +335,7 @@
             display: flex;
             align-items: center;
             gap: 7px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .dot {
@@ -485,7 +423,7 @@
             font-family: Georgia, serif;
             font-size: 9px;
             letter-spacing: 3.1px;
-            color: #65725e;
+            color: var(--muted);
             margin-bottom: 16px
         }
 
@@ -498,94 +436,20 @@
         }
 
         .hero h1 span {
-            color: #65725e
+            color: var(--muted)
         }
 
         .hero-description {
             font-size: 12px;
-            color: #65725e;
+            color: var(--muted);
             line-height: 1.9;
             margin-top: 12px;
             letter-spacing: .3px
         }
 
-        .quick-actions {
-            display: grid;
-            grid-template-columns:repeat(3, 1fr);
-            gap: 14px;
-            margin-top: 33px
-        }
-
-        .quick-card {
-            text-align: left;
-            padding: 21px 19px 18px;
-            border: 1px solid var(--line);
-            background: #fff9;
-            border-radius: 8px;
-            box-shadow: 0 3px 12px #33412b02;
-            position: relative
-        }
-
-        .quick-card:hover {
-            border-color: #b8c7aa;
-            background: white;
-            box-shadow: 0 8px 20px #33412b06
-        }
-
-        .quick-icon {
-            width: 34px;
-            height: 34px;
-            border-radius: 7px;
-            background: #eaf0e3;
-            display: grid;
-            place-items: center;
-            color: #65725e;
-            margin-bottom: 15px
-        }
-
-        .quick-card:nth-child(2) .quick-icon {
-            background: #edf0f1;
-            color: #65725e
-        }
-
-        .quick-card:nth-child(3) .quick-icon {
-            background: #f3eee4;
-            color: #65725e
-        }
-
-        .quick-card h2 {
-            font-size: 13px;
-            font-weight: 500;
-            margin-bottom: 7px
-        }
-
-        .quick-card p {
-            font-size: 11px;
-            color: #65725e;
-            line-height: 1.7
-        }
-
-        .quick-card .arrow {
-            position: absolute;
-            width: 15px;
-            height: 15px;
-            right: 17px;
-            top: 24px;
-            color: #65725e;
-            transition: transform .2s
-        }
-
-        .quick-card:hover .arrow {
-            transform: translateX(3px)
-        }
-
-        .suggestions {
-            margin-top: 29px
-        }
-
         .micro-heading {
             font-size: 11px;
-            color: #65725e;
+            color: var(--muted);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -601,36 +465,6 @@
         .micro-heading svg {
             height: 13px;
             width: 13px
-        }
-
-        .suggestion-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px
-        }
-
-        .suggestion {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 11px;
-            border: 1px solid #e7e9e1;
-            background: #f6f7f1;
-            border-radius: 5px;
-            font-size: 11px;
-            line-height: 1.5;
-            color: #65725e
-        }
-
-        .suggestion svg {
-            width: 13px;
-            height: 13px;
-            opacity: .75
-        }
-
-        .suggestion:hover {
-            background: #eaf0e2;
-            border-color: #cbd7bf
         }
 
         .recent-docs {
@@ -665,7 +499,7 @@
             display: grid;
             place-items: center;
             background: #f3eee4;
-            color: #65725e;
+            color: var(--muted);
             border: 1px solid #e9e2d4;
             border-radius: 3px;
             flex: none
@@ -678,13 +512,13 @@
 
         .file-icon.md {
             background: #eaf0e6;
-            color: #65725e;
+            color: var(--muted);
             border-color: #dfe7d9
         }
 
         .file-icon.png {
             background: #eaf0f1;
-            color: #65725e;
+            color: var(--muted);
             border-color: #dfe7e8
         }
 
@@ -705,7 +539,7 @@
         .recent-doc small {
             display: block;
             font-size: 9px;
-            color: #65725e;
+            color: var(--muted);
             margin-top: 6px
         }
 
@@ -757,7 +591,7 @@
             background: #f0f3e9;
             border: 1px solid #e5eadd;
             border-radius: 4px;
-            color: #65725e;
+            color: var(--muted);
             font-size: 10px
         }
 
@@ -768,7 +602,7 @@
 
         .chip.skill-chip {
             background: #f5f5f0;
-            color: #65725e;
+            color: var(--muted);
             border-color: #eaece4
         }
 
@@ -791,7 +625,7 @@
         }
 
         .query::placeholder {
-            color: #65725e
+            color: var(--muted)
         }
 
         .composer-bottom {
@@ -815,7 +649,7 @@
             border-radius: 5px;
             display: grid;
             place-items: center;
-            color: #65725e
+            color: var(--muted)
         }
 
         .add-btn svg {
@@ -829,7 +663,7 @@
 
         .text-btn {
             font-size: 11px;
-            color: #65725e;
+            color: var(--muted);
             display: inline-flex;
             align-items: center;
             gap: 5px;
@@ -894,7 +728,7 @@
             gap: 10px;
             margin-top: 11px;
             font-size: 9px;
-            color: #65725e;
+            color: var(--muted);
             padding: 0 2px
         }
 
@@ -911,44 +745,12 @@
 
         .composer-caption kbd {
             font: inherit;
-            color: #65725e
-        }
-
-        .popover {
-            display: none;
-            position: absolute;
-            z-index: 45;
-            bottom: calc(100% + 7px);
-            background: #fff;
-            border: 1px solid var(--line);
-            border-radius: 9px;
-            box-shadow: 0 12px 45px #29392f14;
-            padding: 7px;
-            min-width: 230px;
-            animation: rise .18s ease
-        }
-
-        .popover.open {
-            display: block
-        }
-
-        .popover.scope {
-            left: 0;
-            bottom: calc(100% + 7px);
-            width: 285px
-        }
-
-        .popover.add, .popover.skills {
-            left: 0
-        }
-
-        .popover.mode, .popover.model {
-            right: 0
+            color: var(--muted)
         }
 
         .popover-title {
             font-size: 11px;
-            color: #65725e;
+            color: var(--muted);
             padding: 9px 10px;
             border-bottom: 1px solid var(--line);
             margin-bottom: 4px;
@@ -983,14 +785,14 @@
         .menu-option .description {
             display: block;
             font-size: 10px;
-            color: #65725e;
+            color: var(--muted);
             margin-top: 4px;
             line-height: 1.6
         }
 
         .menu-option .tick {
             margin-left: auto;
-            color: #65725e
+            color: var(--muted)
         }
 
         .menu-option label {
@@ -1006,7 +808,7 @@
 
         .menu-footer {
             font-size: 10px;
-            color: #65725e;
+            color: var(--muted);
             padding: 10px;
             border-top: 1px solid var(--line);
             line-height: 1.7
@@ -1092,7 +894,7 @@
         .user-bubble small {
             display: block;
             font-size: 9px;
-            color: #65725e;
+            color: var(--muted);
             margin-top: 7px
         }
 
@@ -1129,7 +931,7 @@
 
         .answer-header small {
             font-size: 10px;
-            color: #65725e;
+            color: var(--muted);
             margin-left: auto
         }
 
@@ -1137,7 +939,7 @@
             font-size: 12px;
             line-height: 1.8;
             margin-bottom: 12px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .result-summary strong {
@@ -1181,7 +983,7 @@
         .result-top h3 svg {
             width: 16px;
             height: 16px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .tag {
@@ -1190,28 +992,28 @@
             padding: 3px 6px;
             border-radius: 3px;
             background: #edf2e7;
-            color: #65725e;
+            color: var(--muted);
             white-space: nowrap
         }
 
         .tag.blue {
             background: #edf2f4;
-            color: #65725e
+            color: var(--muted)
         }
 
         .tag.oat {
             background: #f5eee4;
-            color: #65725e
+            color: var(--muted)
         }
 
         .tag.red {
             background: #f9eee9;
-            color: #65725e
+            color: var(--muted)
         }
 
         .result-snippet {
             font-size: 12px;
-            color: #65725e;
+            color: var(--muted);
             line-height: 1.9;
             margin: 11px 0;
             display: block
@@ -1219,7 +1021,7 @@
 
         .result-path {
             font-size: 10px;
-            color: #65725e;
+            color: var(--muted);
             display: flex;
             align-items: center;
             gap: 6px;
@@ -1233,7 +1035,7 @@
 
         .result-relevance {
             margin-left: auto;
-            color: #65725e
+            color: var(--muted)
         }
 
         .result-thumb {
@@ -1297,7 +1099,7 @@
             min-width: 18px;
             height: 18px;
             font-size: 10px;
-            color: #65725e;
+            color: var(--muted);
             background: #e9efdf;
             border-radius: 3px;
             vertical-align: 2px;
@@ -1311,7 +1113,7 @@
 
         .sources-title {
             font-size: 10px;
-            color: #65725e;
+            color: var(--muted);
             margin: 17px 0 8px
         }
 
@@ -1342,7 +1144,7 @@
             background: #edf2e5;
             padding: 5px 7px;
             font-size: 10px;
-            color: #65725e;
+            color: var(--muted);
             border-radius: 4px;
             font-weight: 400
         }
@@ -1362,14 +1164,14 @@
 
         .citation-card small {
             font-size: 9px;
-            color: #65725e;
+            color: var(--muted);
             display: block;
             margin-top: 5px
         }
 
         .response-meta {
             font-size: 10px;
-            color: #65725e;
+            color: var(--muted);
             margin-top: 14px;
             display: flex;
             align-items: center;
@@ -1414,7 +1216,7 @@
 
         .guide-skip {
             font-size: 11px;
-            color: #65725e;
+            color: var(--muted);
             text-decoration: underline;
             text-underline-offset: 4px;
             padding: 6px 0
@@ -1430,7 +1232,7 @@
         }
 
         .empty-result svg {
-            color: #65725e;
+            color: var(--muted);
             width: 29px;
             height: 29px;
             margin-bottom: 10px
@@ -1445,7 +1247,7 @@
 
         .empty-result p {
             font-size: 12px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .typing {
@@ -1479,7 +1281,7 @@
 
         .network-block p {
             font-size: 11px;
-            color: #65725e;
+            color: var(--muted);
             margin: 8px 0;
             line-height: 1.8
         }
@@ -1516,7 +1318,7 @@
 
         .drawer-head p {
             font-size: 10px;
-            color: #65725e;
+            color: var(--muted);
             margin-top: 5px;
             max-width: 255px;
             overflow: hidden;
@@ -1530,7 +1332,7 @@
             justify-content: space-between;
             padding: 12px 18px;
             font-size: 10px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .drawer-tools button {
@@ -1566,7 +1368,7 @@
         .document-page .doc-kicker {
             font-size: 8px;
             letter-spacing: 1.8px;
-            color: #65725e;
+            color: var(--muted);
             border-bottom: 1px solid #e9ece3;
             padding-bottom: 12px;
             margin-bottom: 22px
@@ -1600,7 +1402,7 @@
 
         .doc-page-number {
             text-align: center;
-            color: #65725e;
+            color: var(--muted);
             font-family: Georgia, serif;
             font-size: 10px;
             margin-top: 40px
@@ -1614,12 +1416,12 @@
             align-items: center;
             justify-content: space-between;
             font-size: 10px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .drawer-foot button {
             font-size: 10px;
-            color: #65725e;
+            color: var(--muted);
             display: flex;
             align-items: center;
             gap: 5px
@@ -1640,7 +1442,7 @@
         .page-kicker {
             font-size: 9px;
             letter-spacing: 2px;
-            color: #65725e;
+            color: var(--muted);
             margin-bottom: 12px
         }
 
@@ -1654,7 +1456,7 @@
 
         .page-subtitle {
             font-size: 12px;
-            color: #65725e;
+            color: var(--muted);
             line-height: 1.9
         }
 
@@ -1671,7 +1473,7 @@
             padding: 12px 0 14px;
             font-size: 12px;
             border-bottom: 2px solid transparent;
-            color: #65725e
+            color: var(--muted)
         }
 
         .manage-tabs button.active {
@@ -1708,7 +1510,7 @@
         .field-search svg {
             width: 14px;
             height: 14px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .field-search input {
@@ -1719,21 +1521,11 @@
             font-size: 11px
         }
 
-        .select {
-            border: 1px solid var(--line);
-            background: #fff;
-            border-radius: 5px;
-            padding: 8px 9px;
-            font-size: 11px;
-            color: #65725e;
-            max-width: 100%
-        }
-
         .btn {
             padding: 10px 15px;
             border: 1px solid #d8e1ce;
             border-radius: 5px;
-            color: #65725e;
+            color: var(--muted);
             background: #f2f6ec;
             display: inline-flex;
             align-items: center;
@@ -1765,13 +1557,13 @@
         .btn.danger {
             background: #f8eeea;
             border-color: #ead2c9;
-            color: #65725e
+            color: var(--muted)
         }
 
         .btn.ghost {
             background: #fff;
             border-color: var(--line);
-            color: #65725e
+            color: var(--muted)
         }
 
         .btn.small {
@@ -1797,7 +1589,7 @@
             background: #f6f8f1;
             text-align: left;
             font-weight: 400;
-            color: #65725e;
+            color: var(--muted);
             padding: 14px 18px;
             border-bottom: 1px solid var(--line)
         }
@@ -1805,7 +1597,7 @@
         td {
             padding: 16px 18px;
             border-bottom: 1px solid #eff1e9;
-            color: #65725e
+            color: var(--muted)
         }
 
         tbody tr:last-child td {
@@ -1825,7 +1617,7 @@
         .table-title svg {
             width: 16px;
             height: 16px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .table-actions {
@@ -1835,7 +1627,7 @@
 
         .table-actions button {
             font-size: 11px;
-            color: #65725e;
+            color: var(--muted);
             padding: 5px
         }
 
@@ -1847,7 +1639,7 @@
             font-size: 10px;
             line-height: 1.8;
             margin-top: 13px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .settings-card {
@@ -1869,7 +1661,7 @@
 
         .settings-card > p {
             font-size: 11px;
-            color: #65725e;
+            color: var(--muted);
             line-height: 1.9;
             margin: 9px 0 20px
         }
@@ -1883,11 +1675,11 @@
         .field {
             display: block;
             font-size: 11px;
-            color: #65725e;
+            color: var(--muted);
             margin: 14px 0
         }
 
-        .field input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), .field textarea, .field select {
+        .field input:not([role="combobox"]):not([type="checkbox"]):not([type="radio"]):not([type="file"]), .field textarea {
             display: block;
             width: 100%;
             border: 1px solid #dfe5d6;
@@ -1906,7 +1698,7 @@
 
         .field-hint {
             font-size: 10px;
-            color: #65725e;
+            color: var(--muted);
             margin-top: 7px;
             line-height: 1.8
         }
@@ -1925,7 +1717,7 @@
             border-radius: 6px;
             padding: 13px 15px;
             font-size: 11px;
-            color: #65725e;
+            color: var(--muted);
             line-height: 1.9;
             margin-bottom: 22px;
             display: flex;
@@ -1948,7 +1740,7 @@
             line-height: 1.8;
             white-space: pre-wrap;
             overflow-wrap: anywhere;
-            color: #65725e;
+            color: var(--muted);
             max-height: 280px;
             overflow: auto;
             font-family: Consolas, monospace
@@ -1969,50 +1761,12 @@
 
         .client-tabs button.active {
             background: #e3ecd8;
-            color: #65725e
-        }
-
-        .modal-backdrop {
-            position: fixed;
-            inset: 0;
-            background: #26332330;
-            backdrop-filter: blur(4px);
-            z-index: 80;
-            display: grid;
-            place-items: center;
-            padding: 20px;
-            animation: fade .2s ease
-        }
-
-        .modal {
-            background: #fafbf7;
-            border: 1px solid #e3e9d9;
-            border-radius: 12px;
-            box-shadow: 0 25px 100px #21351e20;
-            width: 560px;
-            max-width: 100%;
-            max-height: 88dvh;
-            overflow: auto;
-            padding: 28px
-        }
-
-        .modal-head {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 14px
-        }
-
-        .modal h2 {
-            font-family: var(--serif);
-            font-weight: 400;
-            letter-spacing: 1px;
-            font-size: 24px
+            color: var(--muted)
         }
 
         .modal-description {
             font-size: 12px;
-            color: #65725e;
+            color: var(--muted);
             line-height: 1.9;
             margin-top: 10px;
             margin-bottom: 20px
@@ -2036,7 +1790,7 @@
         .dropzone svg {
             width: 28px;
             height: 28px;
-            color: #65725e;
+            color: var(--muted);
             margin-bottom: 12px
         }
 
@@ -2044,13 +1798,13 @@
             display: block;
             font-size: 12px;
             font-weight: 500;
-            color: #65725e
+            color: var(--muted)
         }
 
         .dropzone small {
             display: block;
             font-size: 10px;
-            color: #65725e;
+            color: var(--muted);
             margin-top: 8px;
             line-height: 1.8
         }
@@ -2067,7 +1821,7 @@
         .upload-row svg {
             width: 15px;
             height: 15px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .upload-row span:nth-child(2) {
@@ -2080,7 +1834,7 @@
 
         .upload-row small {
             font-size: 10px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .upload-progress {
@@ -2129,7 +1883,7 @@
             align-items: center;
             gap: 6px;
             font-size: 11px;
-            color: #65725e;
+            color: var(--muted);
             padding: 6px 0;
             margin-bottom: 22px
         }
@@ -2144,7 +1898,7 @@
             height: 58px;
             border-radius: 50%;
             background: #e5eddc;
-            color: #65725e;
+            color: var(--muted);
             font-family: var(--serif);
             font-size: 25px;
             display: grid;
@@ -2153,7 +1907,7 @@
         }
 
         .muted {
-            color: #65725e
+            color: var(--muted)
         }
 
         .sr-only {
@@ -2174,7 +1928,7 @@
 
         .doc-status {
             font-size: 9px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .settings-pair {
@@ -2193,7 +1947,7 @@
 
         .settings-pair small {
             display: block;
-            color: #65725e;
+            color: var(--muted);
             margin-top: 6px;
             line-height: 1.7
         }
@@ -2216,7 +1970,7 @@
             border: 1px solid #dfe5d6;
             padding: 3px 6px;
             border-radius: 4px;
-            color: #65725e
+            color: var(--muted)
         }
 
         .busy-line {
@@ -2311,18 +2065,6 @@
                 font-size: 40px
             }
 
-            .quick-actions {
-                margin-top: 38px
-            }
-
-            .quick-card {
-                padding: 25px 23px
-            }
-
-            .suggestions {
-                margin-top: 35px
-            }
-
             .recent-docs {
                 margin-top: 35px
             }
@@ -2353,24 +2095,6 @@
 
             .hero-description {
                 margin-top: 8px
-            }
-
-            .quick-actions {
-                margin-top: 23px
-            }
-
-            .quick-card {
-                padding: 15px
-            }
-
-            .quick-icon {
-                margin-bottom: 10px;
-                width: 30px;
-                height: 30px
-            }
-
-            .suggestions {
-                margin-top: 20px
             }
 
             .recent-docs {
@@ -2424,24 +2148,8 @@
                 min-width: 0
             }
 
-            .with-drawer .quick-actions {
-                gap: 8px
-            }
-
-            .with-drawer .quick-card {
-                padding: 14px
-            }
-
-            .with-drawer .quick-card p {
-                font-size: 10px
-            }
-
             .with-drawer .hero h1 {
                 font-size: 28px
-            }
-
-            .with-drawer .suggestion-list {
-                gap: 5px
             }
 
             .with-drawer .recent-doc-list {
@@ -2479,14 +2187,6 @@
                 box-shadow: -15px 0 60px #29392f12
             }
 
-            .quick-actions {
-                gap: 10px
-            }
-
-            .quick-card {
-                padding: 17px 14px
-            }
-
             .hero h1 {
                 font-size: 31px
             }
@@ -2501,10 +2201,6 @@
 
             .form-grid {
                 grid-template-columns:1fr
-            }
-
-            .quick-card .arrow {
-                right: 12px
             }
 
             .hero-description {
@@ -2589,47 +2285,6 @@
                 font-size: 11px
             }
 
-            .quick-actions {
-                margin-top: 27px;
-                gap: 9px
-            }
-
-            .quick-card {
-                padding: 15px 12px
-            }
-
-            .quick-card .arrow {
-                display: none
-            }
-
-            .quick-card h2 {
-                font-size: 12px
-            }
-
-            .quick-card p {
-                font-size: 10px
-            }
-
-            .quick-icon {
-                width: 30px;
-                height: 30px;
-                margin-bottom: 13px
-            }
-
-            .quick-icon svg {
-                width: 17px;
-                height: 17px
-            }
-
-            .suggestions {
-                margin-top: 24px
-            }
-
-            .suggestion {
-                font-size: 10px;
-                padding: 8px 9px
-            }
-
             .recent-docs {
                 margin-top: 24px;
                 padding-top: 17px
@@ -2701,14 +2356,6 @@
                 margin-left: 2px
             }
 
-            .popover {
-                max-width: calc(100vw - 35px)
-            }
-
-            .popover.mode {
-                right: 0
-            }
-
             .management {
                 padding: 25px 20px
             }
@@ -2751,20 +2398,12 @@
                 padding-top: 24px
             }
 
-            .modal {
-                padding: 23px
-            }
-
             .form-actions {
                 flex-wrap: wrap
             }
 
             .recent-docs .micro-heading .text-btn {
                 font-size: 10px
-            }
-
-            .quick-card p {
-                min-height: 30px
             }
 
             .brand {
@@ -2787,18 +2426,6 @@
         @media (max-width: 390px) {
             .chat-scroll {
                 padding: 0 17px
-            }
-
-            .quick-card {
-                padding: 13px 10px
-            }
-
-            .quick-card h2 {
-                font-size: 11px
-            }
-
-            .quick-card p {
-                font-size: 9px
             }
 
             .hero h1 {
@@ -2831,9 +2458,6 @@
                 overflow: hidden
             }
 
-            .suggestion-list .suggestion:last-child {
-                display: none
-            }
         }
 
         .icon-btn.mobile-menu {

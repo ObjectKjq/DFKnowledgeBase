@@ -13,6 +13,25 @@ import java.util.List;
 public interface ConversationService {
 
     /**
+     * 准备一轮发送，首次输入创建会话，并保存本轮完整选择。
+     * @param userId 当前用户
+     * @param id 会话编号，可空
+     * @param title 首次输入生成的标题
+     * @param state 完整选择
+     * @return 会话
+     */
+    ConversationDO beginTurn(Long userId, Long id, String title, RetrievalState state);
+
+    /**
+     * 读取客户端尚未展示的消息。
+     * @param userId 当前用户
+     * @param conversationId 会话编号
+     * @param afterId 已展示的最大消息编号
+     * @return 新增消息
+     */
+    List<MessageDO> getMessageListAfter(Long userId, Long conversationId, Long afterId);
+
+    /**
      * 保存当前会话的完整检索选择。
      * @param userId 用户编号
      * @param id 会话编号

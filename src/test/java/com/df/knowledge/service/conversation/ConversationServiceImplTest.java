@@ -50,6 +50,37 @@ class ConversationServiceImplTest {
     private ConversationServiceImpl conversationService;
 
     @Test
+    void testBeginTurn_replacesCompleteSelectionIncludingClearedFields() {
+        // 准备参数：新快照清空模型、日期、过滤和所选上下文。
+        var conversation = buildConversation(1L, 10L);
+        conversation.setState(new com.df.knowledge.service.conversation.RetrievalState()
+                .setModelId(8L).setSelectedChunkIds(List.of(3L)).setFormats(List.of(1))
+                .setUploadedFrom(LocalDateTime.of(2026, 10, 1, 10, 0)));
+        when(conversationMapper.selectByIdAndUserId(1L, 10L)).thenReturn(conversation);
+        var state = new RetrievalState().setMode("FUZZY");
+
+        // 调用
+        var result = conversationService.beginTurn(10L, 1L, "新问题", state);
+
+        // 断言：保留会话标题，完整替换当前选择。
+        assertEquals(state, result.getState());
+        assertEquals(null, result.getState().getModelId());
+        assertEquals(null, result.getState().getUploadedFrom());
+        verify(conversationMapper).updateById(conversation);
+        verify(conversationMapper, never()).insert(any(ConversationDO.class));
+    }
+
+    @Test
+    void testGetMessageListAfter_checksOwnerBeforeReadingMessages() {
+        // 准备参数
+        when(conversationMapper.selectByIdAndUserId(1L, 20L)).thenReturn(null);
+
+        // 调用并断言
+        assertThrows(ServiceException.class, () -> conversationService.getMessageListAfter(20L, 1L, 5L));
+        verify(messageMapper, never()).selectListAfter(any(), any());
+    }
+
+    @Test
     void testCreateConversation_success() {
         // 准备参数：范围重复时保留首次出现顺序并校验内容权限
         ConversationCreateReqVO reqVO = new ConversationCreateReqVO();

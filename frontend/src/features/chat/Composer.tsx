@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { simpleList } from '@/api/modelConfigurationController'
+import { useEffect, useRef, useState, type ReactElement } from 'react'
+import { Popover as AntdPopover } from 'antd'
 import { useAuthStore } from '@/stores/auth'
 
 import { Icon } from '@/components/Icon'
@@ -12,7 +11,8 @@ import { useKb } from '@/stores/knowledge'
 
 import { sendQuestion, stopQuestion } from './chatActions'
 import { useConversation } from './conversations'
-import { currentSelection, saveSelection } from './selection'
+import { ModelPicker } from './ModelPicker'
+import { currentSelection, saveSelection, selectionKey } from './selection'
 
 const MODES: [ChatMode, string][] = [
   ['混合检索', '关键字与语义融合，直接查看命中分块'],
@@ -21,11 +21,39 @@ const MODES: [ChatMode, string][] = [
   ['RAG 检索', '基于文档生成带引用的流式答案'],
 ]
 
+type OptionKind = 'scope' | 'mode' | 'filters' | 'add'
+
+/** 浮层锚定实际按钮并挂载到页面根节点，避开滚动容器裁剪。 */
+function ComposerOption({ kind, children }: { kind: OptionKind; children: ReactElement }) {
+  const open = useKb((s) => s.popover === kind)
+  const openPopover = useKb((s) => s.openPopover)
+  const closePopover = useKb((s) => s.closePopover)
+  return (
+    <AntdPopover
+      trigger="click"
+      placement={kind === 'mode' || kind === 'scope' ? 'bottomLeft' : 'topLeft'}
+      arrow={false}
+      open={open}
+      autoAdjustOverflow
+      align={{ offset: [0, 0], overflow: { shiftX: true, shiftY: true } }}
+      destroyOnHidden
+      getPopupContainer={() => document.body}
+      classNames={{ root: 'composer-options-overlay', container: 'composer-options-surface' }}
+      content={<ComposerOptions kind={kind} />}
+      onOpenChange={(next) => {
+        if (next && useKb.getState().popover !== kind) openPopover(kind)
+        else if (!next && useKb.getState().popover === kind) closePopover()
+      }}
+    >
+      {children}
+    </AntdPopover>
+  )
+}
+
 /** 输入选项仅呈现后端已支持的检索模式和知识库范围。 */
-function Popover() {
+function ComposerOptions({ kind: popover }: { kind: OptionKind }) {
   const filters = useChat((s) => s.filters)
   const setFilters = useChat((s) => s.setFilters)
-  const popover = useKb((s) => s.popover)
   const close = useKb((s) => s.closePopover)
   const { libs } = useLibraries()
   const scope = useChat((s) => s.scope)
@@ -33,9 +61,8 @@ function Popover() {
   const mode = useChat((s) => s.mode)
   const setMode = useChat((s) => s.setMode)
   const openUpload = useKb((s) => s.openUpload)
-  if (!popover) return null
   return (
-    <div className={`popover open ${popover}`} id="popover" role="dialog" aria-label="输入选项">
+    <div className={`composer-options-content ${popover}`} role="dialog" aria-label="输入选项">
       {popover === 'scope' && (
         <>
           <div className="popover-title">检索范围 · 支持多选</div>
@@ -152,11 +179,6 @@ export function Composer() {
   const token = useAuthStore((s) => s.token)
   const modelId = useChat((s) => s.modelId)
   const setModelId = useChat((s) => s.setModelId)
-  const models = useQuery({
-    queryKey: ['chat-models', token],
-    queryFn: async () => (await simpleList()).data ?? [],
-    enabled: !!token,
-  })
   const id = useChat((s) => s.conversationId)
   const draft = useChat((s) => s.draft)
   const setDraft = useChat((s) => s.setDraft)
@@ -164,7 +186,6 @@ export function Composer() {
   const restoreScope = useChat((s) => s.restoreScope)
   const scope = useChat((s) => s.scope)
   const mode = useChat((s) => s.mode)
-  const openPopover = useKb((s) => s.openPopover)
   const closePopover = useKb((s) => s.closePopover)
   const popover = useKb((s) => s.popover)
   const { libs } = useLibraries()
@@ -174,10 +195,15 @@ export function Composer() {
   const [selectionError, setSelectionError] = useState('')
   const filters = useChat((s) => s.filters)
   const selection = JSON.stringify({ ...currentSelection(), formats: filters.formats })
+  const savedSelection = conversation.data?.state
+  const selectionDirty =
+    savedSelection && selectionKey(currentSelection()) !== selectionKey(savedSelection)
   useEffect(() => {
     if (id === null || restoreScope || busy || !token) return
+    const current = JSON.parse(selection) as API.RetrievalState
+    if (!savedSelection || selectionKey(current) === selectionKey(savedSelection)) return
     let active = true
-    void saveSelection(id, JSON.parse(selection) as API.RetrievalState)
+    void saveSelection(id, current)
       .then(() => {
         if (active) setSelectionError('')
       })
@@ -187,9 +213,9 @@ export function Composer() {
     return () => {
       active = false
     }
-  }, [id, restoreScope, busy, selection, token])
+  }, [id, restoreScope, busy, selection, token, savedSelection])
   useEffect(() => {
-    if (!draft) textarea.current?.focus()
+    if (!draft) textarea.current?.focus({ preventScroll: true })
   }, [draft, id])
   const label =
     scope.length === 1
@@ -206,7 +232,7 @@ export function Composer() {
   return (
     <div className="composer-area">
       <div className="composer-wrap">
-        {selectionError && (
+        {selectionError && selectionDirty && (
           <div role="alert">
             选择尚未保存：{selectionError}
             <button
@@ -223,7 +249,6 @@ export function Composer() {
             </button>
           </div>
         )}
-        <Popover />
         <form
           className={`composer ${dragging ? 'dragging' : ''}`}
           onSubmit={(e) => {
@@ -252,38 +277,32 @@ export function Composer() {
                 </button>
               </span>
             )}
-            <label className="chip">
-              对话模型
-              <select
-                aria-label="对话模型"
-                value={modelId ?? ''}
-                onChange={(e) => setModelId(e.target.value ? Number(e.target.value) : undefined)}
+            <ComposerOption kind="mode">
+              <button
+                type="button"
+                className="chip mode-btn"
+                data-menu="mode"
+                aria-expanded={popover === 'mode'}
               >
-                <option value="">选择对话模型</option>
-                {models.data?.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name}
-                    {model.simulated ? '（本地模拟）' : ''}
-                  </option>
-                ))}
-              </select>
-            </label>
-            {models.isSuccess && !models.data.length && (
-              <span className="table-note">未配置对话模型，请联系管理员</span>
-            )}
-            <button
-              type="button"
-              className="chip"
-              disabled={restoreScope}
-              onClick={() => openPopover('scope')}
-              data-menu="scope"
-              aria-label={`检索范围：${label}`}
-              aria-expanded={popover === 'scope'}
-            >
-              <Icon name="layers" />
-              {label}
-              <Icon name="down" />
-            </button>
+                <Icon name="search" />
+                {mode}
+                <Icon name="down" />
+              </button>
+            </ComposerOption>
+            <ComposerOption kind="scope">
+              <button
+                type="button"
+                className="chip"
+                disabled={restoreScope}
+                data-menu="scope"
+                aria-label={`检索范围：${label}`}
+                aria-expanded={popover === 'scope'}
+              >
+                <Icon name="layers" />
+                {label}
+                <Icon name="down" />
+              </button>
+            </ComposerOption>
           </div>
           <textarea
             ref={textarea}
@@ -307,37 +326,31 @@ export function Composer() {
           />
           <div className="composer-bottom">
             <div className="composer-left">
-              <button
-                type="button"
-                className="text-btn"
-                aria-label="过滤条件"
-                onClick={() => openPopover('filters')}
-              >
-                过滤条件
-              </button>
-              <button
-                type="button"
-                className="add-btn"
-                onClick={() => openPopover('add')}
-                data-menu="add"
-                aria-label="添加文档"
-                aria-expanded={popover === 'add'}
-              >
-                <Icon name="plus" />
-              </button>
+              <ComposerOption kind="filters">
+                <button
+                  type="button"
+                  className="text-btn"
+                  aria-label="过滤条件"
+                  data-menu="filters"
+                  aria-expanded={popover === 'filters'}
+                >
+                  过滤条件
+                </button>
+              </ComposerOption>
+              <ComposerOption kind="add">
+                <button
+                  type="button"
+                  className="add-btn"
+                  data-menu="add"
+                  aria-label="添加文档"
+                  aria-expanded={popover === 'add'}
+                >
+                  <Icon name="plus" />
+                </button>
+              </ComposerOption>
             </div>
             <div className="composer-right">
-              <button
-                type="button"
-                className="text-btn mode-btn"
-                onClick={() => openPopover('mode')}
-                data-menu="mode"
-                aria-expanded={popover === 'mode'}
-              >
-                <Icon name="search" />
-                {mode}
-                <Icon name="down" />
-              </button>
+              <ModelPicker value={modelId} onChange={setModelId} />
               {busy ? (
                 <button type="button" className="btn small" onClick={stopQuestion}>
                   停止生成

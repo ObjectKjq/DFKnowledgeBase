@@ -3,10 +3,8 @@ import { deleteConversation } from '@/api/conversationController'
 import { useConversations, conversationsKey } from '@/features/chat/conversations'
 import { useChat } from '@/stores/chat'
 import { useLibraries } from '@/features/knowledge/useLibraries'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
-import { MENU_TYPE_DIR } from '@/features/manage/menuTree'
-import { menuRoute } from '@/features/manage/tabs'
 import { useAuthStore } from '@/stores/auth'
 import { useKb } from '@/stores/knowledge'
 
@@ -15,8 +13,8 @@ import { Icon } from './Icon'
 /** 左侧主导航（复刻原型 `.sidebar`）。 */
 export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate()
+  const isSettings = useLocation().pathname.startsWith('/settings')
   const { libs, isPending, isError, refetch } = useLibraries()
-  const menus = useAuthStore((s) => s.menus)
   const scope = useChat((s) => s.scope)
   const currentId = useChat((s) => s.conversationId)
   const setScope = useChat((s) => s.setScope)
@@ -48,7 +46,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
   const sharedLibs = libs.filter((l) => l.type === 'shared')
 
   return (
-    <aside className={`sidebar ${open ? 'open' : ''}`} aria-label="主导航">
+    <aside className={`sidebar ${open ? 'open' : ''}`} id="app-sidebar" aria-label="主导航">
       <div className="brand">
         <svg className="brand-mark" viewBox="0 0 36 40" aria-hidden="true">
           <path
@@ -62,7 +60,7 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
         </svg>
         <div>
           <div className="brand-name">知序</div>
-          <div className="brand-en">KNOWLEDGE, AT HOME.</div>
+          <div className="brand-en">个人知识空间</div>
         </div>
       </div>
 
@@ -94,14 +92,17 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
           </button>
         )}
         <nav aria-label="知识库">
-          <button className={`nav-item ${!scope.length ? 'active' : ''}`} onClick={() => goScope()}>
+          <button
+            className={`nav-item ${!isSettings && !scope.length ? 'active' : ''}`}
+            onClick={() => goScope()}
+          >
             <Icon name="layers" />
             <span>全部知识库</span>
           </button>
           {personalLibs.map((l) => (
             <button
               key={l.id}
-              className={`nav-item ${scope.length === 1 && scope[0] === l.id ? 'active' : ''}`}
+              className={`nav-item ${!isSettings && scope.length === 1 && scope[0] === l.id ? 'active' : ''}`}
               onClick={() => goScope(l.id)}
             >
               <Icon name="book" />
@@ -109,11 +110,11 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
               <span className="count">{l.role}</span>
             </button>
           ))}
-          <div className="side-subtitle">共享知识库</div>
+          {!!sharedLibs.length && <div className="side-subtitle">共享知识库</div>}
           {sharedLibs.map((l) => (
             <button
               key={l.id}
-              className={`nav-item ${scope.length === 1 && scope[0] === l.id ? 'active' : ''}`}
+              className={`nav-item ${!isSettings && scope.length === 1 && scope[0] === l.id ? 'active' : ''}`}
               onClick={() => goScope(l.id)}
             >
               <Icon name="users" />
@@ -123,15 +124,12 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
           ))}
         </nav>
 
-        <div className="section-label history-label">
-          最近会话
-          <Icon name="refresh" />
-        </div>
+        <div className="section-label history-label">最近会话</div>
         <nav aria-label="最近会话">
           {history.data?.map((conversation) => (
             <div className="history-row" key={conversation.id}>
               <button
-                className={`history-item ${currentId === conversation.id ? 'active' : ''}`}
+                className={`history-item ${!isSettings && currentId === conversation.id ? 'active' : ''}`}
                 title={conversation.title}
                 disabled={busy || deletion.isPending}
                 onClick={() => {
@@ -167,62 +165,12 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
           )}
           {history.isSuccess && !history.data.length && <p className="table-note">暂无会话</p>}
         </nav>
-
-        {/* 功能入口由登录返回的菜单树驱动，无权的菜单不渲染。 */}
-        {menus.length > 0 && (
-          <>
-            <div className="section-label">功能菜单</div>
-            <nav aria-label="功能菜单">
-              {menus.map((m) =>
-                m.type === MENU_TYPE_DIR ? (
-                  <div key={m.id}>
-                    <div className="side-subtitle">{m.name}</div>
-                    {((m.children ?? []) as API.MenuVO[]).map((c) => (
-                      <button
-                        key={c.id}
-                        className="nav-item"
-                        onClick={() => {
-                          navigate(menuRoute(c.path))
-                          onClose()
-                        }}
-                      >
-                        <Icon name="settings" />
-                        <span>{c.name}</span>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <button
-                    key={m.id}
-                    className="nav-item"
-                    onClick={() => {
-                      navigate(menuRoute(m.path))
-                      onClose()
-                    }}
-                  >
-                    <Icon name="layers" />
-                    <span>{m.name}</span>
-                  </button>
-                ),
-              )}
-            </nav>
-          </>
-        )}
       </div>
 
       <div className="side-bottom">
-        <div className="local-note">
-          <strong>
-            <Icon name="shield" />
-            知识在此，安心在此。
-          </strong>
-          <p>资料存于你的环境，灵感随时可寻。</p>
-          <div className="storage-track">
-            <span />
-          </div>
-        </div>
         <div className="settings-nav">
           <button
+            className={isSettings ? 'active' : ''}
             onClick={() => {
               navigate('/settings/docs')
               onClose()
@@ -231,7 +179,6 @@ export function AppSidebar({ open, onClose }: { open: boolean; onClose: () => vo
             <Icon name="settings" />
             设置与管理
           </button>
-          <small>v0.3</small>
         </div>
       </div>
     </aside>

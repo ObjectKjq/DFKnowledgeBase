@@ -19,6 +19,7 @@ Lombok 行为由根 `lombok.config` 控制：setter 链式返回 this（`chain=t
 | `controller/{业务}/vo/{业务}`               | REST 接口层；VO 归 controller 层，不建顶层 vo 包      |
 | `service/{业务}`                            | 业务逻辑；`XxxService` + `XxxServiceImpl` 同包        |
 | `dal/dataobject/{业务}`、`dal/mysql/{业务}` | DO、MyBatis-Plus Mapper                               |
+| `dal/elasticsearch/{业务}`                   | Spring Data Elasticsearch Repository；对应 Document 放 `dal/dataobject/{业务}` |
 | `enums/{业务}`                              | 枚举 + 常量类（`ErrorCodeConstants`、`XxxConstants`） |
 | `config` / `job` / `mq`                     | 配置类、定时任务、消息（message/producer/consumer）   |
 | `common`                                    | 公共返回值/错误码/异常/分页，只放稳定公共约定         |
@@ -80,6 +81,7 @@ private void validateDocExists(Long id) {
 - DO：`@TableName("模块_业务")`（小写下划线，表名带模块前缀）+ `@Data`；每个字段一行中文 Javadoc，枚举字段写 `枚举 {@link XxxEnum}`、外键字段写 `关联 {@link XxxDO#getId()}`——用 `{@link}` 建立字段级关联。
 - 公共字段（create_time/update_time/deleted 等）出现第二个 DO 时再抽公共基类，语义对齐：`@TableField(fill = FieldFill.INSERT)` 自动填充 + `@TableLogic` 逻辑删除。
 - Mapper：`@Mapper` + `extends BaseMapper<XxxDO>`；查询条件写成 Mapper 的 `default` 方法（简单场景不写 XML），动态条件用 wrapper 的 `condition` 重载（`eq(condition, ...)`、`like(condition, ...)`）实现"空参跳过"。
+- ES 实体命名 `XxxDocument`，使用 `@Document`、`@Id`、`@Field`，与 MySQL DO 分离，不继承 `BaseDO`；Repository 命名 `XxxRepository`，继承 `ElasticsearchRepository`。自管索引使用 `createIndex = false`，严格 mapping 下显式关闭 `_class`。普通保存优先 Repository；复杂检索和需检查完整删除响应的操作使用 `ElasticsearchOperations`。
 - 分页统一 `.orderByDesc(XxxDO::getId)`（id 倒序）；方法命名 `selectList(ReqVO)` / `selectPage(ReqVO)` / `selectByXxxAndYyy`。
 
 ## 枚举与常量

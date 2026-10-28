@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
+import { Select } from 'antd'
 
 import { createMenu, deleteMenu, getMenuList, updateMenu } from '@/api/menuController'
 import { useAuthStore } from '@/stores/auth'
@@ -205,28 +206,29 @@ function MenuFormModal({
         </label>
         <label className="field">
           菜单类型
-          <select
+          <Select
+            aria-label="菜单类型"
             value={form.type}
-            onChange={(e) => setForm({ ...form, type: Number(e.target.value) })}
-          >
-            <option value={1}>目录</option>
-            <option value={2}>菜单</option>
-            <option value={3}>按钮</option>
-          </select>
+            onChange={(type) => setForm({ ...form, type })}
+            options={[
+              { value: 1, label: '目录' },
+              { value: 2, label: '菜单' },
+              { value: 3, label: '按钮' },
+            ]}
+          />
         </label>
         <label className="field">
           上级菜单
-          <select
+          <Select
+            aria-label="上级菜单"
             value={form.parentId}
-            onChange={(e) => setForm({ ...form, parentId: Number(e.target.value) })}
-          >
-            <option value={0}>根目录</option>
-            {parents.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))}
-          </select>
+            showSearch={{ optionFilterProp: 'label' }}
+            onChange={(parentId) => setForm({ ...form, parentId })}
+            options={[
+              { value: 0, label: '根目录' },
+              ...parents.map((menu) => ({ value: menu.id!, label: menu.name })),
+            ]}
+          />
         </label>
         <label className="field">
           权限标识{form.type === MENU_TYPE_BUTTON ? '' : ' · 选填'}
@@ -254,13 +256,15 @@ function MenuFormModal({
         </label>
         <label className="field">
           菜单状态
-          <select
+          <Select
+            aria-label="菜单状态"
             value={form.status}
-            onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
-          >
-            <option value={0}>开启</option>
-            <option value={1}>停用</option>
-          </select>
+            onChange={(status) => setForm({ ...form, status })}
+            options={[
+              { value: 0, label: '开启' },
+              { value: 1, label: '停用' },
+            ]}
+          />
         </label>
         {hint && <p className="field-hint">{hint}</p>}
         <div className="form-actions">

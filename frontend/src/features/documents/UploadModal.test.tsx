@@ -44,7 +44,7 @@ it('选中文件立即上传，确认创建失败后重试复用文件引用', a
       <UploadModal />
     </QueryClientProvider>,
   )
-  await screen.findByRole('option', { name: '个人知识库' })
+  await screen.findByText('个人知识库')
   const file = new File(['example'], 'example.txt', { type: 'text/plain' })
   fireEvent.change(screen.getByLabelText('选择上传文档'), { target: { files: [file] } })
   await screen.findByText('已上传')

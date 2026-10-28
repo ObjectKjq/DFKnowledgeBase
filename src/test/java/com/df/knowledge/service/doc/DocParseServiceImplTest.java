@@ -292,9 +292,9 @@ class DocParseServiceImplTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = DocStatusEnum.class, names = {"INDEXING", "AVAILABLE", "DELETED"})
+    @EnumSource(value = DocStatusEnum.class, names = {"INDEXING", "AVAILABLE", "FAILED"})
     void testParse_staleTaskDoesNotReplaceChunks(DocStatusEnum status) throws Exception {
-        // 准备参数：旧解析任务等待行锁期间，另一任务已完成解析、索引或删除
+        // 准备参数：旧解析任务等待行锁期间，另一任务已推进到索引、可用或失败状态
         DocDO doc = prepareDoc("txt", "不应再次解析".getBytes(StandardCharsets.UTF_8));
         doc.setStatus(status.getCode());
         DocChunkDO existing = new DocChunkDO().setDocId(5L).setChunkIndex(0).setText("已建立索引的分块");

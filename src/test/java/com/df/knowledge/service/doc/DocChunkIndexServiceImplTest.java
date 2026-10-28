@@ -2,8 +2,9 @@ package com.df.knowledge.service.doc;
 
 import com.df.knowledge.common.exception.ServiceException;
 import com.df.knowledge.dal.dataobject.doc.DocChunkDO;
+import com.df.knowledge.dal.dataobject.doc.DocChunkDocument;
+import com.df.knowledge.dal.elasticsearch.doc.DocChunkRepository;
 import com.df.knowledge.enums.ErrorCodeConstants;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -19,14 +20,9 @@ import org.springframework.data.elasticsearch.core.RefreshPolicy;
 import org.springframework.data.elasticsearch.core.SearchHit;
 import org.springframework.data.elasticsearch.core.SearchHits;
 import org.springframework.data.elasticsearch.core.SearchShardStatistics;
-import org.springframework.data.elasticsearch.core.document.Document;
-import org.springframework.data.elasticsearch.core.mapping.IndexCoordinates;
-import org.springframework.data.elasticsearch.core.query.BulkOptions;
 import org.springframework.data.elasticsearch.core.query.ByQueryResponse;
 import org.springframework.data.elasticsearch.core.query.DeleteQuery;
-import org.springframework.data.elasticsearch.core.query.IndexQuery;
 import org.springframework.data.elasticsearch.core.query.types.ConflictsType;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -49,21 +45,17 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class DocChunkIndexServiceImplTest {
 
-    private static final IndexCoordinates INDEX = IndexCoordinates.of("knowledge_doc_chunk");
-
     @Mock
     private ElasticsearchOperations elasticsearchOperations;
+
+    @Mock
+    private DocChunkRepository docChunkRepository;
 
     @Mock
     private IndexOperations indexOperations;
 
     @InjectMocks
     private DocChunkIndexServiceImpl service;
-
-    @BeforeEach
-    void setUp() {
-        ReflectionTestUtils.setField(service, "indexName", "knowledge_doc_chunk");
-    }
 
     @Test
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -75,31 +67,27 @@ class DocChunkIndexServiceImplTest {
         // 调用
         service.writeBatch(2L, List.of(chunk()), List.of(vector));
 
-        // 断言：幂等编号、keyword 字符串和定位字段不变，不写入额外类型字段。
-        ArgumentCaptor<List<IndexQuery>> queries = ArgumentCaptor.forClass((Class) List.class);
-        ArgumentCaptor<BulkOptions> options = ArgumentCaptor.forClass(BulkOptions.class);
-        verify(elasticsearchOperations).bulkIndex(queries.capture(), options.capture(), eq(INDEX));
-        IndexQuery query = queries.getValue().getFirst();
-        assertEquals("100", query.getId());
-        Document source = Document.parse(query.getSource());
-        assertEquals("2", source.get("kb_id"));
-        assertEquals("5", source.get("doc_id"));
-        assertEquals("100", source.get("chunk_id"));
-        assertEquals(1, source.get("chunk_index"));
-        assertEquals("知识检索", source.get("text"));
-        assertEquals(400, source.get("start_offset"));
-        assertEquals(404, source.get("end_offset"));
-        assertEquals(2, source.get("page_number"));
-        assertEquals(512, ((List<?>) source.get("vector")).size());
-        assertEquals(1, ((Number) ((List<?>) source.get("vector")).getFirst()).doubleValue());
-        assertFalse(source.containsKey("_class"));
-        assertEquals(RefreshPolicy.WAIT_UNTIL, options.getValue().getRefreshPolicy());
+        // 断言：编号、定位和向量交给索引实体，保存时显式等待检索可见。
+        ArgumentCaptor<List<DocChunkDocument>> documents = ArgumentCaptor.forClass((Class) List.class);
+        verify(docChunkRepository).saveAll(documents.capture(), eq(RefreshPolicy.WAIT_UNTIL));
+        DocChunkDocument document = documents.getValue().getFirst();
+        assertEquals("100", document.getChunkId());
+        assertEquals("2", document.getKnowledgeBaseId());
+        assertEquals("5", document.getDocId());
+        assertEquals(1, document.getChunkIndex());
+        assertEquals("知识检索", document.getText());
+        assertEquals(400, document.getStartOffset());
+        assertEquals(404, document.getEndOffset());
+        assertEquals(2, document.getPageNumber());
+        assertEquals(512, document.getVector().length);
+        assertEquals(1, document.getVector()[0]);
+        verifyNoInteractions(elasticsearchOperations);
     }
 
     @Test
     void testWriteBatch_partialFailureRejected() {
         // 准备参数：Spring Data 将逐条写入错误转换为 BulkFailureException。
-        when(elasticsearchOperations.bulkIndex(anyList(), any(BulkOptions.class), eq(INDEX)))
+        when(docChunkRepository.saveAll(anyList(), eq(RefreshPolicy.WAIT_UNTIL)))
                 .thenThrow(new BulkFailureException("部分失败",
                         Map.of("100", new BulkFailureException.FailureDetails(400, "向量维度错误"))));
 
@@ -113,8 +101,8 @@ class DocChunkIndexServiceImplTest {
     @Test
     void testDeleteByDocId_refreshesAndDeletesOnlyTargetDocument() {
         // 准备参数
-        when(elasticsearchOperations.indexOps(INDEX)).thenReturn(indexOperations);
-        when(elasticsearchOperations.delete(any(DeleteQuery.class), eq(Document.class), eq(INDEX)))
+        when(elasticsearchOperations.indexOps(DocChunkDocument.class)).thenReturn(indexOperations);
+        when(elasticsearchOperations.delete(any(DeleteQuery.class), eq(DocChunkDocument.class)))
                 .thenReturn(ByQueryResponse.builder().build());
 
         // 调用
@@ -124,7 +112,7 @@ class DocChunkIndexServiceImplTest {
         ArgumentCaptor<DeleteQuery> deletion = ArgumentCaptor.forClass(DeleteQuery.class);
         var order = inOrder(indexOperations, elasticsearchOperations);
         order.verify(indexOperations).refresh();
-        order.verify(elasticsearchOperations).delete(deletion.capture(), eq(Document.class), eq(INDEX));
+        order.verify(elasticsearchOperations).delete(deletion.capture(), eq(DocChunkDocument.class));
         NativeQuery query = (NativeQuery) deletion.getValue().getQuery();
         assertEquals("doc_id", query.getQuery().term().field());
         assertEquals("5", query.getQuery().term().value().stringValue());
@@ -135,8 +123,8 @@ class DocChunkIndexServiceImplTest {
     @Test
     void testDeleteByDocId_incompleteDeletionRejected() {
         // 准备参数：依次返回超时和版本冲突。
-        when(elasticsearchOperations.indexOps(INDEX)).thenReturn(indexOperations);
-        when(elasticsearchOperations.delete(any(DeleteQuery.class), eq(Document.class), eq(INDEX)))
+        when(elasticsearchOperations.indexOps(DocChunkDocument.class)).thenReturn(indexOperations);
+        when(elasticsearchOperations.delete(any(DeleteQuery.class), eq(DocChunkDocument.class)))
                 .thenReturn(ByQueryResponse.builder().withTimedOut(true).build(),
                         ByQueryResponse.builder().withVersionConflicts(1).build());
 
@@ -150,9 +138,9 @@ class DocChunkIndexServiceImplTest {
     @Test
     void testSearchHybrid_fusesTwoAuthorizedRequests() {
         // 准备参数：语义次序为 101、100，关键词仅命中 100。
-        SearchHits<Document> semanticResponse = hits("101", "100");
-        SearchHits<Document> keywordResponse = hits("100");
-        when(elasticsearchOperations.search(any(NativeQuery.class), eq(Document.class), eq(INDEX)))
+        SearchHits<DocChunkDocument> semanticResponse = hits("101", "100");
+        SearchHits<DocChunkDocument> keywordResponse = hits("100");
+        when(elasticsearchOperations.search(any(NativeQuery.class), eq(DocChunkDocument.class)))
                 .thenReturn(semanticResponse, keywordResponse);
 
         // 调用并断言
@@ -162,7 +150,7 @@ class DocChunkIndexServiceImplTest {
         assertEquals("SEMANTIC", result.get(1).matchType());
         assertEquals(0.032522, result.getFirst().score(), 0.000001);
         ArgumentCaptor<NativeQuery> query = ArgumentCaptor.forClass(NativeQuery.class);
-        verify(elasticsearchOperations, times(2)).search(query.capture(), eq(Document.class), eq(INDEX));
+        verify(elasticsearchOperations, times(2)).search(query.capture(), eq(DocChunkDocument.class));
         var semantic = query.getAllValues().getFirst();
         var keyword = query.getAllValues().getLast();
         var filters = semantic.getKnnSearches().getFirst().filter();
@@ -178,22 +166,22 @@ class DocChunkIndexServiceImplTest {
     @Test
     void testSearchFuzzy_usesOnlySemanticQuery() {
         // 准备参数
-        SearchHits<Document> response = hits("101");
-        when(elasticsearchOperations.search(any(NativeQuery.class), eq(Document.class), eq(INDEX)))
+        SearchHits<DocChunkDocument> response = hits("101");
+        when(elasticsearchOperations.search(any(NativeQuery.class), eq(DocChunkDocument.class)))
                 .thenReturn(response);
 
         // 调用并断言
         var result = service.search("知识检索", new float[512], List.of(2L), List.of(5L), "FUZZY", 20);
         assertEquals("SEMANTIC", result.getFirst().matchType());
-        verify(elasticsearchOperations).search(any(NativeQuery.class), eq(Document.class), eq(INDEX));
+        verify(elasticsearchOperations).search(any(NativeQuery.class), eq(DocChunkDocument.class));
     }
 
     @Test
     void testSearch_partialShardFailureRejected() {
         // 准备参数
-        SearchHits<Document> response = hits();
+        SearchHits<DocChunkDocument> response = hits();
         when(response.getSearchShardStatistics()).thenReturn(SearchShardStatistics.of(1, 0, 1, 0, List.of()));
-        when(elasticsearchOperations.search(any(NativeQuery.class), eq(Document.class), eq(INDEX))).thenReturn(response);
+        when(elasticsearchOperations.search(any(NativeQuery.class), eq(DocChunkDocument.class))).thenReturn(response);
 
         // 调用并断言
         ServiceException exception = assertThrows(ServiceException.class,
@@ -204,7 +192,7 @@ class DocChunkIndexServiceImplTest {
     @Test
     void testSearch_requestFailureRejected() {
         // 准备参数：连接错误、超时等失败由 Spring Data 抛出。
-        when(elasticsearchOperations.search(any(NativeQuery.class), eq(Document.class), eq(INDEX)))
+        when(elasticsearchOperations.search(any(NativeQuery.class), eq(DocChunkDocument.class)))
                 .thenThrow(new DataAccessResourceFailureException("检索超时"));
 
         // 调用并断言
@@ -229,11 +217,11 @@ class DocChunkIndexServiceImplTest {
     }
 
     @SuppressWarnings("unchecked")
-    private static SearchHits<Document> hits(String... ids) {
-        SearchHits<Document> response = mock(SearchHits.class);
-        List<SearchHit<Document>> result = java.util.Arrays.stream(ids).map(id ->
-                new SearchHit<Document>("knowledge_doc_chunk", id, null, 1, null,
-                        null, null, null, null, null, Document.create())).toList();
+    private static SearchHits<DocChunkDocument> hits(String... ids) {
+        SearchHits<DocChunkDocument> response = mock(SearchHits.class);
+        List<SearchHit<DocChunkDocument>> result = java.util.Arrays.stream(ids).map(id ->
+                new SearchHit<DocChunkDocument>("knowledge_doc_chunk", id, null, 1, null,
+                        null, null, null, null, null, new DocChunkDocument())).toList();
         org.mockito.Mockito.lenient().when(response.getSearchHits()).thenReturn(result);
         return response;
     }

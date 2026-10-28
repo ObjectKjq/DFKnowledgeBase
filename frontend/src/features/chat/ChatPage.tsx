@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react'
 
-import { useKb } from '@/stores/knowledge'
 import { useChat } from '@/stores/chat'
 import { useConversation } from './conversations'
 
@@ -17,34 +16,27 @@ export function ChatPage() {
   const busy = useChat((s) => s.busy)
   const messagesLength = query.data?.messages.length ?? 0
   const scrollRef = useRef<HTMLDivElement>(null)
+  const isNew = currentId === null && !hasPending
 
-  // 原型：新消息到达时把会话面板滚到底部。
+  // 新检索从顶部开始阅读；会话中的新消息保持滚动到底部。
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
     requestAnimationFrame(() => {
-      el.scrollTop = el.scrollHeight
+      el.scrollTop = isNew ? 0 : el.scrollHeight
     })
-  }, [messagesLength, busy, currentId, pendingText])
-
-  // 原型：点击输入选项弹层之外的区域时关闭弹层。
-  useEffect(() => {
-    const onDocClick = (e: MouseEvent) => {
-      const t = e.target as HTMLElement
-      if (!useKb.getState().popover) return
-      if (t.closest('#popover') || t.closest('[data-menu]')) return
-      useKb.getState().closePopover()
-    }
-    document.addEventListener('click', onDocClick)
-    return () => document.removeEventListener('click', onDocClick)
-  }, [])
+  }, [messagesLength, busy, currentId, pendingText, isNew])
 
   return (
-    <section className="chat-panel" id="chat-panel" aria-label="检索会话">
+    <section
+      className={`chat-panel ${isNew ? 'is-new' : ''}`}
+      id="chat-panel"
+      aria-label="检索会话"
+    >
       <div className="chat-scroll" id="chat-scroll" ref={scrollRef}>
-        <div id="chat-content">{currentId !== null || hasPending ? <MessageList /> : <Home />}</div>
+        <div id="chat-content">{isNew ? <Home composer={<Composer />} /> : <MessageList />}</div>
       </div>
-      <Composer />
+      {!isNew && <Composer />}
     </section>
   )
 }

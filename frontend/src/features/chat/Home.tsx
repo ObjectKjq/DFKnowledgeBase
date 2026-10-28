@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { getDocPage } from '@/api/docController'
@@ -9,11 +10,8 @@ import { useAuthStore } from '@/stores/auth'
 import { useChat } from '@/stores/chat'
 import { useKb } from '@/stores/knowledge'
 
-import { sendQuestion } from './chatActions'
-import { HERO_ART } from './homeArt'
-
-/** 首页入口与最近可用文档，点击问题直接执行真实检索。 */
-export function Home() {
+/** 首页以检索输入为中心，下方提供轻量操作与最近可用文档。 */
+export function Home({ composer }: { composer?: ReactNode }) {
   const navigate = useNavigate()
   const token = useAuthStore((s) => s.token)
   const { libs } = useLibraries()
@@ -28,78 +26,29 @@ export function Home() {
   return (
     <div className="home">
       <div className="hero">
-        <div dangerouslySetInnerHTML={{ __html: HERO_ART }} />
-        <p className="eyebrow">A QUIET PLACE FOR YOUR KNOWLEDGE</p>
-        <h1>
-          今天想找<span>什么？</span>
-        </h1>
-        <p className="hero-description">
-          让散落的文档，有序安放。
-          <br />
-          从一次检索开始，与积累的知识重新相遇。
-        </p>
+        <h1>今天想探索什么？</h1>
+        <p className="hero-description">搜索资料、梳理思路，从你的知识库开始。</p>
       </div>
-      <div className="quick-actions">
-        <button className="quick-card" onClick={openUpload}>
-          <span className="quick-icon">
-            <Icon name="upload" />
-          </span>
-          <Icon name="arrow" className="arrow" />
-          <h2>上传文档</h2>
-          <p>
-            上传并建立索引，
-            <br />
-            让知识随时可寻。
-          </p>
+      {composer}
+      <div className="home-actions">
+        <button className="home-action" onClick={openUpload}>
+          <Icon name="upload" />
+          上传文档
         </button>
         <button
-          className="quick-card"
+          className="home-action"
           onClick={() => {
             setMode('RAG 检索')
-            document.getElementById('query')?.focus()
+            document.getElementById('query')?.focus({ preventScroll: true })
           }}
         >
-          <span className="quick-icon">
-            <Icon name="spark" />
-          </span>
-          <Icon name="arrow" className="arrow" />
-          <h2>向知识提问</h2>
-          <p>
-            基于有权访问的文档，
-            <br />
-            生成可核对引用的答案。
-          </p>
+          <Icon name="spark" />
+          向知识提问
         </button>
-        <button className="quick-card" onClick={() => navigate('/settings/mcp')}>
-          <span className="quick-icon">
-            <Icon name="book" />
-          </span>
-          <Icon name="arrow" className="arrow" />
-          <h2>连接 AI 智能体</h2>
-          <p>
-            通过只读 MCP 工具，
-            <br />
-            连接你有权访问的知识。
-          </p>
+        <button className="home-action" onClick={() => navigate('/settings/mcp')}>
+          <Icon name="plug" />
+          连接 AI 智能体
         </button>
-      </div>
-      <div className="suggestions">
-        <div className="micro-heading">从一个问题开始</div>
-        <div className="suggestion-list">
-          {['如何让知识检索更可信？', '总结文档中的主要观点'].map((question) => (
-            <button
-              className="suggestion"
-              key={question}
-              onClick={() => {
-                setMode('RAG 检索')
-                void sendQuestion(question)
-              }}
-            >
-              <Icon name="spark" />
-              {question}
-            </button>
-          ))}
-        </div>
       </div>
       <div className="recent-docs">
         <div className="micro-heading">

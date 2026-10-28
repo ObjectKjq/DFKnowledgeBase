@@ -1,6 +1,8 @@
 # ES 索引自管，混合检索用 Java 端 RRF
 
-> 2026-10-28 更新：业务统一通过 `spring-boot-starter-data-elasticsearch` 自动配置的 `ElasticsearchOperations` 访问 ES，不再直接注入 `ElasticsearchClient`。批量写入使用 `IndexQuery` 和 `BulkOptions`，删除使用 `DeleteQuery`，BM25 与 kNN 使用 `NativeQuery`，Java 端 RRF 融合规则保持不变。索引与 mapping 仍由部署脚本管理；使用显式 JSON source 避免引入 `_class` 字段。检索请求禁用部分结果，保持超时和分片失败时明确报错。
+> 2026-10-28 更新：通过 `spring-boot-starter-data-elasticsearch` 自动配置客户端、`ElasticsearchOperations` 和 Repository。独立的 `DocChunkDocument` 使用 `@Document`、`@Id`、`@Field` 声明 ES 读写映射，与 MySQL 的 `DocChunkDO` 分开维护；`DocChunkRepository` 继承 `ElasticsearchRepository`，批量写入使用 `saveAll(documents, RefreshPolicy.WAIT_UNTIL)`，替代手工组装 JSON。删除使用 `Operations + DeleteQuery` 检查完整响应，BM25 与 kNN 使用 `Operations + NativeQuery`，Java 端 RRF 融合规则保持不变。索引名统一从实体读取 `knowledge.elasticsearch.index-name`；`createIndex = false` 保留部署脚本管理索引与 mapping 的约定，`writeTypeHint = FALSE` 避免严格 mapping 拒绝 `_class` 字段。检索请求禁用部分结果，保持超时和分片失败时明确报错。
+
+实体与 Repository 的用法参照 [Spring Data 官方 Repository 文档](https://docs.spring.io/spring-data/elasticsearch/reference/elasticsearch/repositories/elasticsearch-repositories.html)及[实体映射文档](https://docs.spring.io/spring-data/elasticsearch/reference/elasticsearch/object-mapping.html)。复杂检索继续使用[官方 Operations 与 NativeQuery](https://docs.spring.io/spring-data/elasticsearch/reference/elasticsearch/template.html)，避免用派生方法表达两路候选与权限过滤。删除操作需检查超时、分片失败、版本冲突和取消原因，因此保留 `ByQueryResponse` 检查；不能仅依赖派生删除方法的返回数量。Repository 保存显式指定刷新策略，不修改共享 Template 的全局配置。
 
 检索要求「混合检索」（关键词 + 语义融合排序）与 kb_id/doc_id 级的内容权限过滤，且分块以 MySQL 为权威副本、ES 索引须可重建。继续自管 ES 索引：mapping 由本工程维护（`vector` 512 维 dense_vector（hnsw/cosine）、`text` ik 分词、`kb_id`/`doc_id`/`chunk_id` keyword），由 ES 分别执行 BM25 与 kNN，再在 Java 端按 RRF 公式融合；模糊检索仅使用 kNN。两路查询均须过滤有权且选中的知识库和当前可用文档，返回前再次检查当前权限和状态。
 

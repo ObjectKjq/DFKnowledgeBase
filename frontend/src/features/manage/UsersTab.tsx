@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
+import { Select } from 'antd'
 
 import { getSimpleRoleList } from '@/api/roleController'
 import {
@@ -114,16 +115,16 @@ export function UsersTab() {
               onKeyDown={(e) => e.key === 'Enter' && search()}
             />
           </label>
-          <select
-            className="select"
+          <Select
             aria-label="用户状态"
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="all">全部状态</option>
-            <option value="0">开启</option>
-            <option value="1">停用</option>
-          </select>
+            onChange={setStatusFilter}
+            options={[
+              { value: 'all', label: '全部状态' },
+              { value: '0', label: '开启' },
+              { value: '1', label: '停用' },
+            ]}
+          />
           <button className="btn ghost" onClick={search}>
             查询
           </button>
@@ -348,13 +349,15 @@ function UserFormModal({ user, onClose }: { user: API.UserRespVO | null; onClose
         </label>
         <label className="field">
           用户状态
-          <select
+          <Select
+            aria-label="用户状态"
             value={form.status}
-            onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
-          >
-            <option value={0}>开启</option>
-            <option value={1}>停用</option>
-          </select>
+            onChange={(status) => setForm({ ...form, status })}
+            options={[
+              { value: 0, label: '开启' },
+              { value: 1, label: '停用' },
+            ]}
+          />
         </label>
         <div className="field">
           角色

@@ -28,7 +28,7 @@ const TABS: Record<string, () => ReactElement> = {
   account: AccountTab,
 }
 
-/** 管理页（复刻原型 `#management` / renderManage）。页签由子路由承载，按菜单树显隐。 */
+/** 分组设置导航与内容工作区，入口仍按服务端菜单树显隐。 */
 export function ManagementPage() {
   const { tab } = useParams()
   const navigate = useNavigate()
@@ -53,30 +53,46 @@ export function ManagementPage() {
   }
 
   const Body = TABS[active]
+  const current = tabs.find((t) => t.key === active)!
 
   return (
     <div className="management" id="management">
       <div className="manage-inner">
-        <button className="back-chat" onClick={() => navigate('/')}>
-          <Icon name="back" />
-          回到检索
-        </button>
-        <div className="page-kicker">YOUR KNOWLEDGE, WELL KEPT.</div>
-        <h1 className="page-title">让知识，有序生长。</h1>
-        <p className="page-subtitle">整理资料，连接工具，照顾好属于你的知识空间。</p>
-        <nav className="manage-tabs" aria-label="管理模块">
-          {tabs.map((t) => (
-            <button
-              key={t.key}
-              className={active === t.key ? 'active' : ''}
-              onClick={() => navigate(`/settings/${t.key}`)}
-            >
-              {t.title}
-            </button>
-          ))}
+        <nav className="manage-navigation" aria-label="管理模块">
+          <div className="manage-nav-heading">设置与管理</div>
+          {(['知识空间', '实例管理', '个人'] as const).map((group) => {
+            const items = tabs.filter((t) => t.group === group)
+            if (!items.length) return null
+            return (
+              <div className="manage-nav-group" key={group}>
+                <div className="manage-nav-label">{group}</div>
+                {items.map((t) => (
+                  <button
+                    key={t.key}
+                    className={active === t.key ? 'active' : ''}
+                    aria-current={active === t.key ? 'page' : undefined}
+                    onClick={() => navigate(`/settings/${t.key}`)}
+                  >
+                    <Icon name={t.icon} />
+                    {t.title}
+                  </button>
+                ))}
+              </div>
+            )
+          })}
+          <button className="back-chat" onClick={() => navigate('/')}>
+            <Icon name="back" />
+            回到检索
+          </button>
         </nav>
-        <div id="manage-body">
-          <Body />
+        <div className="manage-content">
+          <header className="manage-page-header">
+            <h1 className="page-title">{current.title}</h1>
+            <p className="page-subtitle">{current.description}</p>
+          </header>
+          <div id="manage-body" key={active}>
+            <Body />
+          </div>
         </div>
       </div>
     </div>

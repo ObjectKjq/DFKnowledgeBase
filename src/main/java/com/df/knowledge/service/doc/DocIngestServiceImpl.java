@@ -118,7 +118,6 @@ public class DocIngestServiceImpl implements DocIngestService {
             docIndexService.index(docId);
         } catch (Exception ex) {
             markFailed(docId, doc, DocStatusEnum.INDEXING.getCode(), ex);
-            return;
         }
         // 4. 索引服务在同一文档行锁内完成「索引中 → 可用」，本层不重复发布状态
     }

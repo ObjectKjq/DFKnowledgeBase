@@ -48,6 +48,12 @@ declare namespace API {
     data?: ConversationDetailRespVO
   }
 
+  type CommonResultConversationTurnRespVO = {
+    code?: number
+    msg?: string
+    data?: ConversationTurnRespVO
+  }
+
   type CommonResultDocChunkRespVO = {
     code?: number
     msg?: string
@@ -267,11 +273,35 @@ declare namespace API {
     updateTime?: string
   }
 
+  type ConversationSendReqVO = {
+    /** 会话编号，首次提问不传，由服务端创建 */
+    conversationId?: number
+    /** 本轮用户输入 */
+    question: string
+    /** 点击发送时的完整选择快照，空数组或空值清除旧选择 */
+    state: RetrievalState
+    /** 客户端已展示的最大消息编号，响应仅返回此编号之后的消息 */
+    afterMessageId: number
+    /** 引导检索的原始问题，后续澄清时保持不变 */
+    guideQuestion?: string
+    /** 本轮澄清回答 */
+    guideAnswer?: string
+    /** 跳过后续澄清，直接混合检索 */
+    skipGuide?: boolean
+  }
+
   type ConversationStateReqVO = {
     /** 会话编号 */
     id: number
     /** 完整会话当前选择；新选择只影响后续消息 */
     state: RetrievalState
+  }
+
+  type ConversationTurnRespVO = {
+    /** 本轮执行后的会话摘要和当前选择 */
+    conversation?: ConversationRespVO
+    /** 已展示编号之后的持久化消息，按时间正序排列 */
+    messages?: MessageRespVO[]
   }
 
   type deleteConversationParams = {

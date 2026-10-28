@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState, type FormEvent } from 'react'
+import { Select } from 'antd'
 
 import { getMenuList } from '@/api/menuController'
 import {
@@ -260,13 +261,15 @@ function RoleFormModal({ role, onClose }: { role: API.RoleRespVO | null; onClose
         </label>
         <label className="field">
           角色状态
-          <select
+          <Select
+            aria-label="角色状态"
             value={form.status}
-            onChange={(e) => setForm({ ...form, status: Number(e.target.value) })}
-          >
-            <option value={0}>开启</option>
-            <option value={1}>停用</option>
-          </select>
+            onChange={(status) => setForm({ ...form, status })}
+            options={[
+              { value: 0, label: '开启' },
+              { value: 1, label: '停用' },
+            ]}
+          />
         </label>
         <label className="field">
           备注 · 选填

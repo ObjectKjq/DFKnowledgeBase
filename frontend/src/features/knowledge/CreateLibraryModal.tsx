@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, type FormEvent } from 'react'
+import { Select } from 'antd'
 
 import { createKnowledgeBase } from '@/api/knowledgeBaseController'
 import { ModalShell } from '@/components/ModalHost'
@@ -41,10 +42,15 @@ export function CreateLibraryModal() {
         </label>
         <label className="field">
           知识库类型
-          <select value={type} onChange={(e) => setType(Number(e.target.value))}>
-            <option value={1}>个人知识库</option>
-            <option value={2}>共享知识库</option>
-          </select>
+          <Select
+            aria-label="知识库类型"
+            value={type}
+            onChange={setType}
+            options={[
+              { value: 1, label: '个人知识库' },
+              { value: 2, label: '共享知识库' },
+            ]}
+          />
         </label>
         <label className="field">
           说明 · 选填

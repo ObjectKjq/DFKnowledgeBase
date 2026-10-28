@@ -26,7 +26,14 @@ function HttpErrorBridge() {
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <ConfigProvider locale={zhCN} theme={antdTheme}>
+      <ConfigProvider
+        locale={zhCN}
+        theme={antdTheme}
+        select={{
+          className: 'app-select',
+          classNames: { popup: { root: 'app-select-popup' } },
+        }}
+      >
         <AntdApp>
           <HttpErrorBridge />
           {children}

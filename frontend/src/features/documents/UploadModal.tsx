@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Select } from 'antd'
 import { useRef, useState } from 'react'
 
 import { createDoc } from '@/api/docController'
@@ -98,19 +99,15 @@ export function UploadModal() {
     >
       <label className="field">
         保存到
-        <select
+        <Select
           aria-label="上传目标知识库"
-          value={target}
-          disabled={started}
-          onChange={(e) => setTarget(e.target.value)}
-        >
-          {!canUpload && <option value="">请选择可编辑的知识库</option>}
-          {writable.map((library) => (
-            <option key={library.id} value={library.id}>
-              {library.name}
-            </option>
-          ))}
-        </select>
+          value={canUpload ? target : undefined}
+          placeholder="请选择可编辑的知识库"
+          disabled={started || !writable.length}
+          showSearch={{ optionFilterProp: 'label' }}
+          options={writable.map((library) => ({ value: library.id, label: library.name }))}
+          onChange={setTarget}
+        />
       </label>
       {!writable.length && (
         <p className="field-hint">暂无可上传的知识库，查看者仅可检索和查看文档。</p>
