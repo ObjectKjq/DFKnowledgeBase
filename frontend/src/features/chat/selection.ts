@@ -7,7 +7,7 @@ import { conversationKey } from './conversationKeys'
 
 export const MODE_CODES: Record<ChatMode, string> = {
   混合检索: 'HYBRID',
-  模糊检索: 'FUZZY',
+  关键字检索: 'FUZZY',
   引导检索: 'GUIDED',
   'RAG 检索': 'RAG',
 }

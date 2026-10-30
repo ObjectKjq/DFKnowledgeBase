@@ -9,17 +9,17 @@ vi.mock('@/lib/http', () => ({
   default: vi.fn().mockResolvedValue({ code: 0, data: { list: [], total: 0 } }),
 }))
 
-it('首页提供真实 MCP 接入入口', () => {
+it('首页最近可用文档支持查看全部', () => {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/settings/mcp" element={<p>MCP 接入管理</p>} />
+          <Route path="/settings/docs" element={<p>文档管理</p>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
   )
-  fireEvent.click(screen.getByRole('button', { name: /连接 AI 智能体/ }))
-  expect(screen.getByText('MCP 接入管理')).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /查看全部/ }))
+  expect(screen.getByText('文档管理')).toBeInTheDocument()
 })

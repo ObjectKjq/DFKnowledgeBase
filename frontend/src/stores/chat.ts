@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type ChatMode = '混合检索' | '模糊检索' | '引导检索' | 'RAG 检索'
+export type ChatMode = '混合检索' | '关键字检索' | '引导检索' | 'RAG 检索'
 
 export interface ChatFilters {
   formats: number[]

@@ -67,8 +67,8 @@ it('输入区仅提供四种检索模式并选择命名模型', async () => {
   fireEvent.click(screen.getByRole('button', { name: '混合检索' }))
   expect(screen.getByRole('button', { name: /引导检索/ })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /精确检索/ })).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: /模糊检索/ }))
-  expect(screen.getByRole('button', { name: '模糊检索' })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: /关键字检索/ }))
+  expect(screen.getByRole('button', { name: '关键字检索' })).toBeInTheDocument()
   const picker = screen.getByRole('button', { name: '对话模型' })
   await waitFor(() => expect(picker).not.toBeDisabled())
   fireEvent.click(picker)
@@ -143,9 +143,9 @@ function turnStream(messages: object[], state: API.RetrievalState) {
   })
 }
 
-it('模糊检索一次发送过滤快照并显示结果，主动翻页才请求下一页', async () => {
+it('关键字检索一次发送过滤快照并显示结果，主动翻页才请求下一页', async () => {
   useChat.setState({
-    mode: '模糊检索',
+    mode: '关键字检索',
     scope: ['7'],
     filters: { formats: [1], uploadedFrom: '2026-10-01T10:00' },
   })
@@ -257,7 +257,7 @@ it('恢复会话自己的模式、模型、过滤和所选上下文，编辑后�
   })
   renderComposer()
   fireEvent.click(await screen.findByRole('button', { name: '研究会话' }))
-  expect(await screen.findByRole('button', { name: '模糊检索' })).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: '关键字检索' })).toBeInTheDocument()
   expect(await screen.findByText('我的对话模型')).toBeInTheDocument()
   expect(screen.getByText('所选上下文：1 个分块')).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: '过滤条件' }))
@@ -266,7 +266,7 @@ it('恢复会话自己的模式、模型、过滤和所选上下文，编辑后�
   await waitFor(() => expect(saved.formats).toEqual([6, 1]))
   fireEvent.click(screen.getByRole('button', { name: /新检索/ }))
   fireEvent.click(screen.getByRole('button', { name: '研究会话' }))
-  expect(await screen.findByRole('button', { name: '模糊检索' })).toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: '关键字检索' })).toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: '过滤条件' }))
   expect(screen.getByLabelText('PDF')).toBeChecked()
 })

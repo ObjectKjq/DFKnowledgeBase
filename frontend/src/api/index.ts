@@ -16,7 +16,6 @@ import * as authController from './authController'
 import * as docSearchController from './docSearchController'
 import * as ragController from './ragController'
 import * as docController from './docController'
-import * as conversationTurnController from './conversationTurnController'
 import * as knowledgeBaseController from './knowledgeBaseController'
 import * as mcpCallLogController from './mcpCallLogController'
 export default {
@@ -34,7 +33,6 @@ export default {
   docSearchController,
   ragController,
   docController,
-  conversationTurnController,
   knowledgeBaseController,
   mcpCallLogController,
 }

@@ -13,7 +13,7 @@ public class DocParseJob {
     private DocIngestService docIngestService;
 
     /** 每小时第 0、10、20、30、40、50 分钟执行，未完成文档由后续扫描继续处理。 */
-    @Scheduled(cron = "0 */10 * * * ?")
+    @Scheduled(cron = "0 */1 * * * ?")
     public void execute() {
         docIngestService.dispatchPendingDocs();
     }

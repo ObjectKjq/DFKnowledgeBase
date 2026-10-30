@@ -2,6 +2,8 @@ package com.df.knowledge.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import reactor.core.scheduler.Scheduler;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -21,6 +23,17 @@ public class RagStreamExecutorConfiguration {
     @Bean(destroyMethod = "shutdownNow")
     public ExecutorService ragStreamExecutor() {
         return Executors.newVirtualThreadPerTaskExecutor();
+    }
+
+    /**
+     * 将阻塞的会话发送交给虚拟线程，取消订阅时中断任务。
+     *
+     * @param ragStreamExecutor 问答任务执行器
+     * @return 会话流式任务调度器
+     */
+    @Bean(destroyMethod = "dispose")
+    public Scheduler ragStreamScheduler(ExecutorService ragStreamExecutor) {
+        return Schedulers.fromExecutorService(ragStreamExecutor);
     }
 
     /**

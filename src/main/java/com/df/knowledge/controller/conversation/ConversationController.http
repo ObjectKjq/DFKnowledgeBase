@@ -1,3 +1,20 @@
+### 首次发送完整选择，服务端创建会话并流式返回新增消息
+POST {{baseUrl}}/knowledge/conversation/send-stream
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: text/event-stream
+
+{
+  "question": "知识检索如何工作",
+  "afterMessageId": 0,
+  "state": {
+    "mode": "HYBRID",
+    "knowledgeBaseIds": [],
+    "formats": [],
+    "selectedChunkIds": []
+  }
+}
+
 ### 创建会话
 POST {{baseUrl}}/knowledge/conversation/create
 Content-Type: application/json

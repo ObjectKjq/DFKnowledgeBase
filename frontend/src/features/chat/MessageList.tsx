@@ -149,7 +149,7 @@ function MessageView({
         await search({
           query: original.question ?? '',
           ...original.selection,
-          mode: original.mode === '模糊检索' ? 'FUZZY' : 'HYBRID',
+          mode: original.mode === '关键字检索' ? 'FUZZY' : 'HYBRID',
           pageNo,
           pageSize: 20,
         })

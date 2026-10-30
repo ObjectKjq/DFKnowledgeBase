@@ -16,9 +16,9 @@ import { currentSelection, saveSelection, selectionKey } from './selection'
 
 const MODES: [ChatMode, string][] = [
   ['混合检索', '关键字与语义融合，直接查看命中分块'],
-  ['模糊检索', '仅按语义匹配，适合凭模糊记忆查找'],
-  ['引导检索', '最多澄清两轮，也可直接混合检索'],
+  ['关键字检索', '输入关键字，查找相关文档分块'],
   ['RAG 检索', '基于文档生成带引用的流式答案'],
+  ['引导检索', '最多澄清两轮，也可直接混合检索'],
 ]
 
 type OptionKind = 'scope' | 'mode' | 'filters' | 'add'
@@ -87,7 +87,6 @@ function ComposerOptions({ kind: popover }: { kind: OptionKind }) {
               <span className="description">{library.role}</span>
             </label>
           ))}
-          <div className="menu-footer">仅影响后续提问，已发送的提问和引用保持原有范围。</div>
         </>
       )}
       {popover === 'mode' && (
@@ -102,7 +101,6 @@ function ComposerOptions({ kind: popover }: { kind: OptionKind }) {
                 close()
               }}
             >
-              <Icon name={value === 'RAG 检索' ? 'spark' : 'search'} />
               <span>
                 {value}
                 <span className="description">{description}</span>
@@ -284,7 +282,6 @@ export function Composer() {
                 data-menu="mode"
                 aria-expanded={popover === 'mode'}
               >
-                <Icon name="search" />
                 {mode}
                 <Icon name="down" />
               </button>
@@ -368,13 +365,6 @@ export function Composer() {
             </div>
           </div>
         </form>
-        <div className="composer-caption">
-          <span>
-            <Icon name="lock" />
-            仅检索你有权访问的知识库；模型由实例配置决定。
-          </span>
-          <span>Enter 发送 · Shift + Enter 换行</span>
-        </div>
       </div>
     </div>
   )

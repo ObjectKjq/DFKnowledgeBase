@@ -7,16 +7,12 @@ import { Icon } from '@/components/Icon'
 import { useLibraries } from '@/features/knowledge/useLibraries'
 import { libName } from '@/lib/format'
 import { useAuthStore } from '@/stores/auth'
-import { useChat } from '@/stores/chat'
-import { useKb } from '@/stores/knowledge'
 
-/** 首页以检索输入为中心，下方提供轻量操作与最近可用文档。 */
+/** 首页以检索输入为中心，下方展示最近可用文档。 */
 export function Home({ composer }: { composer?: ReactNode }) {
   const navigate = useNavigate()
   const token = useAuthStore((s) => s.token)
   const { libs } = useLibraries()
-  const openUpload = useKb((s) => s.openUpload)
-  const setMode = useChat((s) => s.setMode)
   const query = useQuery({
     queryKey: ['manage-documents', token, 'recent'],
     queryFn: async () =>
@@ -30,26 +26,6 @@ export function Home({ composer }: { composer?: ReactNode }) {
         <p className="hero-description">搜索资料、梳理思路，从你的知识库开始。</p>
       </div>
       {composer}
-      <div className="home-actions">
-        <button className="home-action" onClick={openUpload}>
-          <Icon name="upload" />
-          上传文档
-        </button>
-        <button
-          className="home-action"
-          onClick={() => {
-            setMode('RAG 检索')
-            document.getElementById('query')?.focus({ preventScroll: true })
-          }}
-        >
-          <Icon name="spark" />
-          向知识提问
-        </button>
-        <button className="home-action" onClick={() => navigate('/settings/mcp')}>
-          <Icon name="plug" />
-          连接 AI 智能体
-        </button>
-      </div>
       <div className="recent-docs">
         <div className="micro-heading">
           <span>最近可用文档</span>
